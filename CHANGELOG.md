@@ -2,6 +2,28 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.4 - 2026-08-23
+
+### Added
+
+- Added a sidebar upgrade icon with release details, package size, publication date, download URL, and verified in-app installation.
+- Added static update manifest publication metadata for release notifications.
+
+### Fixed
+
+- Improved update notifications so the main settings entry surfaces available releases without requiring the About page.
+
+---
+
+### 新增
+
+- 在主界面设置入口旁增加升级图标，展示版本详情、安装包大小、发布日期、下载地址，并支持应用内校验安装。
+- 更新静态版本清单，记录发版时间等版本提示信息。
+
+### 修复
+
+- 优化新版本提示，无需进入关于页面即可从主界面设置入口查看更新。
+
 ## 0.1.3 - 2026-08-22
 
 ### Added
