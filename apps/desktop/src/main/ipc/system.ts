@@ -118,7 +118,10 @@ function parseUpdateManifest(value: unknown): UpdateManifest {
       ...(asset.sha256 ? { sha256: asset.sha256.toLowerCase() } : {}),
     }
   }
-  return { version, releaseUrl: manifest.releaseUrl, assets }
+  const publishedAt = typeof manifest.publishedAt === 'string' && !Number.isNaN(Date.parse(manifest.publishedAt))
+    ? new Date(manifest.publishedAt).toISOString()
+    : undefined
+  return { version, releaseUrl: manifest.releaseUrl, ...(publishedAt ? { publishedAt } : {}), assets }
 }
 
 async function fetchLatestManifest(): Promise<ReleaseFetchResult> {
@@ -128,7 +131,14 @@ async function fetchLatestManifest(): Promise<ReleaseFetchResult> {
   })
   if (response.status === 404) return { status: 404, data: null }
   if (!response.ok) return { status: response.status, data: null }
-  const data = parseUpdateManifest(await response.json())
+  const manifest = parseUpdateManifest(await response.json())
+  const lastModified = response.headers.get('last-modified')
+  const fallbackPublishedAt = lastModified && !Number.isNaN(Date.parse(lastModified))
+    ? new Date(lastModified).toISOString()
+    : undefined
+  const data = manifest.publishedAt || !fallbackPublishedAt
+    ? manifest
+    : { ...manifest, publishedAt: fallbackPublishedAt }
   cachedManifest = data
   return { status: response.status, data }
 }
@@ -171,7 +181,13 @@ export function registerSystemIpc(): void {
       if (!latest) return { status: 'error', message: '更新清单版本号无效' }
       const url = data.releaseUrl
       if (isNewer(latest, app.getVersion())) {
-        return { status: 'update', latest, url, asset: findUpdateAsset(data) }
+        return {
+          status: 'update',
+          latest,
+          url,
+          ...(data.publishedAt ? { publishedAt: data.publishedAt } : {}),
+          asset: findUpdateAsset(data),
+        }
       }
       return { status: 'latest', latest, url }
     } catch (error) {

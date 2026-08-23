@@ -150,6 +150,7 @@ jobs:
             JSON.stringify({
               version,
               releaseUrl: `https://github.com/${repo}/releases/tag/v${version}`,
+              publishedAt: new Date().toISOString(),
               assets,
             }, null, 2) + '\n',
           )

@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PanelLeft, Settings } from '@lucide/vue'
 import skillbuddyMarkUrl from '@/assets/logo.png'
-import AppUpdateButton from '@/components/AppUpdateButton.vue'
+import AppUpdateNotice from '@/components/AppUpdateNotice.vue'
 import SidebarAgentsSection from '@/components/sidebar/SidebarAgentsSection.vue'
 import SidebarPrimaryNav from '@/components/sidebar/SidebarPrimaryNav.vue'
 import SidebarScopesSection from '@/components/sidebar/SidebarScopesSection.vue'
@@ -203,7 +203,7 @@ async function addProjectRoot(): Promise<void> {
           <Settings class="size-4 shrink-0" />
           <span class="truncate">{{ t('common.settings') }}</span>
         </button>
-        <AppUpdateButton />
+        <AppUpdateNotice />
       </div>
     </div>
   </aside>

@@ -798,6 +798,11 @@ export default {
   },
   settings: {
     title: 'Settings',
+    updateAvailableTitle: 'New version available',
+    updateVersion: 'Version v{v}',
+    updateSize: 'Package size',
+    updatePublishedAt: 'Published',
+    updateDownloadUrl: 'Download URL',
     back: 'Back to app',
     searchPh: 'Search settings',
     noResults: 'No matching settings',

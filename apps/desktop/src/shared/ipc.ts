@@ -419,12 +419,19 @@ export interface UpdateReleaseAsset {
 export interface UpdateManifest {
   version: string
   releaseUrl: string
+  publishedAt?: string
   assets: Record<string, UpdateReleaseAsset>
 }
 
 /** 检查更新的结果：有新版本 / 已是最新 / 尚无发布 / 出错。 */
 export type UpdateCheckResult =
-  | { status: 'update'; latest: string; url: string; asset: UpdateReleaseAsset | null }
+  | {
+      status: 'update'
+      latest: string
+      url: string
+      publishedAt?: string
+      asset: UpdateReleaseAsset | null
+    }
   | { status: 'latest'; latest: string; url: string }
   | { status: 'none' }
   | { status: 'error'; message: string }

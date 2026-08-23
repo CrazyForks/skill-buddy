@@ -798,6 +798,11 @@ export default {
   },
   settings: {
     title: '设置',
+    updateAvailableTitle: '发现新版本',
+    updateVersion: '版本 v{v}',
+    updateSize: '包大小',
+    updatePublishedAt: '发布日期',
+    updateDownloadUrl: '下载地址',
     back: '返回应用',
     searchPh: '搜索设置',
     noResults: '没有匹配的设置项',
