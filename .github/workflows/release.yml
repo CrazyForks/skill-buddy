@@ -104,6 +104,57 @@ jobs:
         working-directory: release
         run: sha256sum * > SHA256SUMS.txt
 
+      - name: 生成更新清单
+        working-directory: release
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}"
+          export VERSION
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const version = process.env.VERSION
+          const repo = 'konnga/skill-buddy'
+          const files = fs.readdirSync('.')
+          const checksums = Object.fromEntries(
+            fs.readFileSync('SHA256SUMS.txt', 'utf8')
+              .trim()
+              .split(/\r?\n/)
+              .map((line) => {
+                const [sha, name] = line.trim().split(/\s+/, 2)
+                return [name, sha]
+              }),
+          )
+          const patterns = {
+            'darwin-arm64': /-macos-arm64\.dmg$/,
+            'win32-x64': /-windows-x64\.exe$/,
+            'win32-arm64': /-windows-arm64\.exe$/,
+            'linux-x64': /-linux-x86_64\.AppImage$/,
+            'linux-arm64': /-linux-arm64\.AppImage$/,
+          }
+          const assets = {}
+          for (const [platform, pattern] of Object.entries(patterns)) {
+            const name = files.find((file) => pattern.test(file))
+            if (!name) throw new Error(`缺少更新安装包：${platform}`)
+            assets[platform] = {
+              name,
+              size: fs.statSync(path.join('.', name)).size,
+              url: `https://github.com/${repo}/releases/download/v${version}/${encodeURIComponent(name)}`,
+              sha256: checksums[name],
+            }
+          }
+          fs.writeFileSync(
+            'latest.json',
+            JSON.stringify({
+              version,
+              releaseUrl: `https://github.com/${repo}/releases/tag/v${version}`,
+              assets,
+            }, null, 2) + '\n',
+          )
+          NODE
+
       - name: 提取当前版本变更日志
         env:
           VERSION: ${{ github.ref_name }}

@@ -7,11 +7,13 @@ import {
   session,
   shell,
 } from 'electron'
+import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import type {
   AppInfo,
   ConfirmOptions,
+  UpdateManifest,
   UpdateCheckResult,
   UpdateDownloadProgress,
   UpdateDownloadResult,
@@ -23,59 +25,37 @@ import {
   onDesktopPreferencesChanged,
   setDesktopPreferences,
 } from '../preferences'
-import { readSecret } from '../secrets.js'
 import { toggleMainWindow } from '../window'
 
 /** 检查更新所用的 GitHub 仓库（Releases 页）。 */
 const UPDATE_REPO = 'konnga/skill-buddy'
-const UPDATE_API = `https://api.github.com/repos/${UPDATE_REPO}/releases/latest`
 const UPDATE_RELEASES_URL = `https://github.com/${UPDATE_REPO}/releases`
-const UPDATE_LATEST_URL = `${UPDATE_RELEASES_URL}/latest`
+const UPDATE_MANIFEST_URL = `${UPDATE_RELEASES_URL}/latest/download/latest.json`
 const UPDATE_HEADERS = { 'user-agent': 'SkillBuddy' }
 
-interface ReleaseAssetResponse {
-  name?: string
-  size?: number
-  browser_download_url?: string
-}
-
-interface ReleaseResponse {
-  tag_name?: string
-  html_url?: string
-  assets?: ReleaseAssetResponse[]
-}
-
-let cachedRelease: ReleaseResponse | null = null
+let cachedManifest: UpdateManifest | null = null
 
 interface ReleaseFetchResult {
   status: number
-  data: ReleaseResponse
-}
-
-async function githubApiHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {
-    ...UPDATE_HEADERS,
-    accept: 'application/vnd.github+json',
-    'x-github-api-version': '2022-11-28',
-  }
-  const token = await readSecret('githubToken')
-  if (token) headers.authorization = `Bearer ${token}`
-  return headers
+  data: UpdateManifest | null
 }
 
 async function updateFetch(
   url: string,
-  options: { headers?: Record<string, string>; timeoutMs?: number } = {},
+  options: { headers?: Record<string, string>; timeoutMs?: number; cacheBust?: boolean } = {},
 ): Promise<Response> {
-  const { headers = UPDATE_HEADERS, timeoutMs = 10_000 } = options
+  const { headers = UPDATE_HEADERS, timeoutMs = 10_000, cacheBust = false } = options
+  const requestUrl = cacheBust
+    ? `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`
+    : url
   try {
-    return await session.defaultSession.fetch(url, {
+    return await session.defaultSession.fetch(requestUrl, {
       headers,
       redirect: 'follow',
       signal: AbortSignal.timeout(timeoutMs),
     })
   } catch {
-    return fetch(url, {
+    return fetch(requestUrl, {
       headers,
       redirect: 'follow',
       signal: AbortSignal.timeout(timeoutMs),
@@ -83,91 +63,83 @@ async function updateFetch(
   }
 }
 
-/** GitHub API 限流时，从公开 Releases 页面获取最新标签和安装包。 */
-async function fetchLatestReleasePage(): Promise<ReleaseFetchResult> {
-  const latestResponse = await updateFetch(UPDATE_LATEST_URL)
-  if (!latestResponse.ok) return { status: latestResponse.status, data: {} }
-  const latestHtml = await latestResponse.text()
-  const tag =
-    latestResponse.url.match(/\/releases\/tag\/([^/?#]+)/)?.[1]
-    ?? latestHtml.match(/\/releases\/tag\/([^"/?#]+)/)?.[1]
-  if (!tag) return { status: 404, data: {} }
+function updateAssetKey(platform: NodeJS.Platform, arch: string): string | null {
+  if (
+    (platform === 'darwin' && arch === 'arm64')
+    || (platform === 'win32' && (arch === 'x64' || arch === 'arm64'))
+    || (platform === 'linux' && (arch === 'x64' || arch === 'arm64'))
+  ) {
+    return `${platform}-${arch}`
+  }
+  return null
+}
 
-  const assetsResponse = await updateFetch(
-    `${UPDATE_RELEASES_URL}/expanded_assets/${encodeURIComponent(tag)}`,
-  )
-  const assets: ReleaseAssetResponse[] = []
-  if (assetsResponse.ok) {
-    const html = await assetsResponse.text()
-    const pattern = /href="([^"]*\/releases\/download\/[^"]+)"/g
-    for (const match of html.matchAll(pattern)) {
-      const href = match[1]?.replaceAll('&amp;', '&')
-      if (!href) continue
-      const browserDownloadUrl = new URL(href, 'https://github.com').toString()
-      const name = decodeURIComponent(new URL(browserDownloadUrl).pathname.split('/').at(-1) ?? '')
-      if (name) assets.push({ name, size: 0, browser_download_url: browserDownloadUrl })
+function normalizeVersion(value: string): string | null {
+  const version = value.trim().replace(/^v/i, '')
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version : null
+}
+
+function parseVersion(value: string): number[] {
+  const core = value.split('-', 1)[0] ?? value
+  return core.split('.').map((part) => Number(part))
+}
+
+function findUpdateAsset(data: UpdateManifest): UpdateReleaseAsset | null {
+  const key = updateAssetKey(process.platform, process.arch)
+  if (!key) return null
+  return data.assets[key] ?? null
+}
+
+function parseUpdateManifest(value: unknown): UpdateManifest {
+  if (!value || typeof value !== 'object') throw new Error('更新清单格式无效')
+  const manifest = value as Partial<UpdateManifest>
+  if (
+    typeof manifest.version !== 'string'
+    || typeof manifest.releaseUrl !== 'string'
+    || !manifest.assets
+    || typeof manifest.assets !== 'object'
+  ) {
+    throw new Error('更新清单格式无效')
+  }
+  const version = normalizeVersion(manifest.version)
+  if (!version) throw new Error('更新清单版本号无效')
+  const assets: UpdateManifest['assets'] = {}
+  for (const [key, value] of Object.entries(manifest.assets)) {
+    if (!value || typeof value !== 'object') continue
+    const asset = value as Partial<UpdateReleaseAsset>
+    if (typeof asset.name !== 'string' || typeof asset.url !== 'string') continue
+    if (asset.sha256 && !/^[a-f0-9]{64}$/i.test(asset.sha256)) {
+      throw new Error(`更新清单校验值无效：${key}`)
+    }
+    assets[key] = {
+      name: asset.name,
+      size: typeof asset.size === 'number' ? asset.size : 0,
+      url: asset.url,
+      ...(asset.sha256 ? { sha256: asset.sha256.toLowerCase() } : {}),
     }
   }
-  return {
-    status: 200,
-    data: {
-      tag_name: tag,
-      html_url: `${UPDATE_RELEASES_URL}/tag/${tag}`,
-      assets,
-    },
-  }
+  return { version, releaseUrl: manifest.releaseUrl, assets }
 }
 
-function updateAssetNames(platform: NodeJS.Platform, arch: string): string[] {
-  if (platform === 'darwin' && arch === 'arm64') return ['-macos-arm64.dmg', '.dmg']
-  if (platform === 'win32' && arch === 'x64') {
-    return ['-windows-x64.exe', '.exe']
-  }
-  if (platform === 'win32' && arch === 'arm64') {
-    return ['-windows-arm64.exe']
-  }
-  if (platform === 'linux' && arch === 'x64') {
-    return ['-linux-x86_64.AppImage', '-linux-x64.AppImage', '.AppImage']
-  }
-  if (platform === 'linux' && arch === 'arm64') {
-    return ['-linux-arm64.AppImage']
-  }
-  return []
+async function fetchLatestManifest(): Promise<ReleaseFetchResult> {
+  const response = await updateFetch(UPDATE_MANIFEST_URL, {
+    headers: { ...UPDATE_HEADERS, accept: 'application/json', 'cache-control': 'no-cache' },
+    cacheBust: true,
+  })
+  if (response.status === 404) return { status: 404, data: null }
+  if (!response.ok) return { status: response.status, data: null }
+  const data = parseUpdateManifest(await response.json())
+  cachedManifest = data
+  return { status: response.status, data }
 }
 
-function findUpdateAsset(data: ReleaseResponse): ReleaseAssetResponse | null {
-  const suffixes = updateAssetNames(process.platform, process.arch)
-  if (suffixes.length === 0) return null
-  return data.assets?.find((item) => {
-    const name = item.name ?? ''
-    return suffixes.some((suffix) => name.endsWith(suffix)) && Boolean(item.browser_download_url)
-  }) ?? null
-}
-
-function selectUpdateAsset(data: ReleaseResponse): UpdateReleaseAsset | null {
-  const asset = findUpdateAsset(data)
-  if (!asset?.name || !asset.browser_download_url) return null
-  return { name: asset.name, size: asset.size ?? 0 }
-}
-
-async function fetchLatestRelease(): Promise<ReleaseFetchResult> {
-  const response = await updateFetch(UPDATE_API, { headers: await githubApiHeaders() })
-  if (response.ok) {
-    const data = (await response.json()) as ReleaseResponse
-    cachedRelease = data
-    return { status: response.status, data }
-  }
-  if (response.status === 404) return { status: 404, data: {} }
-
-  const fallback = await fetchLatestReleasePage()
-  if (fallback.status === 200) cachedRelease = fallback.data
-  return fallback
-}
-
-/** 简单的 x.y.z 版本比较：latest 是否比 current 新。 */
+/** 比较清单中的版本号，拒绝非标准版本，避免异常响应被当成最新版本。 */
 function isNewer(latest: string, current: string): boolean {
-  const a = latest.split('.').map((part) => parseInt(part, 10) || 0)
-  const b = current.split('.').map((part) => parseInt(part, 10) || 0)
+  const normalizedLatest = normalizeVersion(latest)
+  const normalizedCurrent = normalizeVersion(current)
+  if (!normalizedLatest || !normalizedCurrent) return false
+  const a = parseVersion(normalizedLatest)
+  const b = parseVersion(normalizedCurrent)
   for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
     const delta = (a[i] ?? 0) - (b[i] ?? 0)
     if (delta !== 0) return delta > 0
@@ -191,15 +163,15 @@ export function registerSystemIpc(): void {
 
   ipcMain.handle('app:check-update', async (): Promise<UpdateCheckResult> => {
     try {
-      const { status, data } = await fetchLatestRelease()
+      const { status, data } = await fetchLatestManifest()
       // 仓库尚未发布任何 Release 时 GitHub 返回 404
       if (status === 404) return { status: 'none' }
-      if (status !== 200) return { status: 'error', message: `GitHub ${status}` }
-      const latest = (data.tag_name ?? '').replace(/^v/, '')
-      if (!latest) return { status: 'none' }
-      const url = data.html_url ?? `https://github.com/${UPDATE_REPO}/releases`
+      if (status !== 200 || !data) return { status: 'error', message: `更新清单请求失败：${status}` }
+      const latest = normalizeVersion(data.version)
+      if (!latest) return { status: 'error', message: '更新清单版本号无效' }
+      const url = data.releaseUrl
       if (isNewer(latest, app.getVersion())) {
-        return { status: 'update', latest, url, asset: selectUpdateAsset(data) }
+        return { status: 'update', latest, url, asset: findUpdateAsset(data) }
       }
       return { status: 'latest', latest, url }
     } catch (error) {
@@ -215,21 +187,23 @@ export function registerSystemIpc(): void {
 
       let temporaryPath = ''
       try {
-        let data = cachedRelease
-        if ((data?.tag_name ?? '').replace(/^v/, '') !== latest) {
-          const result = await fetchLatestRelease()
-          if (result.status !== 200) throw new Error(`GitHub ${result.status}`)
+        let data = cachedManifest
+        if (normalizeVersion(data?.version ?? '') !== normalizeVersion(latest)) {
+          const result = await fetchLatestManifest()
+          if (result.status !== 200 || !result.data) {
+            throw new Error(`更新清单请求失败：${result.status}`)
+          }
           data = result.data
         }
         if (!data) throw new Error('无法读取发布信息')
-        const releaseVersion = (data.tag_name ?? '').replace(/^v/, '')
+        const releaseVersion = normalizeVersion(data.version)
         if (releaseVersion !== latest) throw new Error('发布版本已变化，请重新检查更新')
         const asset = findUpdateAsset(data)
-        if (!asset?.name || !asset.browser_download_url) {
+        if (!asset?.name || !asset.url) {
           throw new Error('当前系统暂无可用安装包')
         }
 
-        const responseAsset = await updateFetch(asset.browser_download_url, {
+        const responseAsset = await updateFetch(asset.url, {
           timeoutMs: 30 * 60_000,
         })
         if (!responseAsset.ok || !responseAsset.body) throw new Error(`下载失败：${responseAsset.status}`)
@@ -241,9 +215,11 @@ export function registerSystemIpc(): void {
         const total = Number(responseAsset.headers.get('content-length')) || asset.size || 0
         let transferred = 0
         let lastPercent = -1
+        const hash = createHash('sha256')
         try {
           for await (const chunk of responseAsset.body as AsyncIterable<Uint8Array>) {
             await file.write(chunk)
+            hash.update(chunk)
             transferred += chunk.byteLength
             const percent = total > 0
               ? Math.min(99, Math.round((transferred / total) * 100))
@@ -260,6 +236,9 @@ export function registerSystemIpc(): void {
           }
         } finally {
           await file.close()
+        }
+        if (asset.sha256 && hash.digest('hex') !== asset.sha256) {
+          throw new Error('下载文件校验失败，请重新检查更新')
         }
         await fs.rm(filePath, { force: true })
         await fs.rename(temporaryPath, filePath)

@@ -407,12 +407,22 @@ export interface AppInfo {
   arch: string
 }
 
-/** 检查更新的结果：有新版本 / 已是最新 / 尚无发布 / 出错。 */
+/** Release 中单个平台安装包的更新信息。 */
 export interface UpdateReleaseAsset {
   name: string
   size: number
+  url: string
+  sha256?: string
 }
 
+/** GitHub Release 附件中的版本更新清单。 */
+export interface UpdateManifest {
+  version: string
+  releaseUrl: string
+  assets: Record<string, UpdateReleaseAsset>
+}
+
+/** 检查更新的结果：有新版本 / 已是最新 / 尚无发布 / 出错。 */
 export type UpdateCheckResult =
   | { status: 'update'; latest: string; url: string; asset: UpdateReleaseAsset | null }
   | { status: 'latest'; latest: string; url: string }
