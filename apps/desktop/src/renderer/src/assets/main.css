@@ -100,10 +100,7 @@
   }
   .content-surface {
     @apply border-l bg-background;
-    border-left-color: rgb(0 0 0 / 0.18);
-  }
-  .dark .content-surface {
-    border-left-color: rgb(255 255 255 / 0.16);
+    border-left-color: var(--border);
   }
 
   /* Codex-style sidebar selection: a quiet flat gray pill, one step

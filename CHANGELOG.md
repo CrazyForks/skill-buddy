@@ -2,6 +2,32 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.5 - 2026-08-24
+
+### Added
+
+- Added keyboard recording for the global wake shortcut.
+- Added confirmation dialogs before deleting project scopes.
+
+### Fixed
+
+- Softened the sidebar divider color.
+- Removed raw market timeout errors from the interface.
+- Improved Windows Skills detail loading with Markdown fallback rendering.
+
+---
+
+### 新增
+
+- 全局唤起快捷键支持直接按键录入。
+- 删除项目范围前增加确认弹窗。
+
+### 修复
+
+- 调淡侧边栏与内容区之间的分隔线。
+- 不再在界面显示市场请求超时等底层错误。
+- 增强 Windows Skills 详情页加载，并在 Markdown 预览失败时回退显示原文。
+
 ## 0.1.4 - 2026-08-23
 
 ### Added
