@@ -751,6 +751,8 @@ export default {
     syncTargets: 'The following installations will be overwritten:',
     syncToOthers: 'Sync to {n} installation(s)',
     installTo: 'Install to other platforms',
+    selectAllTargets: 'Select all',
+    selectGlobalTargets: 'Select global',
     userScope: 'Global',
     projectScope: 'Project: {root}',
     scopeUser: 'user',

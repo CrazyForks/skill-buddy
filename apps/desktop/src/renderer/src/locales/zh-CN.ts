@@ -751,6 +751,8 @@ export default {
     syncTargets: '将覆盖以下安装位置：',
     syncToOthers: '同步到 {n} 个安装位置',
     installTo: '安装到其他平台',
+    selectAllTargets: '全选',
+    selectGlobalTargets: '选择全局',
     userScope: '全局',
     projectScope: '项目：{root}',
     scopeUser: '全局',

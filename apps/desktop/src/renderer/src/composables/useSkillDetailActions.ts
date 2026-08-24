@@ -211,6 +211,7 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
       actionError.value = null
       basePath.value = null
     },
+    { immediate: true },
   )
 
   return {

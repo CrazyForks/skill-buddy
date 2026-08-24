@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown } from '@lucide/vue'
+import { ChevronDown, Globe2, ListChecks } from '@lucide/vue'
 import type { PlatformStatus } from '@skillbuddy/core'
 import type { InstallTarget } from '#shared/ipc'
 import PlatformIcon from '@/components/PlatformIcon.vue'
@@ -13,6 +13,8 @@ import { pathBasename } from '@/lib/paths'
 
 const props = defineProps<{
   label?: string
+  /** 在标题右侧显示批量选择快捷操作。 */
+  quickActions?: boolean
   /** 禁用不可选的目标（如导入来源自身）。 */
   excluded?: InstallTarget[]
   /** 自定义禁用目标的提示文案，默认「已安装」。 */
@@ -147,11 +149,47 @@ function toggleGroup(group: TargetGroup): void {
 function selectedCount(group: TargetGroup): number {
   return group.options.filter(checked).length
 }
+
+const selectableOptions = computed(() =>
+  groups.value.flatMap((group) => group.options).filter((option) => !option.excluded),
+)
+
+function selectAllTargets(): void {
+  model.value = selectableOptions.value.map((option) => option.target)
+}
+
+function selectGlobalTargets(): void {
+  model.value = selectableOptions.value
+    .filter((option) => option.target.scope === 'user')
+    .map((option) => option.target)
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-2">
-    <span v-if="label" class="text-sm font-medium">{{ label }}</span>
+    <div v-if="label" class="flex items-center justify-between gap-3">
+      <span class="text-sm font-medium">{{ label }}</span>
+      <div v-if="props.quickActions" class="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          :title="t('detail.selectAllTargets')"
+          @click="selectAllTargets"
+        >
+          <ListChecks class="size-3.5" aria-hidden="true" />
+          {{ t('detail.selectAllTargets') }}
+        </button>
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          :title="t('detail.selectGlobalTargets')"
+          @click="selectGlobalTargets"
+        >
+          <Globe2 class="size-3.5" aria-hidden="true" />
+          {{ t('detail.selectGlobalTargets') }}
+        </button>
+      </div>
+    </div>
     <ScrollArea class="max-h-72 rounded-md border" viewport-class="max-h-72 pr-2">
       <section v-for="group in groups" :key="group.key" class="border-b last:border-b-0">
         <button

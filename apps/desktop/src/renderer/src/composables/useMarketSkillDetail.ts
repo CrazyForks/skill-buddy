@@ -33,7 +33,7 @@ interface UseMarketSkillDetailOptions {
 }
 
 export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
-  const { installSkill, detectedPlatforms } = useSkills()
+  const { installSkill } = useSkills()
   const { groups, marketSkillSources } = useSettings()
   const { t } = useI18n()
   const item = computed(() => toValue(options.item))
@@ -213,10 +213,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
   }
 
   onMounted(() => {
-    targets.value = detectedPlatforms.value.map((platform) => ({
-      agent: platform.id,
-      scope: 'user',
-    }))
+    targets.value = []
     void loadSource()
   })
 
@@ -224,6 +221,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
     () => item.value.key,
     () => {
       installRequestId += 1
+      targets.value = []
       busy.value = false
       selectedGroups.value = new Set()
       error.value = null

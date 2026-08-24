@@ -31,7 +31,11 @@ const targetsModel = computed({
 
 <template>
   <section class="flex flex-col gap-2 py-4">
-    <PlatformTargetPicker v-model="targetsModel" :label="t('team.installTo')" />
+    <PlatformTargetPicker
+      v-model="targetsModel"
+      :label="t('team.installTo')"
+      quick-actions
+    />
     <p v-if="props.error" class="break-all text-sm text-destructive">{{ props.error }}</p>
     <Button
       class="mt-1 w-fit cursor-pointer"

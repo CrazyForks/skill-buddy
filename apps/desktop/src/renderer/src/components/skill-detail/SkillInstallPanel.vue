@@ -20,6 +20,7 @@ const { t } = useI18n()
     <PlatformTargetPicker
       v-model="targetsModel"
       :label="t('detail.installTo')"
+      quick-actions
       :excluded="props.installedTargets"
     />
     <Button
