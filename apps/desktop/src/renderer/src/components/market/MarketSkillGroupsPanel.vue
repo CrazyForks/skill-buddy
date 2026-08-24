@@ -28,7 +28,7 @@ const initialSkillSources = computed<Record<string, MarketSkillSource>>(() =>
 </script>
 
 <template>
-  <section class="flex flex-col gap-3 rounded-xl border px-5 py-4">
+  <section class="flex flex-col gap-3 py-4 rounded-xl border px-5">
     <div class="flex items-center justify-between gap-3">
       <h3 class="text-sm font-medium">{{ t('market.addToGroups') }}</h3>
       <button

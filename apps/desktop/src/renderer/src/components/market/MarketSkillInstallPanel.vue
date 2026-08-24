@@ -1,3 +1,10 @@
+<!--
+ * @Author: wjc
+ * @Date: 2026-08-24 11:49:54
+ * @LastEditors: wjc
+ * @LastEditTime: 2026-08-24 17:40:24
+ * @Description: 
+-->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -23,7 +30,7 @@ const targetsModel = computed({
 </script>
 
 <template>
-  <section class="flex flex-col gap-2 rounded-xl border bg-muted/20 px-5 py-4">
+  <section class="flex flex-col gap-2 py-4">
     <PlatformTargetPicker v-model="targetsModel" :label="t('team.installTo')" />
     <p v-if="props.error" class="break-all text-sm text-destructive">{{ props.error }}</p>
     <Button
