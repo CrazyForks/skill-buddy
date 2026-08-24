@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FolderPlus, Trash2 } from '@lucide/vue'
+import {
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from 'reka-ui'
 import CopyButton from '@/components/CopyButton.vue'
 import { Button } from '@/components/ui/button'
 
@@ -16,12 +24,27 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const pendingRemoval = shallowRef<string | null>(null)
 const visibleRoots = computed(() => {
   const query = props.query.trim().toLowerCase()
   return query
     ? props.roots.filter((root) => root.toLowerCase().includes(query))
     : props.roots
 })
+
+function requestRemove(root: string): void {
+  pendingRemoval.value = root
+}
+
+function closeRemoveDialog(): void {
+  pendingRemoval.value = null
+}
+
+function confirmRemove(): void {
+  if (!pendingRemoval.value) return
+  emit('remove', pendingRemoval.value)
+  closeRemoveDialog()
+}
 </script>
 
 <template>
@@ -53,12 +76,50 @@ const visibleRoots = computed(() => {
             variant="ghost"
             size="icon"
             class="size-7 cursor-pointer text-muted-foreground"
-            @click="emit('remove', root)"
+            :title="t('common.delete')"
+            :aria-label="t('common.delete')"
+            @click="requestRemove(root)"
           >
             <Trash2 class="size-3.5" />
           </Button>
         </span>
       </div>
     </div>
+    <DialogRoot
+      :open="Boolean(pendingRemoval)"
+      @update:open="(open) => !open && closeRemoveDialog()"
+    >
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-40 bg-black/40" />
+        <DialogContent
+          class="fixed left-1/2 top-1/2 z-50 w-[380px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-background p-5 shadow-xl outline-none"
+        >
+          <DialogTitle class="text-base font-semibold">
+            {{ t('app.removeScopeTitle') }}
+          </DialogTitle>
+          <DialogDescription class="mt-2 break-all text-sm leading-6 text-muted-foreground">
+            {{ t('app.removeScopeConfirm', { root: pendingRemoval }) }}
+          </DialogDescription>
+          <div class="mt-5 flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="cursor-pointer"
+              @click="closeRemoveDialog"
+            >
+              {{ t('common.cancel') }}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              class="cursor-pointer"
+              @click="confirmRemove"
+            >
+              {{ t('app.removeScopeAction') }}
+            </Button>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </section>
 </template>

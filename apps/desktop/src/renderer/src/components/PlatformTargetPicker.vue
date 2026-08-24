@@ -154,14 +154,41 @@ const selectableOptions = computed(() =>
   groups.value.flatMap((group) => group.options).filter((option) => !option.excluded),
 )
 
-function selectAllTargets(): void {
-  model.value = selectableOptions.value.map((option) => option.target)
+const globalOptions = computed(() =>
+  selectableOptions.value.filter((option) => option.target.scope === 'user'),
+)
+
+function areOptionsSelected(options: TargetOption[]): boolean {
+  return options.length > 0 && options.every((option) => checked(option))
 }
 
-function selectGlobalTargets(): void {
-  model.value = selectableOptions.value
-    .filter((option) => option.target.scope === 'user')
-    .map((option) => option.target)
+const allTargetsSelected = computed(() => areOptionsSelected(selectableOptions.value))
+const globalTargetsSelected = computed(() => areOptionsSelected(globalOptions.value))
+
+function toggleOptions(options: TargetOption[]): void {
+  if (options.length === 0) return
+
+  const optionKeys = new Set(options.map((option) => option.key))
+  if (areOptionsSelected(options)) {
+    model.value = model.value.filter((target) => !optionKeys.has(targetKey(target)))
+    return
+  }
+
+  const selectedKeys = new Set(model.value.map((target) => targetKey(target)))
+  model.value = [
+    ...model.value,
+    ...options
+      .filter((option) => !selectedKeys.has(option.key))
+      .map((option) => option.target),
+  ]
+}
+
+function toggleAllTargets(): void {
+  toggleOptions(selectableOptions.value)
+}
+
+function toggleGlobalTargets(): void {
+  toggleOptions(globalOptions.value)
 }
 </script>
 
@@ -172,18 +199,28 @@ function selectGlobalTargets(): void {
       <div v-if="props.quickActions" class="flex shrink-0 items-center gap-1">
         <button
           type="button"
-          class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          :class="[
+            'inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
+            allTargetsSelected && 'bg-accent text-foreground',
+          ]"
           :title="t('detail.selectAllTargets')"
-          @click="selectAllTargets"
+          :aria-pressed="allTargetsSelected"
+          :disabled="selectableOptions.length === 0"
+          @click="toggleAllTargets"
         >
           <ListChecks class="size-3.5" aria-hidden="true" />
           {{ t('detail.selectAllTargets') }}
         </button>
         <button
           type="button"
-          class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          :class="[
+            'inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
+            globalTargetsSelected && 'bg-accent text-foreground',
+          ]"
           :title="t('detail.selectGlobalTargets')"
-          @click="selectGlobalTargets"
+          :aria-pressed="globalTargetsSelected"
+          :disabled="globalOptions.length === 0"
+          @click="toggleGlobalTargets"
         >
           <Globe2 class="size-3.5" aria-hidden="true" />
           {{ t('detail.selectGlobalTargets') }}

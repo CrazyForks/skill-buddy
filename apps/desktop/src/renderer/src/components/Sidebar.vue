@@ -123,6 +123,16 @@ async function addProjectRoot(): Promise<void> {
   projectRoots.value = [...projectRoots.value, dir]
   await refresh()
 }
+
+/** 从侧边栏移除项目作用域，并刷新当前技能扫描结果。 */
+async function removeProjectRoot(root: string): Promise<void> {
+  projectRoots.value = projectRoots.value.filter((item) => item !== root)
+  if (projectFilter.value === root) {
+    projectFilter.value = null
+    platformFilter.value = null
+  }
+  await refresh()
+}
 </script>
 
 <template>
@@ -188,6 +198,7 @@ async function addProjectRoot(): Promise<void> {
             :platform-filter="platformFilter"
             :skills-view="props.view === 'skills'"
             @add="addProjectRoot"
+            @remove="removeProjectRoot"
             @select-project="filterProject"
             @select-platform="filterProjectPlatform"
           />

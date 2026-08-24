@@ -1,8 +1,22 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, FolderOpen, Plus } from '@lucide/vue'
+import { ChevronRight, FolderOpen, Plus, Trash2 } from '@lucide/vue'
+import {
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuPortal,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from 'reka-ui'
 import PlatformIcon from '@/components/PlatformIcon.vue'
+import { Button } from '@/components/ui/button'
 import type { ProjectPlatformCount } from '@/composables/useSkills'
 import { pathBasename } from '@/lib/paths'
 
@@ -16,15 +30,31 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   add: []
+  remove: [root: string]
   selectProject: [root: string]
   selectPlatform: [root: string, id: string]
 }>()
 
 const { t } = useI18n()
 const expanded = shallowRef(true)
+const pendingRemoval = shallowRef<string | null>(null)
 const expandedProjectRoot = computed(() =>
   props.projectFilter && props.projectFilter !== 'user' ? props.projectFilter : null,
 )
+
+function requestRemove(root: string): void {
+  pendingRemoval.value = root
+}
+
+function closeRemoveDialog(): void {
+  pendingRemoval.value = null
+}
+
+function confirmRemove(): void {
+  if (!pendingRemoval.value) return
+  emit('remove', pendingRemoval.value)
+  closeRemoveDialog()
+}
 </script>
 
 <template>
@@ -70,35 +100,52 @@ const expandedProjectRoot = computed(() =>
     >
       <div class="min-h-0 overflow-hidden">
         <template v-for="root in props.projectRoots" :key="root">
-          <button
-            type="button"
-            :class="[
-              'flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors',
-              props.skillsView &&
-              props.projectFilter === root &&
-              props.platformFilter === null
-                ? 'nav-active'
-                : 'hover:bg-accent/60',
-            ]"
-            :title="root"
-            :aria-expanded="expandedProjectRoot === root"
-            @click="emit('selectProject', root)"
-          >
-            <span class="flex min-w-0 items-center gap-1.5">
-              <ChevronRight
+          <ContextMenuRoot>
+            <ContextMenuTrigger as-child>
+              <button
+                type="button"
                 :class="[
-                  'size-3 shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none',
-                  expandedProjectRoot === root && 'rotate-90',
+                  'flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors',
+                  props.skillsView &&
+                  props.projectFilter === root &&
+                  props.platformFilter === null
+                    ? 'nav-active'
+                    : 'hover:bg-accent/60',
                 ]"
-                aria-hidden="true"
-              />
-              <FolderOpen class="size-3.5 shrink-0 text-foreground/60" />
-              <span class="truncate">{{ pathBasename(root) }}</span>
-            </span>
-            <span class="text-sm tabular-nums text-muted-foreground">
-              {{ props.countByProject.get(root) ?? 0 }}
-            </span>
-          </button>
+                :title="root"
+                :aria-expanded="expandedProjectRoot === root"
+                @click="emit('selectProject', root)"
+              >
+                <span class="flex min-w-0 items-center gap-1.5">
+                  <ChevronRight
+                    :class="[
+                      'size-3 shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none',
+                      expandedProjectRoot === root && 'rotate-90',
+                    ]"
+                    aria-hidden="true"
+                  />
+                  <FolderOpen class="size-3.5 shrink-0 text-foreground/60" />
+                  <span class="truncate">{{ pathBasename(root) }}</span>
+                </span>
+                <span class="text-sm tabular-nums text-muted-foreground">
+                  {{ props.countByProject.get(root) ?? 0 }}
+                </span>
+              </button>
+            </ContextMenuTrigger>
+            <ContextMenuPortal>
+              <ContextMenuContent
+                class="z-50 min-w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none"
+              >
+                <ContextMenuItem
+                  class="flex cursor-pointer select-none items-center gap-2 rounded-[5px] px-2.5 py-2 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
+                  @select="requestRemove(root)"
+                >
+                  <Trash2 class="size-4" />
+                  {{ t('common.delete') }}
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenuPortal>
+          </ContextMenuRoot>
           <div
             :class="[
               'grid transition-[grid-template-rows,opacity] motion-reduce:transition-none',
@@ -137,5 +184,41 @@ const expandedProjectRoot = computed(() =>
         </template>
       </div>
     </div>
+    <DialogRoot
+      :open="Boolean(pendingRemoval)"
+      @update:open="(open) => !open && closeRemoveDialog()"
+    >
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-40 bg-black/40" />
+        <DialogContent
+          class="fixed left-1/2 top-1/2 z-50 w-[380px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-background p-5 shadow-xl outline-none"
+        >
+          <DialogTitle class="text-base font-semibold">
+            {{ t('app.removeScopeTitle') }}
+          </DialogTitle>
+          <DialogDescription class="mt-2 break-all text-sm leading-6 text-muted-foreground">
+            {{ t('app.removeScopeConfirm', { root: pendingRemoval }) }}
+          </DialogDescription>
+          <div class="mt-5 flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="cursor-pointer"
+              @click="closeRemoveDialog"
+            >
+              {{ t('common.cancel') }}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              class="cursor-pointer"
+              @click="confirmRemove"
+            >
+              {{ t('app.removeScopeAction') }}
+            </Button>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </section>
 </template>
