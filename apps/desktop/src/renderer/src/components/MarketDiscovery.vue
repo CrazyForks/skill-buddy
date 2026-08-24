@@ -20,7 +20,6 @@ const {
   items,
   loading,
   loadingMore,
-  error,
   hasMore,
   setSource,
   setQuery,
@@ -38,8 +37,6 @@ const {
       @update:query="setQuery"
       @search="search"
     />
-
-    <p v-if="error" class="mb-2 break-all text-sm text-destructive">{{ error }}</p>
 
     <MarketSkillGrid
       :items="items"

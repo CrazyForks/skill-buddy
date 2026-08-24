@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, shallowRef, watch } from 'vue'
 import type { AggregatedSkill } from '@skillbuddy/core'
+import SkillDetailPage from '@/components/SkillDetailPage.vue'
 import { useSkills } from '@/composables/useSkills'
 import type { SkillBundle } from '@/lib/bundles'
 import type { MarketItem } from '@/lib/market'
@@ -15,7 +16,6 @@ const BundleDetailPage = defineAsyncComponent(() => import('@/components/BundleD
 const BundlesPage = defineAsyncComponent(() => import('@/components/BundlesPage.vue'))
 const MarketDetailPage = defineAsyncComponent(() => import('@/components/MarketDetailPage.vue'))
 const NewSkillPage = defineAsyncComponent(() => import('@/components/NewSkillPage.vue'))
-const SkillDetailPage = defineAsyncComponent(() => import('@/components/SkillDetailPage.vue'))
 const DashboardView = defineAsyncComponent(() => import('@/views/DashboardView.vue'))
 const GroupsView = defineAsyncComponent(() => import('@/views/GroupsView.vue'))
 const SkillsView = defineAsyncComponent(() => import('@/views/SkillsView.vue'))

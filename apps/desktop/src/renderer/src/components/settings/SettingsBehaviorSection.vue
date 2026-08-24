@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -18,6 +19,99 @@ const launchAtLogin = defineModel<boolean>('launchAtLogin', { required: true })
 const launchHidden = defineModel<boolean>('launchHidden', { required: true })
 const globalShortcut = defineModel<string>('globalShortcut', { required: true })
 const { t } = useI18n()
+const recordingShortcut = shallowRef(false)
+let shortcutCaptured = false
+
+const shortcutKeyAliases: Record<string, string> = {
+  ' ': 'Space',
+  Esc: 'Escape',
+  Escape: 'Escape',
+  Enter: 'Enter',
+  Tab: 'Tab',
+  Backspace: 'Backspace',
+  Delete: 'Delete',
+  Insert: 'Insert',
+  Home: 'Home',
+  End: 'End',
+  PageUp: 'PageUp',
+  PageDown: 'PageDown',
+  ArrowUp: 'Up',
+  ArrowDown: 'Down',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
+  CapsLock: 'Capslock',
+  NumLock: 'Numlock',
+  ScrollLock: 'Scrolllock',
+  PrintScreen: 'PrintScreen',
+  ContextMenu: 'Menu',
+  '!': '1',
+  '@': '2',
+  '#': '3',
+  $: '4',
+  '%': '5',
+  '^': '6',
+  '&': '7',
+  '*': '8',
+  '(': '9',
+  ')': '0',
+  _: '-',
+  '+': 'Plus',
+  '{': '[',
+  '}': ']',
+  '|': '\\',
+  ':': ';',
+  '"': "'",
+  '<': ',',
+  '>': '.',
+  '?': '/',
+}
+
+function normalizeShortcutKey(event: KeyboardEvent): string | null {
+  const alias = shortcutKeyAliases[event.key]
+  if (alias !== undefined) return alias
+  if (/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(event.key)) return event.key
+  if (event.key.length === 1) return event.key === '+' ? 'Plus' : event.key.toUpperCase()
+  return null
+}
+
+function onShortcutKeydown(event: KeyboardEvent): void {
+  event.preventDefault()
+  event.stopPropagation()
+  const input = event.currentTarget as HTMLInputElement
+  if (['Escape', 'Backspace', 'Delete'].includes(event.key)) {
+    shortcutCaptured = true
+    globalShortcut.value = ''
+    input.blur()
+    return
+  }
+
+  const key = normalizeShortcutKey(event)
+  if (!key) return
+
+  const modifiers: string[] = []
+  if (event.metaKey || event.ctrlKey) modifiers.push('CommandOrControl')
+  if (event.altKey) modifiers.push('Alt')
+  if (event.shiftKey) modifiers.push('Shift')
+  if (modifiers.length === 0) return
+
+  const accelerator = [...modifiers, key].join('+')
+  const unchanged = accelerator === globalShortcut.value
+  shortcutCaptured = true
+  globalShortcut.value = accelerator
+  if (unchanged) void window.skillsManager?.setGlobalShortcut(accelerator)
+  input.blur()
+}
+
+function startShortcutRecording(): void {
+  recordingShortcut.value = true
+  shortcutCaptured = false
+  void window.skillsManager?.setGlobalShortcut('')
+}
+
+function stopShortcutRecording(): void {
+  recordingShortcut.value = false
+  if (!shortcutCaptured) void window.skillsManager?.setGlobalShortcut(globalShortcut.value)
+}
 
 function visible(...texts: string[]): boolean {
   const query = props.query.trim().toLowerCase()
@@ -122,8 +216,15 @@ function visible(...texts: string[]): boolean {
         </div>
         <Input
           v-model="globalShortcut"
-          class="w-64 shrink-0 font-mono text-sm"
-          :placeholder="t('settings.shortcutPh')"
+          :class="[
+            'w-64 shrink-0 cursor-pointer font-mono text-sm',
+            recordingShortcut && 'ring-1 ring-ring',
+          ]"
+          :placeholder="t(recordingShortcut ? 'settings.shortcutRecording' : 'settings.shortcutPh')"
+          readonly
+          @focus="startShortcutRecording"
+          @blur="stopShortcutRecording"
+          @keydown="onShortcutKeydown"
         />
       </div>
     </div>

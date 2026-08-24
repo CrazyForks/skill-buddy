@@ -77,7 +77,6 @@ export function useSkillMarketDiscovery() {
   const items = shallowRef<MarketItem[]>(cachedCatalog?.items ?? [])
   const loading = shallowRef(false)
   const loadingMore = shallowRef(false)
-  const error = shallowRef<string | null>(null)
   const hasMore = shallowRef(cachedCatalog?.hasMore ?? false)
 
   /** skills.sh 不提供分页，保留完整结果并在渲染层分批追加。 */
@@ -128,7 +127,6 @@ export function useSkillMarketDiscovery() {
     activeQuery = requestedQuery
     loading.value = true
     loadingMore.value = false
-    error.value = null
     items.value = []
     hasMore.value = false
     try {
@@ -178,9 +176,8 @@ export function useSkillMarketDiscovery() {
       items.value = mapGithub(result.items)
       hasMore.value = items.value.length < githubTotal
       cacheCatalog()
-    } catch (cause) {
-      if (requestId !== searchRequestId) return
-      error.value = cause instanceof Error ? cause.message : String(cause)
+    } catch {
+      /** 市场搜索失败时静默保留空状态，不向界面暴露 IPC 或网络错误原文。 */
     } finally {
       if (requestId === searchRequestId) loading.value = false
     }
@@ -237,9 +234,8 @@ export function useSkillMarketDiscovery() {
       ]
       hasMore.value = result.items.length > 0 && items.value.length < githubTotal
       cacheCatalog()
-    } catch (cause) {
-      if (requestId !== searchRequestId) return
-      error.value = cause instanceof Error ? cause.message : String(cause)
+    } catch {
+      /** 分页失败不影响当前已加载的市场内容。 */
     } finally {
       if (requestId === searchRequestId) loadingMore.value = false
     }
@@ -265,7 +261,6 @@ export function useSkillMarketDiscovery() {
     items,
     loading,
     loadingMore,
-    error,
     hasMore,
     setSource,
     setQuery,
