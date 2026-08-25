@@ -79,6 +79,7 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "start": "electron-vite preview",
     "dist:mac:arm64": "pnpm build && electron-builder --mac --arm64 --publish never",
+    "dist:mac:x64": "pnpm build && electron-builder --mac --x64 --publish never",
     "dist:win:x64": "pnpm build && electron-builder --win --x64 --publish never",
     "dist:win:arm64": "pnpm build && electron-builder --win --arm64 --publish never",
     "dist:linux:x64": "pnpm build && electron-builder --linux --x64 --publish never",

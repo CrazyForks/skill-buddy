@@ -23,6 +23,13 @@ jobs:
             path: |
               apps/desktop/dist/*.dmg
               apps/desktop/dist/*.zip
+          - name: macOS x64
+            os: macos-14
+            command: dist:mac:x64
+            artifact: skillbuddy-macos-x64
+            path: |
+              apps/desktop/dist/*.dmg
+              apps/desktop/dist/*.zip
           - name: Windows x64
             os: windows-latest
             command: dist:win:x64
@@ -129,6 +136,7 @@ jobs:
           )
           const patterns = {
             'darwin-arm64': /-macos-arm64\.dmg$/,
+            'darwin-x64': /-macos-x64\.dmg$/,
             'win32-x64': /-windows-x64\.exe$/,
             'win32-arm64': /-windows-arm64\.exe$/,
             'linux-x64': /-linux-x86_64\.AppImage$/,

@@ -2,6 +2,18 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added Intel macOS (`x64`) desktop builds, release assets, and architecture-aware in-app updates.
+
+---
+
+### 新增
+
+- 增加 Intel macOS（`x64`）桌面构建、发布安装包及按架构匹配的应用内更新。
+
 ## 0.1.5 - 2026-08-24
 
 ### Added
