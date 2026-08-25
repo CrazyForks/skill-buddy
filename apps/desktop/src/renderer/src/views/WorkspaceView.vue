@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, shallowRef, watch } from 'vue'
 import type { AggregatedSkill } from '@skillbuddy/core'
 import SkillDetailPage from '@/components/SkillDetailPage.vue'
 import { useSkills } from '@/composables/useSkills'
@@ -53,6 +53,20 @@ const bundlesOpen = shallowRef(false)
 const bundleSelected = shallowRef<SkillBundle | null>(null)
 const newOpen = shallowRef(false)
 const conversationSkill = shallowRef<AggregatedSkill | null>(null)
+
+/**
+ * 是否有临时页覆盖主视图。
+ * 主视图用 v-show 隐藏而非卸载，保证 KeepAlive 缓存在打开详情页期间不被销毁。
+ */
+const overlayOpen = computed(
+  () =>
+    Boolean(selected.value) ||
+    Boolean(marketSelected.value) ||
+    attentionOpen.value ||
+    Boolean(bundleSelected.value) ||
+    bundlesOpen.value ||
+    newOpen.value,
+)
 
 function closeDetails(): void {
   selected.value = null
@@ -175,37 +189,41 @@ watch(skills, (value) => {
       :skill="conversationSkill ?? undefined"
       @close="closeConversation"
     />
-    <DashboardView
-      v-else-if="props.view === 'dashboard'"
-      :inset="props.inset"
-      @open-market="marketSelected = $event"
-      @open-attention="attentionOpen = true"
-      @open-drift="openDriftSkills"
-      @new-skill="openConversation()"
-      @import-skills="emit('importSkills')"
-    />
-    <TeamView
-      v-else-if="props.view === 'team'"
-      :inset="props.inset"
-      @open-settings="emit('openSettings', $event)"
-    />
-    <McpServersView
-      v-else-if="props.view === 'mcp'"
-      :inset="props.inset"
-    />
-    <GroupsView
-      v-else-if="props.view === 'groups'"
-      :inset="props.inset"
-      @navigate="emit('navigate', $event)"
-    />
-    <SkillsView
-      v-else
-      :inset="props.inset"
-      @open-skill="openSkill"
-      @edit-skill="openSkill($event, null, 'edit')"
-      @new-skill="openConversation()"
-      @import-skills="emit('importSkills')"
-      @navigate="emit('navigate', $event)"
-    />
+    <div v-show="!overlayOpen" class="flex min-h-0 flex-1 flex-col">
+      <TeamView
+        v-if="props.view === 'team'"
+        :inset="props.inset"
+        @open-settings="emit('openSettings', $event)"
+      />
+      <GroupsView
+        v-else-if="props.view === 'groups'"
+        :inset="props.inset"
+        @navigate="emit('navigate', $event)"
+      />
+      <KeepAlive v-else :max="3">
+        <DashboardView
+          v-if="props.view === 'dashboard'"
+          :inset="props.inset"
+          @open-market="marketSelected = $event"
+          @open-attention="attentionOpen = true"
+          @open-drift="openDriftSkills"
+          @new-skill="openConversation()"
+          @import-skills="emit('importSkills')"
+        />
+        <McpServersView
+          v-else-if="props.view === 'mcp'"
+          :inset="props.inset"
+        />
+        <SkillsView
+          v-else
+          :inset="props.inset"
+          @open-skill="openSkill"
+          @edit-skill="openSkill($event, null, 'edit')"
+          @new-skill="openConversation()"
+          @import-skills="emit('importSkills')"
+          @navigate="emit('navigate', $event)"
+        />
+      </KeepAlive>
+    </div>
   </main>
 </template>

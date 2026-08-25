@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, shallowRef, watch } from 'vue'
+import { computed, onActivated, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus, RefreshCw, Search, ServerCog, Store, TriangleAlert } from '@lucide/vue'
 import type { McpInstallation, McpServerDefinition, McpTarget } from '@skillbuddy/core'
@@ -31,6 +31,7 @@ const {
   error,
   search,
   currentPlan,
+  lastCheckedAt,
   refresh,
   planUpsert,
   planSync,
@@ -76,7 +77,14 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => void refresh())
+/** 本视图被 KeepAlive 缓存，扫描结果过期时才在激活时重新扫描。 */
+const RESCAN_INTERVAL_MS = 60_000
+
+onActivated(() => {
+  const checkedAt = lastCheckedAt.value
+  if (checkedAt !== null && Date.now() - checkedAt < RESCAN_INTERVAL_MS) return
+  void refresh()
+})
 
 function openSync(installation: McpInstallation): void {
   syncSource.value = installation
