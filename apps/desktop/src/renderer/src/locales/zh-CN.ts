@@ -756,6 +756,7 @@ export default {
     installTo: '安装到其他平台',
     selectAllTargets: '全选',
     selectGlobalTargets: '选择全局',
+    selectProjectTargets: '选择项目',
     userScope: '全局',
     projectScope: '项目：{root}',
     scopeUser: '全局',

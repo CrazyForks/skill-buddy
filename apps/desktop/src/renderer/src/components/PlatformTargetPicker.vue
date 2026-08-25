@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, Globe2, ListChecks } from '@lucide/vue'
+import { ChevronDown, FolderGit2, Globe2, ListChecks } from '@lucide/vue'
 import type { PlatformStatus } from '@skillbuddy/core'
 import type { InstallTarget } from '#shared/ipc'
 import PlatformIcon from '@/components/PlatformIcon.vue'
@@ -157,6 +157,9 @@ const selectableOptions = computed(() =>
 const globalOptions = computed(() =>
   selectableOptions.value.filter((option) => option.target.scope === 'user'),
 )
+const projectOptions = computed(() =>
+  selectableOptions.value.filter((option) => option.target.scope === 'project'),
+)
 
 function areOptionsSelected(options: TargetOption[]): boolean {
   return options.length > 0 && options.every((option) => checked(option))
@@ -164,6 +167,7 @@ function areOptionsSelected(options: TargetOption[]): boolean {
 
 const allTargetsSelected = computed(() => areOptionsSelected(selectableOptions.value))
 const globalTargetsSelected = computed(() => areOptionsSelected(globalOptions.value))
+const projectTargetsSelected = computed(() => areOptionsSelected(projectOptions.value))
 
 function toggleOptions(options: TargetOption[]): void {
   if (options.length === 0) return
@@ -189,6 +193,10 @@ function toggleAllTargets(): void {
 
 function toggleGlobalTargets(): void {
   toggleOptions(globalOptions.value)
+}
+
+function toggleProjectTargets(): void {
+  toggleOptions(projectOptions.value)
 }
 </script>
 
@@ -225,13 +233,34 @@ function toggleGlobalTargets(): void {
           <Globe2 class="size-3.5" aria-hidden="true" />
           {{ t('detail.selectGlobalTargets') }}
         </button>
+        <button
+          type="button"
+          :class="[
+            'inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
+            projectTargetsSelected && 'bg-accent text-foreground',
+          ]"
+          :title="t('detail.selectProjectTargets')"
+          :aria-pressed="projectTargetsSelected"
+          :disabled="projectOptions.length === 0"
+          @click="toggleProjectTargets"
+        >
+          <FolderGit2 class="size-3.5" aria-hidden="true" />
+          {{ t('detail.selectProjectTargets') }}
+        </button>
       </div>
     </div>
     <ScrollArea class="max-h-72 rounded-md border" viewport-class="max-h-72 pr-2">
-      <section v-for="group in groups" :key="group.key" class="border-b last:border-b-0">
+      <section
+        v-for="group in groups"
+        :key="group.key"
+        class="border-b last:border-b-0"
+      >
         <button
           type="button"
-          class="flex h-11 w-full cursor-pointer items-center gap-2.5 bg-muted/25 px-3 text-left transition-colors hover:bg-muted/50"
+          :class="[
+            'flex h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left transition-colors hover:bg-muted/50',
+            expandedKeys.has(group.key) ? 'bg-muted/45' : 'bg-muted/25',
+          ]"
           :aria-expanded="expandedKeys.has(group.key)"
           :aria-controls="group.panelId"
           @click="toggleGroup(group)"
@@ -254,17 +283,21 @@ function toggleGlobalTargets(): void {
           />
         </button>
 
-        <div v-show="expandedKeys.has(group.key)" :id="group.panelId">
+        <div
+          v-show="expandedKeys.has(group.key)"
+          :id="group.panelId"
+          class="relative ml-4 border-l-1 border-muted-foreground/15 bg-muted/[0.06]"
+        >
           <template v-for="option in group.options" :key="option.key">
             <div
               v-if="option === group.projectOptions[0]"
-              class="border-t bg-muted/10 px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              class="border-t bg-muted/20 px-4 py-1.5 text-xs font-medium text-muted-foreground"
             >
               {{ t('mcp.target.project') }}
             </div>
             <label
               :class="[
-                'flex min-h-11 items-center gap-3 border-t px-3 py-2',
+                'flex min-h-11 items-center gap-3 border-t px-4 py-2',
                 option.excluded
                   ? 'cursor-not-allowed opacity-45'
                   : 'cursor-pointer hover:bg-muted/35',

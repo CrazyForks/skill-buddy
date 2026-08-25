@@ -756,6 +756,7 @@ export default {
     installTo: 'Install to other platforms',
     selectAllTargets: 'Select all',
     selectGlobalTargets: 'Select global',
+    selectProjectTargets: 'Select projects',
     userScope: 'Global',
     projectScope: 'Project: {root}',
     scopeUser: 'user',
