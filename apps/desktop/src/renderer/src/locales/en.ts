@@ -776,6 +776,8 @@ export default {
     installedCount: 'Installed in {n} place(s)',
     removeOne: 'Remove this installation (to trash)',
     resources: 'Bundled files',
+    expandAllResources: 'Expand all',
+    collapseAllResources: 'Collapse all',
     previewResource: 'Preview file {name}',
     expandDirectory: 'Expand directory {name}',
     collapseDirectory: 'Collapse directory {name}',

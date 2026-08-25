@@ -776,6 +776,8 @@ export default {
     installedCount: '装于 {n} 处',
     removeOne: '移除此端安装（移入废纸篓）',
     resources: '附属文件',
+    expandAllResources: '全展开',
+    collapseAllResources: '全收起',
     previewResource: '预览文件 {name}',
     expandDirectory: '展开目录 {name}',
     collapseDirectory: '收起目录 {name}',

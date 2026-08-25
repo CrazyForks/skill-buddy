@@ -21,22 +21,59 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   preview: [path: string, source: string]
+  expansionChange: [state: { allExpanded: boolean; expandable: boolean }]
 }>()
 
 const { t } = useI18n()
 const tree = computed(() => buildSkillResourceTree(props.resources))
 const expanded = shallowRef<ReadonlySet<string>>(new Set())
 const rows = computed(() => flattenSkillResourceTree(tree.value, expanded.value))
+const directoryPaths = computed(() => {
+  const paths: string[] = []
+  const walk = (nodes: readonly SkillResourceTreeNode[]): void => {
+    for (const node of nodes) {
+      if (node.kind !== 'directory') continue
+      paths.push(node.path)
+      walk(node.children)
+    }
+  }
+  walk(tree.value)
+  return paths
+})
+const allExpanded = computed(
+  () =>
+    directoryPaths.value.length > 0 &&
+    directoryPaths.value.every((path) => expanded.value.has(path)),
+)
 
 watch(tree, () => {
   expanded.value = new Set()
 })
+
+watch(
+  [allExpanded, directoryPaths],
+  ([allDirectoriesExpanded, paths]) => {
+    emit('expansionChange', {
+      allExpanded: allDirectoriesExpanded,
+      expandable: paths.length > 0,
+    })
+  },
+  { immediate: true },
+)
 
 function toggleDirectory(path: string): void {
   const next = new Set(expanded.value)
   if (next.has(path)) next.delete(path)
   else next.add(path)
   expanded.value = next
+}
+
+function expandAll(): void {
+  expanded.value = new Set(directoryPaths.value)
+}
+
+function collapseAll(): void {
+  expanded.value = new Set()
 }
 
 function activateNode(node: SkillResourceTreeNode): void {
@@ -54,13 +91,15 @@ function nodeLabel(node: SkillResourceTreeNode): string {
     : 'detail.expandDirectory'
   return t(messageKey, { name: node.path })
 }
+
+defineExpose({ expandAll, collapseAll })
 </script>
 
 <template>
   <ul
     role="tree"
     :aria-label="t('detail.resources')"
-    class="overflow-hidden rounded-md border py-1"
+    class="overflow-hidden py-1"
   >
     <li v-for="row in rows" :key="row.node.path" role="none">
       <button

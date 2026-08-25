@@ -259,7 +259,7 @@ function toggleProjectTargets(): void {
           type="button"
           :class="[
             'flex h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left transition-colors hover:bg-muted/50',
-            expandedKeys.has(group.key) ? 'bg-muted/45' : 'bg-muted/25',
+            expandedKeys.has(group.key) ? 'border-b bg-muted/45' : 'bg-muted/25',
           ]"
           :aria-expanded="expandedKeys.has(group.key)"
           :aria-controls="group.panelId"
@@ -288,7 +288,7 @@ function toggleProjectTargets(): void {
           :id="group.panelId"
           class="relative ml-4 border-l-1 border-muted-foreground/15 bg-muted/[0.06]"
         >
-          <template v-for="option in group.options" :key="option.key">
+          <template v-for="(option, optionIndex) in group.options" :key="option.key">
             <div
               v-if="option === group.projectOptions[0]"
               class="border-t bg-muted/20 px-4 py-1.5 text-xs font-medium text-muted-foreground"
@@ -297,7 +297,8 @@ function toggleProjectTargets(): void {
             </div>
             <label
               :class="[
-                'flex min-h-11 items-center gap-3 border-t px-4 py-2',
+                'flex min-h-11 items-center gap-3 px-4 py-2',
+                !(expandedKeys.has(group.key) && optionIndex === 0) && 'border-t',
                 option.excluded
                   ? 'cursor-not-allowed opacity-45'
                   : 'cursor-pointer hover:bg-muted/35',
