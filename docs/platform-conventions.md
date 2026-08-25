@@ -6,25 +6,26 @@
 `name`/`description` 必填，可选 `scripts/` `references/` `assets/`）已成为
 跨工具事实标准，五个平台全部兼容。差异只剩目录位置。
 
-| 平台 | user 级 | project 级 | 检测 | 置信度 |
-|---|---|---|---|---|
-| Claude Code | `~/.claude/skills/` | `.claude/skills/` | `~/.claude` | 官方 |
-| Codex | `~/.agents/skills/` | `.agents/skills/` | `~/.codex`（=$CODEX_HOME） | 官方 |
-| Cursor 2.4+ | `~/.cursor/skills/` | `.cursor/skills/` | `~/.cursor` | 官方 |
-| OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` | `~/.config/opencode` | 官方 |
-| WorkBuddy | `~/.workbuddy/skills/` | 无（桌面助手，无项目概念） | `~/.workbuddy` | 多来源一致（非官方一手） |
-| GitHub Copilot | `~/.copilot/skills/` | `.github/skills/` | `~/.copilot` | 官方 |
-| Gemini CLI | `~/.gemini/skills/` | `.gemini/skills/` | `~/.gemini` | 官方 |
-| CodeBuddy | `~/.codebuddy/skills/` | `.codebuddy/skills/` | `~/.codebuddy` | 官方 |
-| Trae（国际版） | `~/.trae/skills/` | `.trae/skills/` | `~/.trae` | 官方（间接确认） |
-| Trae CN | `~/.trae-cn/skills/` | `.trae/skills/` | `~/.trae-cn` | 官方社区帖 |
-| 豆包 | `~/Doubao/skills/` | 无（桌面助手） | `~/Doubao` | 本机实测 |
-| Kimi Code | `~/.kimi/skills/` | `.kimi/skills/` | `~/.kimi` | 待真机复核 |
-| Z Code | `~/.zcode/skills/` | `.zcode/skills/` | `~/.zcode` | 待真机复核 |
+| 平台           | user 级                        | project 级                 | 检测                         | 置信度                   |
+| -------------- | ------------------------------ | -------------------------- | ---------------------------- | ------------------------ |
+| Claude Code    | `~/.claude/skills/`          | `.claude/skills/`        | `~/.claude`                | 官方                     |
+| Codex          | `~/.agents/skills/`          | `.agents/skills/`        | `~/.codex`（=$CODEX_HOME） | 官方                     |
+| Cursor 2.4+    | `~/.cursor/skills/`          | `.cursor/skills/`        | `~/.cursor`                | 官方                     |
+| OpenCode       | `~/.config/opencode/skills/` | `.opencode/skills/`      | `~/.config/opencode`       | 官方                     |
+| WorkBuddy      | `~/.workbuddy/skills/`       | 无（桌面助手，无项目概念） | `~/.workbuddy`             | 多来源一致（非官方一手） |
+| GitHub Copilot | `~/.copilot/skills/`         | `.github/skills/`        | `~/.copilot`               | 官方                     |
+| Gemini CLI     | `~/.gemini/skills/`          | `.gemini/skills/`        | `~/.gemini`                | 官方                     |
+| CodeBuddy      | `~/.codebuddy/skills/`       | `.codebuddy/skills/`     | `~/.codebuddy`             | 官方                     |
+| Trae（国际版） | `~/.trae/skills/`            | `.trae/skills/`          | `~/.trae`                  | 官方（间接确认）         |
+| Trae CN        | `~/.trae-cn/skills/`         | `.trae/skills/`          | `~/.trae-cn`               | 官方社区帖               |
+| 豆包           | `~/Doubao/skills/`           | 无（桌面助手）             | `~/Doubao`                 | 本机实测                 |
+| Kimi Code      | `~/.kimi/skills/`            | `.kimi/skills/`          | `~/.kimi`                  | 待真机复核               |
+| Z Code         | `~/.zcode/skills/`           | `.zcode/skills/`         | `~/.zcode`                 | 待真机复核               |
 
 ## 平台备注
 
 ### Codex（developers.openai.com/codex/skills）
+
 - 官方扫描顺序 repo → user → admin(`/etc/codex/skills`) → system；
   **用跨工具共享目录 `.agents/skills`**，社区教程里的 `~/.codex/skills`
   不是当前推荐的用户创作目录，但 Codex 运行时仍会在 `$CODEX_HOME/skills`
@@ -39,14 +40,14 @@
 官方推荐的可写目录仍是 `~/.agents/skills` 和项目 `.agents/skills`，但作为
 本机管理器，SkillBuddy 还需要展示 Codex 运行时已经加载的其他来源：
 
-| 来源 | 路径 | 管理策略 |
-|---|---|---|
-| 用户主目录 | `~/.agents/skills` | 可编辑、安装和删除 |
-| 项目目录 | `<project>/.agents/skills` | 可编辑、安装和删除 |
-| Codex 专属兼容目录 | `$CODEX_HOME/skills`（默认 `~/.codex/skills`） | 只读展示，避免误写到主目录 |
-| 管理员目录 | `/etc/codex/skills` | 只读展示 |
-| 系统内置 | `$CODEX_HOME/skills/.system` | 只读展示 |
-| 已安装插件 | `$CODEX_HOME/plugins/cache/<market>/<plugin>/<version>/skills` | 只读展示，每个插件只取最新有效版本 |
+| 来源               | 路径                                                             | 管理策略                           |
+| ------------------ | ---------------------------------------------------------------- | ---------------------------------- |
+| 用户主目录         | `~/.agents/skills`                                             | 可编辑、安装和删除                 |
+| 项目目录           | `<project>/.agents/skills`                                     | 可编辑、安装和删除                 |
+| Codex 专属兼容目录 | `$CODEX_HOME/skills`（默认 `~/.codex/skills`）               | 只读展示，避免误写到主目录         |
+| 管理员目录         | `/etc/codex/skills`                                            | 只读展示                           |
+| 系统内置           | `$CODEX_HOME/skills/.system`                                   | 只读展示                           |
+| 已安装插件         | `$CODEX_HOME/plugins/cache/<market>/<plugin>/<version>/skills` | 只读展示，每个插件只取最新有效版本 |
 
 不得递归扫描 `$CODEX_HOME/.tmp`、`vendor_imports` 或 marketplace 源目录，
 这些目录包含暂存、未安装和重复副本。
@@ -59,6 +60,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 包含大量未安装插件，不能作为本机已安装 Skill 扫描。
 
 ### Cursor（cursor.com/docs/skills，2.4 changelog）
+
 - skills 是 rules/commands 的官方后继（内置 `/migrate-to-skills`）
 - 兼容回退读取：`.agents/skills`、`.claude/skills`、`.codex/skills`
   （user 级同理）——**同一份 skill 可能被多端各自发现**，聚合视图需按
@@ -67,12 +69,14 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - `.cursor/rules/*.mdc` 仍可用；user rules 在应用设置里，无文件系统写入面
 
 ### OpenCode（opencode.ai/docs/skills）
+
 - 也兼容读取 `.claude/skills` 与 `.agents/skills`（同上聚合去重问题）
 - frontmatter 约束最严格：name 1-64 字符 `^[a-z0-9]+(-[a-z0-9]+)*$`
   且必须与目录名一致；description 1-1024
 - 目录命名复数为标准（`skills/` `commands/` `agents/`），单数是兼容遗留
 
 ### WorkBuddy（腾讯 CodeBuddy 产品线桌面助手）
+
 - 官方文档只讲界面操作不写路径；`~/.workbuddy/skills/` 来自多个独立
   中文教程（腾讯云社区/苏米客/CSDN），一致但非一手
 - 部分公开实现写入 `~/.workbuddy/skills-marketplace/skills`
@@ -83,6 +87,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
   修改该 skill——未采信（单来源），待实测后决定是否写入
 
 ### GitHub Copilot（docs.github.com，2026-04 agent mode 铺开 / 2026-07 code review GA）
+
 - `.github/skills/` 是 CLI / agent mode / code review 全线识别的项目级路径；
   VS Code 额外兼容读 `.agents/skills` 与 `.claude/skills`
 - user 级 `~/.copilot/skills/`（COPILOT_HOME 可覆盖根目录）
@@ -90,11 +95,13 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
   prompt files 并存，官方已提供向 skills 的迁移引导
 
 ### Gemini CLI（google-gemini/gemini-cli docs）
+
 - 原生 `~/.gemini/skills/` 与 `.gemini/skills/`，同层级 `.agents/skills`
   别名优先；skills 激活需用户 consent、workspace 需 `/trust`
 - 另有 commands（TOML）与 extensions 体系；GEMINI.md 三层拼接
 
 ### CodeBuddy（codebuddy.ai/docs/cli/skills，官方）
+
 - `~/.codebuddy/skills/` 与 `.codebuddy/skills/`，项目级同名优先
 - frontmatter 扩展字段最多（allowed-tools / context: fork / hooks 等），
   基础 name/description 与标准一致；**不**自动读 `.claude/skills`
@@ -102,6 +109,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - 记忆文件用 CODEBUDDY.md
 
 ### Trae（docs.trae.ai/ide/skills）
+
 - 国际版 `~/.trae/skills/`；**国内版独立目录 `~/.trae-cn/`**（两行数据分开管理）
 - project 级 `.trae/skills/`（IDE 自动生成），禁用状态在 `.trae/skill-config.json`
 - 官方支持读 `.agents/skills/`（同名时 `.trae/skills/` 优先）
@@ -109,6 +117,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - 注意：开源的 trae-agent CLI 是另一套配置体系，不要混用
 
 ### 豆包
+
 - macOS 桌面端在用户选择的本地工作区下创建 `~/Doubao/skills/`，本机
   实测可确认该路径
 - 豆包内部工作区的 `.skills/` 为应用内置 Skill，不作为 SkillBuddy 的
@@ -116,11 +125,13 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - 桌面助手没有稳定的项目级目录约定，因此只开放 user scope
 
 ### Kimi Code
+
 - 内置目录暂按 Kimi Code CLI 的 home/workspace 命名接入：
   `~/.kimi/skills/` 与 `.kimi/skills/`
 - 当前环境未安装 Kimi Code，需在真机上复核自动检测与安装后可见性
 
 ### Z Code
+
 - 内置目录暂按 Z Code CLI 的 home/workspace 命名接入：
   `~/.zcode/skills/` 与 `.zcode/skills/`
 - 当前环境未安装 Z Code，需在真机上复核自动检测与安装后可见性
@@ -142,7 +153,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 
 ### 目录与作用域
 
-灵犀使用 Electron `app.getPath("userData")` 作为根目录。在 Windows 本机，实际根目录为：
+灵犀使用 Electron `app.getPath("userData")` 作为根目录。在 Windows 下，实际根目录为：
 
 ```text
 %APPDATA%\WPS 灵犀\
@@ -232,18 +243,18 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 
 ### SkillBuddy 适配建议
 
-| 项目 | 建议实现 |
-|---|---|
-| 平台标识 | `lingxi`（显示名：WPS 灵犀） |
-| 检测 | 检查 `%APPDATA%\WPS 灵犀` 或其 `serverdir`，并优先确认 `serverdir\user_skills` / `official_skills` 存在 |
-| user scope | `%APPDATA%\WPS 灵犀\serverdir\user_skills`，可安装、启停、移除 |
-| project scope | 不提供；灵犀本机实现未发现项目级 Skill 目录 |
-| read-only 来源 | `serverdir\official_skills`、版本化 `sandbox_*\skills`、`serverdir\target_skills` |
-| 解析规则 | 目录一级扫描；要求 `SKILL.md`；frontmatter 至少 `name`、`description` |
-| 启停 | 通过平台专用状态存储不可见地控制；若无法安全读写 Electron store，至少提供只读展示并禁用启停按钮 |
-| 删除 | 仅允许 user scope；优先移入回收站，不直接删除 |
-| 去重 | user 同名覆盖 official；聚合视图按 `skillId`/规范化 name 去重，同时保留来源与真实路径 |
-| 导出 | ZIP 根目录包含 Skill 目录，目录中包含 `SKILL.md` 及全部相对资源 |
+| 项目           | 建议实现                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| 平台标识       | `lingxi`（显示名：WPS 灵犀）                                                                                  |
+| 检测           | 检查 `%APPDATA%\WPS 灵犀` 或其 `serverdir`，并优先确认 `serverdir\user_skills` / `official_skills` 存在 |
+| user scope     | `%APPDATA%\WPS 灵犀\serverdir\user_skills`，可安装、启停、移除                                                |
+| project scope  | 不提供；灵犀本机实现未发现项目级 Skill 目录                                                                     |
+| read-only 来源 | `serverdir\official_skills`、版本化 `sandbox_*\skills`、`serverdir\target_skills`                         |
+| 解析规则       | 目录一级扫描；要求 `SKILL.md`；frontmatter 至少 `name`、`description`                                     |
+| 启停           | 通过平台专用状态存储不可见地控制；若无法安全读写 Electron store，至少提供只读展示并禁用启停按钮                 |
+| 删除           | 仅允许 user scope；优先移入回收站，不直接删除                                                                   |
+| 去重           | user 同名覆盖 official；聚合视图按 `skillId`/规范化 name 去重，同时保留来源与真实路径                         |
+| 导出           | ZIP 根目录包含 Skill 目录，目录中包含 `SKILL.md` 及全部相对资源                                               |
 
 **适配边界**：当前结论来自已安装的 WPS 灵犀桌面端实现，不代表 WPS 云端灵犀、
 其他操作系统或未来版本。首次接入建议先实现 user scope 的扫描、安装、导出和只读官方
