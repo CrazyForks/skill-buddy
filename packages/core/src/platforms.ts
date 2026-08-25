@@ -94,7 +94,7 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     id: 'workbuddy',
     displayName: 'WorkBuddy',
     // Desktop assistant — no per-project scope. Deliberately the
-    // tutorial-consistent path, not the competitor's skills-marketplace
+    // 使用官方教程约定的路径，不采用第三方市场缓存目录
     // subdir (their issue #343). Pending real-machine verification.
     userSkillsDir: '~/.workbuddy/skills',
     projectSkillsDir: null,

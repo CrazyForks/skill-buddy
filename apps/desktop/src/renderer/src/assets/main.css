@@ -3,8 +3,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Codex-desktop-inspired neutral theme: near-black primary, calm gray
-   scale, hairline borders. Color is reserved for state (drift/destructive). */
+/* Neutral desktop theme: near-black primary, calm gray scale and hairline
+   borders. Color is reserved for state (drift/destructive). */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.205 0 0);

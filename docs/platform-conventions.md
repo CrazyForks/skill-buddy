@@ -1,6 +1,6 @@
 # 各平台 skills 目录约定（调研记录）
 
-> 调研日期：2026-08-06 ｜ 方法：官方文档 + 竞品源码核实 ｜ 供适配器实现与维护参照
+> 调研日期：2026-08-06 ｜ 方法：官方文档 + 公开实现核实 ｜ 供适配器实现与维护参照
 
 **总结论**：SKILL.md 文件夹约定（目录名 = frontmatter `name`，kebab-case，
 `name`/`description` 必填，可选 `scripts/` `references/` `assets/`）已成为
@@ -75,7 +75,7 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 ### WorkBuddy（腾讯 CodeBuddy 产品线桌面助手）
 - 官方文档只讲界面操作不写路径；`~/.workbuddy/skills/` 来自多个独立
   中文教程（腾讯云社区/苏米客/CSDN），一致但非一手
-- 竞品 skills-manager 写入 `~/.workbuddy/skills-marketplace/skills`
+- 部分公开实现写入 `~/.workbuddy/skills-marketplace/skills`
   （其源码 tool_adapters.rs），与所有教程不一致——疑为其 issue #343
   「WorkBuddy 识别不到」的根因。**我们采用教程一致的 `~/.workbuddy/skills/`，
   待有真机后实测验证**
