@@ -60,6 +60,7 @@ const platformSurfaces: Record<string, string> = {
   doubao: 'desktop',
   kimi: 'cli',
   zcode: 'editor',
+  'wps-lingxi': 'desktop',
 }
 
 function targetKey(target: InstallTarget): string {

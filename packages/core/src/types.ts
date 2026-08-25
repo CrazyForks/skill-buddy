@@ -13,6 +13,7 @@ export type BuiltinAgentId =
   | 'doubao'
   | 'kimi'
   | 'zcode'
+  | 'wps-lingxi'
 
 /**
  * An agent platform id: a built-in id (with autocomplete) or any string

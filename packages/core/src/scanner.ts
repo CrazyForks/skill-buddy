@@ -185,6 +185,33 @@ export function discoverDoubaoSupplementalRoots(homeDir: string = homedir()): Sk
   ]
 }
 
+/**
+ * Bundled WPS 灵犀 skills ship inside the app sandbox and are exposed to the
+ * agent through a `official_skills` symlink next to the writable `user_skills`
+ * directory. They are inventory-only: the desktop app replaces them on every
+ * version upgrade.
+ */
+export function discoverLingxiSupplementalRoots(
+  homeDir: string = homedir(),
+  os: NodeJS.Platform = process.platform,
+): SkillRoot[] {
+  const userDataDir =
+    os === 'darwin'
+      ? join(homeDir, 'Library', 'Application Support', 'WPS 灵犀')
+      : os === 'win32'
+        ? join(homeDir, 'AppData', 'Roaming', 'WPS 灵犀')
+        : join(homeDir, '.config', 'WPS 灵犀')
+  return [
+    {
+      agent: 'wps-lingxi',
+      scope: 'user',
+      path: join(userDataDir, 'serverdir', 'official_skills'),
+      origin: 'system',
+      readOnly: true,
+    },
+  ]
+}
+
 function dedupeRoots(roots: SkillRoot[]): SkillRoot[] {
   const seen = new Set<string>()
   return roots.filter((root) => {
@@ -230,6 +257,7 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
   if (detected.has('codex')) roots.push(...(await discoverCodexSupplementalRoots()))
   if (detected.has('claude-code')) roots.push(...(await discoverClaudePluginRoots()))
   if (detected.has('doubao')) roots.push(...discoverDoubaoSupplementalRoots())
+  if (detected.has('wps-lingxi')) roots.push(...discoverLingxiSupplementalRoots())
   return dedupeRoots(roots)
 }
 

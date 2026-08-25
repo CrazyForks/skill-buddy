@@ -16,6 +16,7 @@ import kimiIcon from '@lobehub/icons-static-svg/icons/kimi.svg'
 import opencodeIcon from '@lobehub/icons-static-svg/icons/opencode.svg'
 import traeIcon from '@lobehub/icons-static-svg/icons/trae-color.svg'
 import workbuddyIcon from '@/assets/platform-icons/workbuddy.svg'
+import wpsLingxiIcon from '@/assets/platform-icons/wps-lingxi.png'
 import zcodeIcon from '@/assets/platform-icons/zcode.svg'
 
 interface PlatformIconDef {
@@ -43,6 +44,7 @@ const ICONS: Record<string, PlatformIconDef> = {
   doubao: { src: doubaoIcon },
   kimi: { src: kimiIcon },
   zcode: { src: zcodeIcon },
+  'wps-lingxi': { src: wpsLingxiIcon },
 }
 
 export function platformIcon(id: string): PlatformIconDef {
