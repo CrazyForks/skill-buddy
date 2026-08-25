@@ -40,11 +40,14 @@
       "target": ["nsis", "zip"]
     },
     "linux": {
-      "icon": "resources/icons/icon.png",
+      "icon": "resources/icons",
       "artifactName": "${productName}-v${version}-linux-${arch}.${ext}",
       "executableName": "skillbuddy",
       "target": ["AppImage", "deb", "rpm"],
       "category": "Development"
+    },
+    "deb": {
+      "afterInstall": "scripts/after-install.sh"
     },
     "extraResources": [
       {
