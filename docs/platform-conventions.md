@@ -133,3 +133,118 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 2. **去重必须按内容而非路径**：Cursor/OpenCode 会读 `~/.claude/skills`，
    同一 skill 会在多个 agent 的 list 结果中出现。聚合层需按 name+内容 hash
    识别「同一份安装被多端看见」vs「多端各有一份拷贝」
+
+## WPS 灵犀桌面端（版本 1.2.36 / sandbox 3.23.0）
+
+> 调研日期：2026-08-25。证据来源：`D:\app\lingxi-desktop` 安装包、解包后的
+> Electron 主进程代码，以及本机运行后生成的 `%APPDATA%\WPS 灵犀` 目录。灵犀没有
+> 公开的项目级 skills 目录约定；以下结论以本机实现为准，升级版本后应复核。
+
+### 目录与作用域
+
+灵犀使用 Electron `app.getPath("userData")` 作为根目录。在 Windows 本机，实际根目录为：
+
+```text
+%APPDATA%\WPS 灵犀\
+├── serverdir\
+│   ├── user_skills\       # 用户可管理的 Skill，唯一写入目标
+│   ├── official_skills\   # 当前 sandbox 的官方 Skill（目录联结）
+│   ├── target_skills\     # 运行态 Skill 目录，指向上面两类来源
+│   ├── memory\            # 灵犀记忆文件，不属于 Skill
+│   └── sandbox.pid
+├── sandbox_<version>\skills\ # 版本化 sandbox 内置 Skill
+└── sandbox_link\            # 当前 sandbox 的目录联结
+```
+
+- 用户级目录：`%APPDATA%\WPS 灵犀\serverdir\user_skills`。
+- 官方目录：`serverdir\official_skills` 实际联结到当前版本的
+  `sandbox_<version>\skills`，例如本机为 `sandbox_3.23.0\skills`。
+- 运行态目录：`serverdir\target_skills` 下每个 Skill 是 junction（Windows）或
+  symlink（其他平台），指向用户目录或官方目录。适配器应把它视为运行缓存/投影，
+  不应直接写入或删除。
+- 未发现项目级 `.lingxi/skills`、工作区级 `skills` 或类似目录。项目会话虽然把
+  workspace 信息传给 agent，但内置 `getSkills` 仍从全局 `user_skills` 与
+  `official_skills` 合并，不能据此推断存在项目级安装范围。
+
+### Skill 文件格式
+
+每个 Skill 必须是一个目录，且目录内必须有大小写不敏感匹配的 `SKILL.md`：
+
+```text
+<skill-id>/
+└── SKILL.md              # 必需
+    ├── YAML frontmatter  # 必需 name、description
+    └── Markdown 正文
+    ├── scripts/          # 可选，任意资源目录均可
+    ├── references/
+    └── assets/
+```
+
+- 灵犀主进程只解析 frontmatter 中的 `name` 与 `description`；支持单行值以及
+  `|`/`>` 多行值。缺少任一字段时，文件安装会失败。
+- 目录名是内部 `skillId`，安装文件时由调用方的 `skillName` 规范化：转小写，
+  非 `[a-z0-9._-]` 字符替换为 `-`，连续 `-` 合并并去除首尾 `-`。压缩包安装则
+  以 frontmatter `name` 生成同样的目录标识。建议 SkillBuddy 直接要求 kebab-case，
+  以免跨平台名称漂移。
+- 资源文件不会被重新编码或过滤，安装时会递归复制整个 Skill 目录；因此应保留
+  `scripts/`、`references/`、`assets/` 等相对路径。
+- `.installed.json` 不是通用 Skill 元数据，只在市场安装时写入，字段包括
+  `id`、`skill_name`、`version`、`source: "market"`、包哈希和安装时间。普通用户
+  Skill 不需要生成该文件。
+
+### 发现、覆盖与优先级
+
+灵犀分别扫描 `user_skills` 和 `official_skills` 下的一级子目录，仅纳入包含
+`SKILL.md` 的目录，然后合并结果：
+
+1. 用户目录先加入列表；同一 `id` 时用户项遮蔽官方项。
+2. 官方目录补充用户目录没有的项。
+3. 列表可按本地存储的 disabled id 过滤；技能的启停状态不通过改名或移动
+   `SKILL.md` 表示。
+4. 同名判断大小写不敏感，市场安装与用户安装也共享冲突检查；默认不覆盖，显式
+   `overwrite` 才执行覆盖。
+
+官方 Skill 不允许直接移除。若用户覆盖同名官方 Skill，灵犀会把用户版本放入
+`user_skills`，并在 `target_skills` 创建指向用户版本的联结；删除用户版本后再恢复
+指向官方版本的联结。
+
+### 启用、禁用与删除
+
+- 启停状态保存于 Electron 持久化存储中的 `disabledSkillIds`（按 `skillId` 保存），
+  不是 Skill 目录内的标记文件。`SkillsSetEnabled` 修改该集合；创建会话时仅把未禁用
+  的 Skill 注入 `env.skills.list`。
+- 删除只针对用户目录中的 Skill，并通过系统回收站接口移入回收站；删除前会清理
+  `target_skills` 的运行态联结，删除后移除来源映射。适配器不应使用不可恢复的递归删除。
+- 官方 Skill、系统 sandbox 内容和 `target_skills` 均应按只读/派生来源展示。
+
+### 安装、导入与打包行为
+
+- 文件安装接口要求输入 `skillName` 和文件列表，列表中必须存在 `SKILL.md`；会检查
+  frontmatter 的 `name`、`description`，拒绝 `..` 或绝对路径，随后写入 `user_skills`。
+- ZIP 导入只接受 `.zip`。解压后递归寻找 `SKILL.md`（若有多个，选择路径最浅的一份），
+  读取 frontmatter 后复制整个 Skill 目录。默认遇到同名 Skill 报冲突，覆盖安装使用
+  原子临时目录替换。
+- 灵犀打包 Skill 时把目录作为 ZIP 根目录（例如 `<skill-id>/SKILL.md`）；从任意文件夹
+  打包前会要求该文件夹根部存在 `SKILL.md`。SkillBuddy 导出给灵犀时应采用这一结构，
+  不要只压缩 `SKILL.md` 文件本身。
+- 市场安装可额外保存 `.installed.json`，SkillBuddy 若不是在模拟灵犀市场安装，建议
+  不写入市场字段，避免被误判为可更新的市场项。
+
+### SkillBuddy 适配建议
+
+| 项目 | 建议实现 |
+|---|---|
+| 平台标识 | `lingxi`（显示名：WPS 灵犀） |
+| 检测 | 检查 `%APPDATA%\WPS 灵犀` 或其 `serverdir`，并优先确认 `serverdir\user_skills` / `official_skills` 存在 |
+| user scope | `%APPDATA%\WPS 灵犀\serverdir\user_skills`，可安装、启停、移除 |
+| project scope | 不提供；灵犀本机实现未发现项目级 Skill 目录 |
+| read-only 来源 | `serverdir\official_skills`、版本化 `sandbox_*\skills`、`serverdir\target_skills` |
+| 解析规则 | 目录一级扫描；要求 `SKILL.md`；frontmatter 至少 `name`、`description` |
+| 启停 | 通过平台专用状态存储不可见地控制；若无法安全读写 Electron store，至少提供只读展示并禁用启停按钮 |
+| 删除 | 仅允许 user scope；优先移入回收站，不直接删除 |
+| 去重 | user 同名覆盖 official；聚合视图按 `skillId`/规范化 name 去重，同时保留来源与真实路径 |
+| 导出 | ZIP 根目录包含 Skill 目录，目录中包含 `SKILL.md` 及全部相对资源 |
+
+**适配边界**：当前结论来自已安装的 WPS 灵犀桌面端实现，不代表 WPS 云端灵犀、
+其他操作系统或未来版本。首次接入建议先实现 user scope 的扫描、安装、导出和只读官方
+展示；启停状态存储和运行态 junction 管理应在真机回归后再开放写操作。

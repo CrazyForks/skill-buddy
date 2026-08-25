@@ -13,6 +13,7 @@ import { useMcpServers } from '@/composables/useMcpServers'
 import { useSettings } from '@/composables/useSettings'
 import { useSkills } from '@/composables/useSkills'
 import type { WorkspaceView } from '@/lib/navigation'
+import { isWindowsPlatform } from '@/lib/platform'
 
 const props = defineProps<{ view: WorkspaceView }>()
 const emit = defineEmits<{
@@ -138,8 +139,8 @@ async function removeProjectRoot(root: string): Promise<void> {
 <template>
   <aside
     :class="[
-      'sidebar-surface relative flex shrink-0 flex-col overflow-hidden transition-[width] duration-200',
-      sidebarCollapsed ? 'w-0' : 'w-[276px]',
+      'sidebar-surface relative flex min-w-0 shrink-0 flex-col overflow-hidden transition-[width] duration-200',
+      sidebarCollapsed ? 'w-0 basis-0' : 'w-[276px] basis-auto',
     ]"
   >
     <div class="relative flex h-full w-[276px] shrink-0 flex-col">
@@ -148,7 +149,7 @@ async function removeProjectRoot(root: string): Promise<void> {
         :class="collapsing && 'pointer-events-auto opacity-100'"
         aria-hidden="true"
       />
-      <div class="app-drag flex h-10 shrink-0 items-center">
+      <div v-if="!isWindowsPlatform" class="app-drag flex h-10 shrink-0 items-center">
         <button
           type="button"
           class="app-no-drag ml-[78px] cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"

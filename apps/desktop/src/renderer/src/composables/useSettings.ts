@@ -2,7 +2,7 @@ import { ref, shallowRef, watch } from 'vue'
 import type { CustomPlatformInput, LinkOpenMode, TeamLibraryConfig } from '#shared/ipc'
 import { detectLocale, i18n, type Locale } from '../i18n'
 import type { MarketSkillSource } from '../lib/market'
-import { applyAppearance } from './useAppearance'
+import { applyAppearance, syncWindowChromeTheme } from './useAppearance'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -200,6 +200,7 @@ export function applyTheme(): void {
   const dark = theme.value === 'dark' || (theme.value === 'system' && media.matches)
   document.documentElement.classList.toggle('dark', dark)
   applyAppearance(dark)
+  syncWindowChromeTheme()
   // The macOS window vibrancy (transparent sidebar) renders in the OS theme,
   // so a fixed light/dark choice must also be pushed to the main process.
   void window.skillsManager?.setTheme(theme.value)
