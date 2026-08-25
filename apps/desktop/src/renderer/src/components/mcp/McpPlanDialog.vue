@@ -11,6 +11,7 @@ import {
 } from 'reka-ui'
 import { Button } from '@/components/ui/button'
 import PlatformIcon from '@/components/PlatformIcon.vue'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { computed, type DeepReadonly } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -63,7 +64,7 @@ function basename(path: string): string {
           </button>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <ScrollArea class="min-h-0 flex-1" viewport-class="px-5 py-4">
           <div class="divide-y rounded-md border">
             <div
               v-for="action in plan?.actions"
@@ -112,7 +113,7 @@ function basename(path: string): string {
               <span>{{ blocker.message }}</span>
             </p>
           </div>
-        </div>
+        </ScrollArea>
 
         <div class="flex justify-end gap-2 border-t px-5 py-4">
           <Button variant="ghost" size="sm" :disabled="applying" @click="emit('close')">
