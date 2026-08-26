@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: eslint
+      glob: '*.{js,mjs,cjs,ts,mts,cts,vue}'
+      run: pnpm exec eslint {staged_files}
+    - name: stylelint
+      glob: '*.{css,scss,vue}'
+      run: pnpm exec stylelint {staged_files}
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
