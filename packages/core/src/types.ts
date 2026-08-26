@@ -5,6 +5,7 @@ export type BuiltinAgentId =
   | 'copilot'
   | 'cursor'
   | 'gemini-cli'
+  | 'qwen-code'
   | 'opencode'
   | 'trae'
   | 'trae-cn'

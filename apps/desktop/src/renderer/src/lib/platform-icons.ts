@@ -14,6 +14,7 @@ import geminiIcon from '@lobehub/icons-static-svg/icons/gemini-color.svg'
 import githubcopilotSvg from '@lobehub/icons-static-svg/icons/githubcopilot.svg?raw'
 import kimiSvg from '@lobehub/icons-static-svg/icons/kimi.svg?raw'
 import opencodeSvg from '@lobehub/icons-static-svg/icons/opencode.svg?raw'
+import qwenIcon from '@lobehub/icons-static-svg/icons/qwen-color.svg'
 import traeIcon from '@lobehub/icons-static-svg/icons/trae-color.svg'
 import workbuddyIcon from '@/assets/platform-icons/workbuddy.svg'
 import wpsLingxiIcon from '@/assets/platform-icons/wps-lingxi.png'
@@ -41,6 +42,7 @@ const ICONS: Record<string, PlatformIconDef> = {
   copilot: { maskSrc: svgMask(githubcopilotSvg) },
   cursor: { maskSrc: svgMask(cursorSvg) },
   'gemini-cli': { src: geminiIcon },
+  'qwen-code': { src: qwenIcon },
   opencode: { maskSrc: svgMask(opencodeSvg) },
   codebuddy: { src: codebuddyIcon },
   trae: { src: traeIcon },
