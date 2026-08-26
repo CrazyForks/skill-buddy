@@ -197,6 +197,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
         requestId === installRequestId &&
         requestedItem.key === item.value.key
       ) {
+        showToast({ message: t('market.installSuccess', { name: requestedItem.name }) })
         options.onInstalled()
       }
     } catch (cause) {

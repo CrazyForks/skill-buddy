@@ -27,6 +27,10 @@ const def = computed(() => platformIcon(props.id))
       maskPosition: 'center',
       maskRepeat: 'no-repeat',
       maskSize: 'contain',
+      WebkitMaskImage: `url(${def.maskSrc})`,
+      WebkitMaskPosition: 'center',
+      WebkitMaskRepeat: 'no-repeat',
+      WebkitMaskSize: 'contain',
     }"
     :class="cn('inline-block shrink-0', props.class)"
     aria-hidden="true"

@@ -80,7 +80,7 @@ watch(() => props.skillName, closeNewGroup)
           v-for="group in memberGroups"
           :key="group.name"
           type="button"
-          class="cursor-pointer rounded-full border border-foreground bg-foreground px-2.5 py-0.5 text-sm text-background transition-colors hover:bg-foreground/85"
+          class="inline-flex shrink-0 cursor-pointer appearance-none items-center rounded-full border border-foreground bg-foreground px-2.5 py-0.5 text-sm leading-5 text-background transition-colors hover:bg-foreground/85"
           @click="toggleGroup(group.name)"
         >
           {{ group.name }}
@@ -94,7 +94,7 @@ watch(() => props.skillName, closeNewGroup)
             v-for="group in availableGroups"
             :key="group.name"
             type="button"
-            class="cursor-pointer rounded-full border px-2.5 py-0.5 text-sm text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+            class="inline-flex shrink-0 cursor-pointer appearance-none items-center rounded-full border px-2.5 py-0.5 text-sm leading-5 text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
             @click="toggleGroup(group.name)"
           >
             {{ group.name }}

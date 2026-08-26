@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import type { TrayCommand } from '#shared/ipc'
 import { getDesktopPreferences } from './preferences'
 import { openLink } from './in-app-browser'
+import { getTitleBarOverlayOptions, getWindowChromeOptions } from './window-chrome'
+import type { WindowThemeColors } from './window-chrome'
 
 let mainWindow: BrowserWindow | null = null
 let quitting = false
@@ -30,6 +32,7 @@ export function createWindow(options: { showOnReady?: boolean } = {}): BrowserWi
     icon: desktopIconPath(),
     autoHideMenuBar: true,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    ...getWindowChromeOptions(process.platform),
     ...(process.platform === 'darwin'
       ? {
           vibrancy: 'sidebar' as const,
@@ -41,6 +44,7 @@ export function createWindow(options: { showOnReady?: boolean } = {}): BrowserWi
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: true,
+      devTools: !app.isPackaged,
     },
   })
   mainWindow = window
@@ -81,6 +85,12 @@ export function createWindow(options: { showOnReady?: boolean } = {}): BrowserWi
   }
 
   return window
+}
+
+/** 更新 Windows 原生窗口控制区，使其与渲染层当前主题表面保持一致。 */
+export function setWindowChromeTheme(colors: WindowThemeColors): void {
+  if (process.platform !== 'win32') return
+  mainWindow?.setTitleBarOverlay(getTitleBarOverlayOptions(colors))
 }
 
 /** 显示、恢复并聚焦主窗口。 */

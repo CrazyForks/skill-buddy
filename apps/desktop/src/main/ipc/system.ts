@@ -65,7 +65,7 @@ async function updateFetch(
 
 function updateAssetKey(platform: NodeJS.Platform, arch: string): string | null {
   if (
-    (platform === 'darwin' && arch === 'arm64')
+    (platform === 'darwin' && (arch === 'arm64' || arch === 'x64'))
     || (platform === 'win32' && (arch === 'x64' || arch === 'arm64'))
     || (platform === 'linux' && (arch === 'x64' || arch === 'arm64'))
   ) {

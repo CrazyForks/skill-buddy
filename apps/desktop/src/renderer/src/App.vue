@@ -3,10 +3,12 @@ import { defineAsyncComponent, shallowRef } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import InAppBrowser from '@/components/InAppBrowser.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import WindowTopBar from '@/components/WindowTopBar.vue'
 import { useAppLifecycle } from '@/composables/useAppLifecycle'
 import { useSettings } from '@/composables/useSettings'
 import { useTrayIntegration } from '@/composables/useTrayIntegration'
 import type { SettingsCategory, WorkspaceView } from '@/lib/navigation'
+import { isWindowsPlatform } from '@/lib/platform'
 import Workspace from '@/views/WorkspaceView.vue'
 
 const ImportAppsModal = defineAsyncComponent(() => import('@/components/ImportAppsModal.vue'))
@@ -50,19 +52,21 @@ useAppLifecycle({ refreshLocal })
 <template>
   <AppToast />
   <InAppBrowser />
-  <SettingsPage
-    v-if="settingsOpen"
-    :initial-category="settingsCategory"
-    @back="settingsOpen = false"
-  />
-  <div v-else class="relative flex h-screen flex-col">
-    <div class="flex min-h-0 flex-1">
+  <div class="relative flex h-screen flex-col">
+    <WindowTopBar :show-sidebar-toggle="!settingsOpen" />
+    <SettingsPage
+      v-if="settingsOpen"
+      class="min-h-0 flex-1"
+      :initial-category="settingsCategory"
+      @back="settingsOpen = false"
+    />
+    <div v-else class="flex min-h-0 flex-1">
       <Sidebar :view="view" @navigate="navigate" @open-settings="openSettings" />
       <Workspace
         :view="view"
         :navigation-revision="navigationRevision"
         :attention-revision="attentionRevision"
-        :inset="sidebarCollapsed"
+        :inset="sidebarCollapsed && !isWindowsPlatform"
         @attention-opened="attentionRevision = 0"
         @open-settings="openSettings"
         @import-skills="importOpen = true"

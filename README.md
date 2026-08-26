@@ -115,15 +115,15 @@ The SkillBuddy desktop application currently provides the following build target
 | Operating system | Architecture | Minimum version | Support status |
 | --- | --- | --- | --- |
 | macOS | Apple Silicon (`arm64`) | macOS 11 Big Sur | Supported, DMG and ZIP |
-| macOS | Intel (`x64`) | - | Not supported |
+| macOS | Intel (`x64`) | macOS 11 Big Sur | Supported, DMG and ZIP |
 | Windows | `x64` | Windows 10 or later | Supported, NSIS installer and ZIP |
 | Windows | `arm64` | Windows 11 | Preview build, NSIS installer and ZIP; real-device verification pending |
 | Linux | `x64` | Modern desktop distribution | Supported, AppImage, DEB, and RPM |
 | Linux | `arm64` | Modern desktop distribution | Preview build, AppImage, DEB, and RPM; real-device verification pending |
 
-Release assets use the `SkillBuddy-v<version>-<system>-<architecture>.<extension>` naming convention. Intel macOS packages are not currently built.
+Release assets use the `SkillBuddy-v<version>-<system>-<architecture>.<extension>` naming convention.
 
-- macOS: `SkillBuddy-v<version>-macos-arm64.dmg` and `.zip`
+- macOS arm64/x64: `SkillBuddy-v<version>-macos-<architecture>.dmg` and `.zip`
 - Windows x64/arm64: `SkillBuddy-v<version>-windows-<architecture>.exe` and `.zip`
 - Linux x64/arm64: `SkillBuddy-v<version>-linux-<architecture>.AppImage`, `.deb`, and `.rpm` (`x86_64` for x64 builds)
 

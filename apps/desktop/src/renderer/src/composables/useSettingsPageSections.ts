@@ -1,12 +1,16 @@
 import { computed, ref, shallowRef, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PlatformStatus } from '@skillbuddy/core'
-import type { CustomPlatformInput, TeamLibraryConfig } from '#shared/ipc'
+import type { CustomPlatformInput, PlatformDraft, TeamLibraryConfig } from '#shared/ipc'
 import { teamLibraryConfigKey } from '#shared/team-library'
 import { syncCustomPlatforms, useSettings } from '@/composables/useSettings'
 import { useSkills } from '@/composables/useSkills'
 import { useTeamLibraries } from '@/composables/useTeamLibraries'
-import type { CustomPlatformForm } from '@/components/settings/SettingsPlatformsSection.vue'
+import {
+  isSelectableDraft,
+  PLATFORM_DRAFT_ERROR_KEYS,
+  type PlatformCandidateRow,
+} from '@/lib/platform-draft'
 
 export interface TeamLibraryRow {
   key: string
@@ -68,49 +72,140 @@ export function useSettingsPageSections(options: UseSettingsPageSectionsOptions)
   }
 
   const showPlatformForm = shallowRef(false)
-  const platformForm = ref<CustomPlatformForm>({
-    id: '',
-    displayName: '',
-    userSkillsDir: '',
-    projectSkillsDir: '',
-    detectPath: '',
-  })
+  const platformCandidates = ref<PlatformCandidateRow[]>([])
+  const platformDiscovering = shallowRef(false)
   const platformFormError = shallowRef<string | null>(null)
 
-  /** 校验通过后先同步主进程平台注册表，再刷新平台探测状态。 */
+  /** 主进程草稿转成面板里的一行；手选的目录默认勾选并展开，发现来的等用户挑。 */
+  function toCandidateRow(draft: PlatformDraft, manual: boolean): PlatformCandidateRow {
+    return {
+      key: draft.detectPath,
+      selected: manual && isSelectableDraft(draft.error),
+      expanded: manual || draft.error === 'invalid-id',
+      manual,
+      hasSkillsDir: draft.hasSkillsDir,
+      error: draft.error,
+      form: {
+        id: draft.id,
+        displayName: draft.displayName,
+        detectPath: draft.detectPath,
+        userSkillsDir: draft.userSkillsDir,
+        projectSkillsDir: draft.projectSkillsDir,
+      },
+    }
+  }
+
+  /** 打开面板时扫描一次候选目录，手选过的行保留，不被扫描结果覆盖。 */
+  async function discoverPlatforms(): Promise<void> {
+    platformDiscovering.value = true
+    platformFormError.value = null
+    try {
+      const drafts = await window.skillsManager.discoverPlatforms()
+      const manualRows = platformCandidates.value.filter((row) => row.manual)
+      platformCandidates.value = [
+        ...manualRows,
+        ...drafts
+          .filter((draft) => !manualRows.some((row) => row.key === draft.detectPath))
+          .map((draft) => toCandidateRow(draft, false)),
+      ]
+    } catch {
+      platformFormError.value = t('settings.platformDiscoveryFailed')
+    } finally {
+      platformDiscovering.value = false
+    }
+  }
+
+  async function togglePlatformForm(open: boolean): Promise<void> {
+    showPlatformForm.value = open
+    if (!open) return
+    platformFormError.value = null
+    await discoverPlatforms()
+  }
+
+  /** 手选目录并入同一份候选列表；已在列表里的目录直接勾选并展开。 */
+  async function pickPlatformDirectory(): Promise<void> {
+    try {
+      const draft = await window.skillsManager.pickPlatformDirectory()
+      if (!draft) return
+      platformFormError.value = null
+      const existing = platformCandidates.value.find((row) => row.key === draft.detectPath)
+      if (existing) {
+        existing.selected = isSelectableDraft(existing.error)
+        existing.expanded = true
+        return
+      }
+      platformCandidates.value = [toCandidateRow(draft, true), ...platformCandidates.value]
+    } catch {
+      platformFormError.value = t('settings.platformPickFailed')
+    }
+  }
+
+  function findPlatformCandidate(key: string): PlatformCandidateRow | undefined {
+    return platformCandidates.value.find((row) => row.key === key)
+  }
+
+  function togglePlatformCandidateSelected(key: string): void {
+    const row = findPlatformCandidate(key)
+    if (!row || !isSelectableDraft(row.error)) return
+    row.selected = !row.selected
+  }
+
+  function togglePlatformCandidateExpanded(key: string): void {
+    const row = findPlatformCandidate(key)
+    if (row) row.expanded = !row.expanded
+  }
+
+  function updatePlatformCandidateField(
+    key: string,
+    field: keyof PlatformCandidateRow['form'],
+    value: string,
+  ): void {
+    const row = findPlatformCandidate(key)
+    if (row) row.form[field] = value
+  }
+
+  function validateCandidate(row: PlatformCandidateRow): string | null {
+    if (row.error && row.error !== 'invalid-id') return t(PLATFORM_DRAFT_ERROR_KEYS[row.error])
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(row.form.id)) return t('settings.errKebab')
+    if (!row.form.displayName || !row.form.detectPath || !row.form.userSkillsDir) {
+      return t('settings.errRequired')
+    }
+    return null
+  }
+
+  /** 勾选的行全部校验通过才写入，先同步主进程平台注册表，再刷新探测状态。 */
   async function addCustomPlatform(): Promise<void> {
     platformFormError.value = null
-    const form = platformForm.value
-    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.id)) {
-      platformFormError.value = t('settings.errKebab')
+    const selected = platformCandidates.value.filter((row) => row.selected)
+    if (selected.length === 0) {
+      platformFormError.value = t('settings.errNoSelection')
       return
     }
-    if (!form.displayName || !form.detectPath || !form.userSkillsDir) {
-      platformFormError.value = t('settings.errRequired')
-      return
+    for (const row of selected) {
+      const message = validateCandidate(row)
+      if (message) {
+        row.expanded = true
+        platformFormError.value = message
+        return
+      }
     }
 
-    const definition: CustomPlatformInput = {
-      id: form.id,
-      displayName: form.displayName,
-      userSkillsDir: form.userSkillsDir || null,
-      projectSkillsDir: form.projectSkillsDir || null,
-      detectPath: form.detectPath,
-    }
+    const definitions: CustomPlatformInput[] = selected.map((row) => ({
+      id: row.form.id,
+      displayName: row.form.displayName,
+      userSkillsDir: row.form.userSkillsDir || null,
+      projectSkillsDir: row.form.projectSkillsDir || null,
+      detectPath: row.form.detectPath,
+    }))
+    const replacedIds = new Set(definitions.map((definition) => definition.id))
     settings.customPlatforms.value = [
-      ...settings.customPlatforms.value.filter((platform) => platform.id !== definition.id),
-      definition,
+      ...settings.customPlatforms.value.filter((platform) => !replacedIds.has(platform.id)),
+      ...definitions,
     ]
     await syncCustomPlatforms()
     await refresh()
     showPlatformForm.value = false
-    platformForm.value = {
-      id: '',
-      displayName: '',
-      userSkillsDir: '',
-      projectSkillsDir: '',
-      detectPath: '',
-    }
+    platformCandidates.value = []
   }
 
   async function removeCustomPlatform(id: string): Promise<void> {
@@ -159,8 +254,14 @@ export function useSettingsPageSections(options: UseSettingsPageSectionsOptions)
     addProjectRoot,
     removeProjectRoot,
     showPlatformForm,
-    platformForm,
+    platformCandidates,
+    platformDiscovering,
     platformFormError,
+    togglePlatformForm,
+    togglePlatformCandidateSelected,
+    togglePlatformCandidateExpanded,
+    updatePlatformCandidateField,
+    pickPlatformDirectory,
     addCustomPlatform,
     removeCustomPlatform,
     teamLibraryRows,

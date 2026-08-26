@@ -30,6 +30,19 @@ let disposeMcp: (() => void) | undefined
 let trayController: TrayController | undefined
 let waitingForPreferenceFlush = false
 
+if (app.isPackaged) {
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('before-input-event', (event, input) => {
+      const key = input.key.toLowerCase()
+      const devToolsShortcut =
+        key === 'f12' ||
+        ((input.control || input.meta) && input.shift && (key === 'i' || key === 'j'))
+      if (devToolsShortcut) event.preventDefault()
+    })
+    contents.on('devtools-opened', () => contents.closeDevTools())
+  })
+}
+
 function registerIpc(tray: TrayController): void {
   registerSkillsIpc(pathPolicy)
   registerBackupIpc(pathPolicy)

@@ -19,6 +19,7 @@ import { useI18n } from 'vue-i18n'
 import McpTargetPicker from './McpTargetPicker.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface ReferenceRow {
   id: string
@@ -169,7 +170,7 @@ function submit(): void {
           </button>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <ScrollArea class="min-h-0 flex-1">
           <form class="px-5 py-4" @submit.prevent="submit">
           <div class="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
             <button
@@ -280,7 +281,7 @@ function submit(): void {
             />
           </section>
           </form>
-        </div>
+        </ScrollArea>
 
         <div class="flex justify-end gap-2 border-t px-5 py-4">
           <Button variant="ghost" size="sm" @click="emit('close')">

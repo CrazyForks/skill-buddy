@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { promises as fs } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import {
@@ -20,7 +20,10 @@ import {
 import type { CustomPlatformInput, InstallTarget } from '#shared/ipc'
 import { readFilePreview } from '../file-preview'
 import { readSecret, writeSecret } from '../secrets'
+import { copyUndoSnapshot } from '../undo-stash'
 import { PathAccessPolicy, validateCustomPlatform } from '../path-policy'
+import { derivePlatformDraft, discoverPlatformCandidates } from '../platform-discovery'
+import { setWindowChromeTheme } from '../window'
 import { installTarget, runTargets } from './targets'
 
 const execFileAsync = promisify(execFile)
@@ -227,6 +230,22 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     nativeTheme.themeSource = mode
   })
 
+  ipcMain.handle('window:set-theme', (_event, colors: unknown) => {
+    if (!colors || typeof colors !== 'object') return
+    const { background, foreground } = colors as Record<string, unknown>
+    if (
+      typeof background !== 'string' ||
+      typeof foreground !== 'string' ||
+      background.trim().length === 0 ||
+      foreground.trim().length === 0 ||
+      background.length > 128 ||
+      foreground.length > 128
+    ) {
+      return
+    }
+    setWindowChromeTheme({ background: background.trim(), foreground: foreground.trim() })
+  })
+
   ipcMain.handle('secure:get', (_event, key: string) => readSecret(key))
 
   ipcMain.handle('secure:set', (_event, key: string, value: string) => writeSecret(key, value))
@@ -243,7 +262,7 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const entries: { path: string; stashPath: string }[] = []
     for (const [index, path] of paths.entries()) {
       const stashPath = join(stashRoot, `${index}-${basename(path)}`)
-      await fs.cp(path, stashPath, { recursive: true })
+      await copyUndoSnapshot(path, stashPath)
       entries.push({ path, stashPath })
     }
     const settled = await Promise.allSettled(paths.map((path) => shell.trashItem(path)))
@@ -408,6 +427,18 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const selected = result.canceled ? null : (result.filePaths[0] ?? null)
     if (selected) pathPolicy.grantSelectedRoot(selected)
     return selected
+  })
+
+  /* 自定义平台：目录发现与推导都在主进程完成，渲染进程只拿到可直接提交的草稿 */
+  ipcMain.handle('platforms:discover', () => discoverPlatformCandidates())
+
+  ipcMain.handle('platforms:pick-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      defaultPath: homedir(),
+    })
+    const selected = result.canceled ? null : (result.filePaths[0] ?? null)
+    return selected ? await derivePlatformDraft(selected) : null
   })
 
   ipcMain.handle('skills:find-in-dir', async (_event, root: string) => {

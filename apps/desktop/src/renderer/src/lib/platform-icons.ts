@@ -1,23 +1,23 @@
 /*
  * @Author: wjc
  * @Date: 2026-08-10 10:14:11
- * @LastEditors: wjc
- * @LastEditTime: 2026-08-19 00:02:10
+ * @LastEditors: wjc-home
+ * @LastEditTime: 2026-08-26 20:46:54
  * @Description:
  */
 import claudeIcon from '@lobehub/icons-static-svg/icons/claude-color.svg'
 import codebuddyIcon from '@lobehub/icons-static-svg/icons/codebuddy-color.svg'
-import codexIcon from '@lobehub/icons-static-svg/icons/openai.svg'
-import cursorIcon from '@lobehub/icons-static-svg/icons/cursor.svg'
+import codexSvg from '@lobehub/icons-static-svg/icons/openai.svg?raw'
+import cursorSvg from '@lobehub/icons-static-svg/icons/cursor.svg?raw'
 import doubaoIcon from '@/assets/platform-icons/doubao.webp'
 import geminiIcon from '@lobehub/icons-static-svg/icons/gemini-color.svg'
-import githubcopilotIcon from '@lobehub/icons-static-svg/icons/githubcopilot.svg'
-import kimiIcon from '@lobehub/icons-static-svg/icons/kimi.svg'
-import opencodeIcon from '@lobehub/icons-static-svg/icons/opencode.svg'
+import githubcopilotSvg from '@lobehub/icons-static-svg/icons/githubcopilot.svg?raw'
+import kimiSvg from '@lobehub/icons-static-svg/icons/kimi.svg?raw'
+import opencodeSvg from '@lobehub/icons-static-svg/icons/opencode.svg?raw'
 import traeIcon from '@lobehub/icons-static-svg/icons/trae-color.svg'
 import workbuddyIcon from '@/assets/platform-icons/workbuddy.svg'
 import wpsLingxiIcon from '@/assets/platform-icons/wps-lingxi.png'
-import zcodeIcon from '@/assets/platform-icons/zcode.svg'
+import zcodeSvg from '@/assets/platform-icons/zcode.svg?raw'
 
 interface PlatformIconDef {
   /** Full image asset URL (for complex multi-element brand marks) */
@@ -30,21 +30,26 @@ interface PlatformIconDef {
   bg?: string
 }
 
+/** 将单色 SVG 内联进 CSS mask，避免 file:// 下外部 SVG 掩码加载失败。 */
+function svgMask(svg: string): string {
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
 const ICONS: Record<string, PlatformIconDef> = {
   'claude-code': { src: claudeIcon },
-  codex: { src: codexIcon },
-  copilot: { src: githubcopilotIcon },
-  cursor: { src: cursorIcon },
+  codex: { maskSrc: svgMask(codexSvg) },
+  copilot: { maskSrc: svgMask(githubcopilotSvg) },
+  cursor: { maskSrc: svgMask(cursorSvg) },
   'gemini-cli': { src: geminiIcon },
-  opencode: { src: opencodeIcon },
+  opencode: { maskSrc: svgMask(opencodeSvg) },
   codebuddy: { src: codebuddyIcon },
   trae: { src: traeIcon },
   'trae-cn': { src: traeIcon },
   workbuddy: { src: workbuddyIcon },
   doubao: { src: doubaoIcon },
-  kimi: { src: kimiIcon },
-  zcode: { src: zcodeIcon },
   'wps-lingxi': { src: wpsLingxiIcon },
+  kimi: { maskSrc: svgMask(kimiSvg) },
+  zcode: { maskSrc: svgMask(zcodeSvg) },
 }
 
 export function platformIcon(id: string): PlatformIconDef {

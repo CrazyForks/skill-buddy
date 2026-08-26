@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { validateMcpDefinition } from '@skillbuddy/core'
 import type { McpServerDefinition } from '@skillbuddy/core'
 import type {
@@ -49,6 +49,7 @@ async function ensureModelScopeSession(force = false): Promise<void> {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        devTools: !app.isPackaged,
       },
     })
     window.webContents.setAudioMuted(true)
