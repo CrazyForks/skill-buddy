@@ -10,7 +10,7 @@ interface ManagedRoot {
 }
 
 /** 判断目标路径是否位于指定目录内，且不把目录本身视为子项。 */
-function isWithin(root: string, target: string): boolean {
+export function isWithin(root: string, target: string): boolean {
   const rel = relative(root, target)
   return rel !== '' && rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)
 }
@@ -114,7 +114,8 @@ export class PathAccessPolicy {
   }
 }
 
-function expandHome(path: string): string {
+/** 把 `~/` 前缀路径展开为绝对路径，其余路径按当前工作目录解析。 */
+export function expandHome(path: string): string {
   return path.startsWith('~/') ? resolve(homedir(), path.slice(2)) : resolve(path)
 }
 

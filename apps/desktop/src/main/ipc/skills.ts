@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { promises as fs } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import {
@@ -22,6 +22,7 @@ import { readFilePreview } from '../file-preview'
 import { readSecret, writeSecret } from '../secrets'
 import { copyUndoSnapshot } from '../undo-stash'
 import { PathAccessPolicy, validateCustomPlatform } from '../path-policy'
+import { derivePlatformDraft, discoverPlatformCandidates } from '../platform-discovery'
 import { setWindowChromeTheme } from '../window'
 import { installTarget, runTargets } from './targets'
 
@@ -426,6 +427,18 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const selected = result.canceled ? null : (result.filePaths[0] ?? null)
     if (selected) pathPolicy.grantSelectedRoot(selected)
     return selected
+  })
+
+  /* 自定义平台：目录发现与推导都在主进程完成，渲染进程只拿到可直接提交的草稿 */
+  ipcMain.handle('platforms:discover', () => discoverPlatformCandidates())
+
+  ipcMain.handle('platforms:pick-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      defaultPath: homedir(),
+    })
+    const selected = result.canceled ? null : (result.filePaths[0] ?? null)
+    return selected ? await derivePlatformDraft(selected) : null
   })
 
   ipcMain.handle('skills:find-in-dir', async (_event, root: string) => {
