@@ -986,7 +986,7 @@ export default {
     hasSkillsDir: '含 skills',
     manuallyPicked: '手动选择',
     orPickManually: '或',
-    pickPlatformDir: '选择平台目录…',
+    pickPlatformDir: '选择平台目录',
     addSelected: '添加选中（{count}）',
     formIdPh: 'id（kebab-case）',
     formNamePh: '显示名称',

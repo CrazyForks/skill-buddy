@@ -141,8 +141,8 @@ async function removeProjectRoot(root: string): Promise<void> {
 <template>
   <aside
     :class="[
-      'sidebar-surface relative flex min-w-0 shrink-0 flex-col overflow-hidden transition-[width] duration-200',
-      sidebarCollapsed ? 'w-0 basis-0' : 'w-[276px] basis-auto',
+      'sidebar-surface relative flex min-w-0 shrink-0 flex-col overflow-hidden transition-[width,flex-basis] duration-200',
+      sidebarCollapsed ? 'w-0 basis-0' : 'w-[276px] basis-[276px]',
     ]"
   >
     <div class="relative flex h-full w-[276px] shrink-0 flex-col">
