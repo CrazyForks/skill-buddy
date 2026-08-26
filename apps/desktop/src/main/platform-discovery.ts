@@ -1,7 +1,12 @@
 import { promises as fs } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
-import { allAdapters, PlatformAdapter } from '@skillbuddy/core'
+import {
+  allAdapters,
+  PlatformAdapter,
+  resolvePlatformOsPath,
+  type PlatformDef,
+} from '@skillbuddy/core'
 import type { PlatformDraft, PlatformDraftError } from '#shared/ipc'
 import { expandHome, isWithin } from './path-policy'
 
@@ -121,6 +126,23 @@ async function candidateRoots(home: string): Promise<string[]> {
 }
 
 /**
+ * 列出一个平台已经占用的目录。平台占用的不止 detectPath：Codex 的
+ * detectPath 是 `~/.codex`，技能却落在跨工具共享的 `~/.agents/skills`。
+ * 只按 detectPath 去重会把 `~/.agents` 当成未注册平台推荐出来，用户添加后
+ * 会和 Codex 扫到同一批技能，同一个技能显示成装在两个平台上。
+ */
+function occupiedRoots(def: PlatformDef): string[] {
+  const os = process.platform
+  const roots = [expandHome(resolvePlatformOsPath(def.detectPath, def.detectPathByOs, os))]
+  const userSkillsDir = resolvePlatformOsPath(def.userSkillsDir, def.userSkillsDirByOs, os)
+  if (userSkillsDir) {
+    const expanded = expandHome(userSkillsDir)
+    roots.push(expanded, dirname(expanded))
+  }
+  return roots
+}
+
+/**
  * 列出尚未注册的疑似 Agent 平台目录，让用户勾选而不是手写四段路径。
  * 只返回通过特征过滤的目录，不把整个 home 的目录结构交给渲染进程。
  */
@@ -129,7 +151,7 @@ export async function discoverPlatformCandidates(): Promise<PlatformDraft[]> {
   const registered = new Set(
     allAdapters()
       .filter((adapter): adapter is PlatformAdapter => adapter instanceof PlatformAdapter)
-      .map((adapter) => expandHome(adapter.def.detectPath)),
+      .flatMap((adapter) => occupiedRoots(adapter.def)),
   )
   const roots = await candidateRoots(home)
   const signals = await Promise.all(
