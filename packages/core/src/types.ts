@@ -5,6 +5,7 @@ export type BuiltinAgentId =
   | 'copilot'
   | 'cursor'
   | 'gemini-cli'
+  | 'qwen-code'
   | 'opencode'
   | 'trae'
   | 'trae-cn'
@@ -15,10 +16,7 @@ export type BuiltinAgentId =
   | 'zcode'
   | 'wps-lingxi'
 
-/**
- * An agent platform id: a built-in id (with autocomplete) or any string
- * for user-defined custom platforms.
- */
+/** An agent platform id: a built-in id (with autocomplete) or any custom string. */
 export type AgentId = BuiltinAgentId | (string & {})
 
 /** Canonical, platform-neutral representation of a skill. */
@@ -29,7 +27,7 @@ export interface Skill {
   version?: string
   author?: string
   tags?: string[]
-  /** Markdown body — the instructions themselves. */
+  /** Markdown body - the instructions themselves. */
   content: string
   /** Additional files shipped alongside the skill (relative path -> absolute source path). */
   resources?: Record<string, string>
@@ -42,14 +40,19 @@ export type InstallScope = 'user' | 'project'
 /** How a discovered skill is managed on disk. */
 export type SkillOrigin = InstallScope | 'legacy' | 'admin' | 'system' | 'plugin'
 
-/** A discovered Skill root, including read-only supplemental platform roots. */
-export interface SkillRoot {
-  agent: AgentId
+/** Additional, non-managed skill root exposed by an agent runtime. */
+export interface SupplementalSkillRoot {
   scope: InstallScope
   path: string
   projectRoot?: string
   origin: SkillOrigin
   readOnly: boolean
+}
+
+/** A discovered Skill root, including read-only supplemental platform roots. */
+export interface SkillRoot extends SupplementalSkillRoot {
+  agent: AgentId
+  /** Whether SkillBuddy can safely toggle discovered installations from this root. */
   canToggle?: boolean
 }
 
@@ -74,17 +77,23 @@ export interface InstalledSkill {
   modifiedAt?: number
 }
 
-/**
- * Adapter for one agent platform: knows the platform's on-disk conventions
- * and converts to/from the canonical skill format.
- */
+/** Agent capabilities that differ from the default SkillBuddy behavior. */
+export interface AdapterCapabilities {
+  /** Whether the agent supports enabling and disabling installed skills. */
+  canToggle?: boolean
+}
+
+/** Adapter for one agent platform and its on-disk Skill conventions. */
 export interface AgentAdapter {
   readonly agent: AgentId
   readonly displayName: string
   /** Whether the adapter supports SkillBuddy's file-based enable/disable flow. */
   readonly supportsToggle?: boolean
+  readonly capabilities?: AdapterCapabilities
   /** Additional read-only or derived roots owned by the platform. */
   supplementalRoots?: () => SkillRoot[] | Promise<SkillRoot[]>
+  /** Compatibility hook for adapters exposing roots without their agent id. */
+  supplementalSkillRoots?(): Promise<SupplementalSkillRoot[]> | SupplementalSkillRoot[]
   /** Directory that holds skills for the given scope; null if unsupported. */
   skillsDir(scope: InstallScope, projectRoot?: string): string | null
   /** Whether this agent appears to be present on this machine. */
@@ -96,10 +105,9 @@ export interface AgentAdapter {
   /** Remove an installed skill by name. */
   uninstall(name: string, scope: InstallScope, projectRoot?: string): Promise<void>
   /** Enable or disable an installed skill without removing its files. */
-  setEnabled(
-    name: string,
-    enabled: boolean,
-    scope: InstallScope,
-    projectRoot?: string,
-  ): Promise<void>
+  setEnabled(name: string, enabled: boolean, scope: InstallScope, projectRoot?: string): Promise<void>
+  /** Apply platform-specific visibility rules to this agent's scanned installations. */
+  reconcileInstallations?(installations: InstalledSkill[]): InstalledSkill[]
+  /** Synchronize platform-owned runtime state after a skill directory changes. */
+  refreshRuntime?(): Promise<void>
 }

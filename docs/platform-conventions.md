@@ -15,6 +15,7 @@
 | WorkBuddy | `~/.workbuddy/skills/` | 无（桌面助手，无项目概念） | `~/.workbuddy` | 多来源一致（非官方一手） |
 | GitHub Copilot | `~/.copilot/skills/` | `.github/skills/` | `~/.copilot` | 官方 |
 | Gemini CLI | `~/.gemini/skills/` | `.gemini/skills/` | `~/.gemini` | 官方 |
+| Qwen Code | `~/.qwen/skills/` | `.qwen/skills/` | `~/.qwen` | 官方 |
 | CodeBuddy | `~/.codebuddy/skills/` | `.codebuddy/skills/` | `~/.codebuddy` | 官方 |
 | Trae（国际版） | `~/.trae/skills/` | `.trae/skills/` | `~/.trae` | 官方（间接确认） |
 | Trae CN | `~/.trae-cn/skills/` | `.trae/skills/` | `~/.trae-cn` | 官方社区帖 |

@@ -327,6 +327,29 @@ export interface CustomPlatformInput {
   detectPath: string
 }
 
+/**
+ * Why a directory cannot become a custom platform root. The renderer maps
+ * these codes to localized text instead of the main process shipping copy.
+ */
+export type PlatformDraftError = 'outside-home' | 'is-home' | 'invalid-id'
+
+/**
+ * A custom platform pre-filled from a single directory. All paths follow the
+ * built-in conventions (`~/`-prefixed user dir, project dir relative to the
+ * project root), so the user only confirms instead of typing them.
+ */
+export interface PlatformDraft {
+  id: string
+  displayName: string
+  detectPath: string
+  userSkillsDir: string
+  /** Empty string means the platform has no project scope. */
+  projectSkillsDir: string
+  /** The directory already holds a `skills/` child — a strong platform signal. */
+  hasSkillsDir: boolean
+  error: PlatformDraftError | null
+}
+
 /** Per-target outcome of an install/uninstall operation. */
 export interface TargetResult {
   target: InstallTarget

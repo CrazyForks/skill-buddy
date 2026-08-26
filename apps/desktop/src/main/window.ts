@@ -44,6 +44,7 @@ export function createWindow(options: { showOnReady?: boolean } = {}): BrowserWi
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: true,
+      devTools: !app.isPackaged,
     },
   })
   mainWindow = window

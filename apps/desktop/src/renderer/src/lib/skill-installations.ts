@@ -72,3 +72,13 @@ export function manageableSkillInstallations(
     return true
   })
 }
+
+/** Return writable installations that support enable and disable operations. */
+export function toggleableSkillInstallations(
+  skill: AggregatedSkill,
+  filter: SkillInstallationFilter,
+): SkillInstallation[] {
+  return manageableSkillInstallations(skill, filter).filter(
+    (installation) => installation.canToggle !== false,
+  )
+}

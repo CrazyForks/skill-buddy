@@ -2,6 +2,18 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Fixed monochrome Agent icons rendering as solid squares on Intel macOS.
+
+---
+
+### 修复
+
+- 修复 Intel macOS 上单色 Agent 图标显示为实心方块的问题。
+
 ## 0.1.6 - 2026-08-26
 
 ### Added

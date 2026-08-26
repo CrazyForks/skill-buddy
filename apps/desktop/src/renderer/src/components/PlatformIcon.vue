@@ -24,6 +24,15 @@ const def = computed(() => platformIcon(props.id))
       width: `${size}px`,
       height: `${size}px`,
       '--platform-icon-mask': `url(${def.maskSrc})`,
+      backgroundColor: 'currentColor',
+      maskImage: `url(${def.maskSrc})`,
+      maskPosition: 'center',
+      maskRepeat: 'no-repeat',
+      maskSize: 'contain',
+      WebkitMaskImage: `url(${def.maskSrc})`,
+      WebkitMaskPosition: 'center',
+      WebkitMaskRepeat: 'no-repeat',
+      WebkitMaskSize: 'contain',
     }"
     :class="cn('inline-block shrink-0', props.class)"
     aria-hidden="true"

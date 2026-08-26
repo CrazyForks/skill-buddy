@@ -34,6 +34,7 @@ import type {
   ModelScopeMcpDetail,
   ModelScopeMcpStats,
   ModelScopeMcpSummary,
+  PlatformDraft,
   TeamLibraryConfig,
   TeamContributionDiff,
   TeamContributionPublishResult,
@@ -206,6 +207,9 @@ const api = {
   listPlatforms: (): Promise<PlatformStatus[]> => ipcRenderer.invoke('platforms:list'),
   registerPlatforms: (defs: CustomPlatformInput[]): Promise<void> =>
     ipcRenderer.invoke('platforms:register', defs),
+  discoverPlatforms: (): Promise<PlatformDraft[]> => ipcRenderer.invoke('platforms:discover'),
+  pickPlatformDirectory: (): Promise<PlatformDraft | null> =>
+    ipcRenderer.invoke('platforms:pick-directory'),
   installSkill: (skill: Skill, targets: InstallTarget[]): Promise<TargetResult[]> =>
     ipcRenderer.invoke('skills:install', skill, targets),
   uninstallSkill: (name: string, targets: InstallTarget[]): Promise<TargetResult[]> =>

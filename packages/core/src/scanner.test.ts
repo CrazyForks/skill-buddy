@@ -6,6 +6,8 @@ import {
   discoverClaudePluginRoots,
   discoverCodexSupplementalRoots,
   discoverLingxiSupplementalRoots,
+  scanInstalledSkills,
+  type SkillRoot,
 } from './scanner.js'
 
 const cleanup: string[] = []
@@ -123,6 +125,31 @@ describe('supplemental skill roots', () => {
         projectRoot: projectPath,
         path: join(installPath, 'skills'),
       }),
+    ])
+  })
+})
+
+describe('scanInstalledSkills', () => {
+  it('保留调用方传入的未注册平台根', async () => {
+    const home = await tempHome()
+    const root = join(home, 'custom-skills')
+    await fs.mkdir(join(root, 'custom-skill'), { recursive: true })
+    await fs.writeFile(
+      join(root, 'custom-skill', 'SKILL.md'),
+      '---\nname: custom-skill\ndescription: test\n---\n',
+    )
+    const roots: SkillRoot[] = [
+      {
+        agent: 'custom-agent',
+        scope: 'user',
+        path: root,
+        origin: 'user',
+        readOnly: false,
+      },
+    ]
+
+    expect(await scanInstalledSkills([], roots)).toEqual([
+      expect.objectContaining({ agent: 'custom-agent', path: join(root, 'custom-skill') }),
     ])
   })
 })

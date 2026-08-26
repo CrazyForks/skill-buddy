@@ -98,8 +98,14 @@ const {
   addProjectRoot,
   removeProjectRoot,
   showPlatformForm,
-  platformForm,
+  platformCandidates,
+  platformDiscovering,
   platformFormError,
+  togglePlatformForm,
+  togglePlatformCandidateSelected,
+  togglePlatformCandidateExpanded,
+  updatePlatformCandidateField,
+  pickPlatformDirectory,
   addCustomPlatform,
   removeCustomPlatform,
   teamLibraryRows,
@@ -168,10 +174,14 @@ const {
             :platforms="visiblePlatforms"
             :custom-platforms="customPlatforms"
             :show-form="showPlatformForm"
-            :form="platformForm"
+            :candidates="platformCandidates"
+            :discovering="platformDiscovering"
             :form-error="platformFormError"
-            @update:showForm="showPlatformForm = $event"
-            @update:form="platformForm = $event"
+            @update:showForm="togglePlatformForm($event)"
+            @toggle-selected="togglePlatformCandidateSelected"
+            @toggle-expanded="togglePlatformCandidateExpanded"
+            @update-field="updatePlatformCandidateField"
+            @pick="pickPlatformDirectory"
             @add="addCustomPlatform"
             @remove="removeCustomPlatform"
           />

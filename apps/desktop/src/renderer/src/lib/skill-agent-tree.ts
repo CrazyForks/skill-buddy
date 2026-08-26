@@ -14,6 +14,7 @@ export interface SkillTreeLeaf {
   agentId: string
   projectFilter: string
   readOnly: boolean
+  canToggle: boolean
   allDisabled: boolean
   partiallyDisabled: boolean
   hasEnabled: boolean
@@ -149,6 +150,7 @@ export function buildSkillAgentTree(options: BuildSkillAgentTreeOptions): SkillT
               agentId: id,
               projectFilter: meta.projectFilter,
               readOnly: status.readOnly,
+              canToggle: status.toggleable.length > 0,
               allDisabled: status.allDisabled,
               partiallyDisabled: status.partiallyDisabled,
               hasEnabled: status.hasEnabled,

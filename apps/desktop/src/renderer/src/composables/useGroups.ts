@@ -14,7 +14,7 @@ import {
 } from '@/lib/market'
 import { serializePreset } from '@/lib/preset-format'
 import {
-  manageableSkillInstallations,
+  toggleableSkillInstallations,
   type SkillInstallationFilter,
 } from '@/lib/skill-installations'
 

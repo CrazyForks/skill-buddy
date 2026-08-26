@@ -91,6 +91,13 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     detectPath: '~/.gemini',
   },
   {
+    id: 'qwen-code',
+    displayName: 'Qwen Code',
+    userSkillsDir: '~/.qwen/skills',
+    projectSkillsDir: '.qwen/skills',
+    detectPath: '~/.qwen',
+  },
+  {
     id: 'codebuddy',
     displayName: 'CodeBuddy',
     userSkillsDir: '~/.codebuddy/skills',

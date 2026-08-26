@@ -3,11 +3,12 @@ import { execFile } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { promises as fs } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { basename, dirname, join } from 'node:path'
+import { homedir, tmpdir } from 'node:os'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import {
   aggregateSkills,
+  allAdapters,
   findSkills,
   getAdapter,
   listPlatformStatus,
@@ -22,6 +23,7 @@ import { readFilePreview } from '../file-preview'
 import { readSecret, writeSecret } from '../secrets'
 import { copyUndoSnapshot } from '../undo-stash'
 import { PathAccessPolicy, validateCustomPlatform } from '../path-policy'
+import { derivePlatformDraft, discoverPlatformCandidates } from '../platform-discovery'
 import { setWindowChromeTheme } from '../window'
 import { installTarget, runTargets } from './targets'
 
@@ -36,6 +38,23 @@ function enqueueSkillStateMutation<T>(mutation: () => Promise<T>): Promise<T> {
     () => undefined,
   )
   return result
+}
+
+/** 刷新受影响平台的运行时投影目录，普通适配器没有此能力时保持无操作。 */
+async function refreshRuntimeForPaths(paths: string[]): Promise<void> {
+  await Promise.all(
+    allAdapters().map(async (adapter) => {
+      if (!adapter.refreshRuntime) return
+      const root = adapter.skillsDir('user')
+      if (!root) return
+      const resolvedRoot = resolve(root)
+      const affectsAdapter = paths.some((path) => {
+        const relation = relative(resolvedRoot, resolve(path))
+        return relation === '' || (!relation.startsWith('..') && !relation.includes(':'))
+      })
+      if (affectsAdapter) await adapter.refreshRuntime()
+    }),
+  )
 }
 
 /** 将单个 Skill 目录符号链接物化为独立目录，避免后续写入影响链接源。 */
@@ -213,6 +232,9 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
           )
           if (!installation) throw new Error(`skill installation not found: ${name}`)
           if (installation.readOnly) throw new Error('skill installation is read-only')
+          if (installation.canToggle === false) {
+            throw new Error(`${target.agent}: skill installation cannot be toggled`)
+          }
           await isolateSharedInstallation(installation, installations)
           return setAdapterEnabled(name, enabled, target)
         }),
@@ -268,6 +290,9 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
       entries.push({ path, stashPath })
     }
     const settled = await Promise.allSettled(paths.map((path) => shell.trashItem(path)))
+    await refreshRuntimeForPaths(
+      paths.filter((_, index) => settled[index]?.status === 'fulfilled'),
+    )
     undoStash.set(token, { root: stashRoot, entries })
     setTimeout(() => {
       const record = undoStash.get(token)
@@ -295,6 +320,7 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     for (const entry of record.entries) {
       await fs.cp(entry.stashPath, entry.path, { recursive: true })
     }
+    await refreshRuntimeForPaths(record.entries.map((entry) => entry.path))
     await fs.rm(record.root, { recursive: true, force: true })
     return true
   })
@@ -366,6 +392,9 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
   ipcMain.handle('skills:trash', async (_event, paths: string[]) => {
     await Promise.all(paths.map((path) => pathPolicy.assertWritableSkillDirectory(path)))
     const settled = await Promise.allSettled(paths.map((path) => shell.trashItem(path)))
+    await refreshRuntimeForPaths(
+      paths.filter((_, index) => settled[index]?.status === 'fulfilled'),
+    )
     return settled.map((result, index) => ({
       path: paths[index]!,
       ok: result.status === 'fulfilled',
@@ -429,6 +458,18 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const selected = result.canceled ? null : (result.filePaths[0] ?? null)
     if (selected) pathPolicy.grantSelectedRoot(selected)
     return selected
+  })
+
+  /* 自定义平台：目录发现与推导都在主进程完成，渲染进程只拿到可直接提交的草稿 */
+  ipcMain.handle('platforms:discover', () => discoverPlatformCandidates())
+
+  ipcMain.handle('platforms:pick-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      defaultPath: homedir(),
+    })
+    const selected = result.canceled ? null : (result.filePaths[0] ?? null)
+    return selected ? await derivePlatformDraft(selected) : null
   })
 
   ipcMain.handle('skills:find-in-dir', async (_event, root: string) => {

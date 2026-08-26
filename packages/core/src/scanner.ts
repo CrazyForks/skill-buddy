@@ -1,8 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join, resolve } from 'node:path'
-import {
-  allAdapters,
-} from './adapters/index.js'
+import { allAdapters } from './adapters/index.js'
 import { readSkillDirState } from './skill-io.js'
 import type { AgentId, InstalledSkill, SkillRoot } from './types.js'
 
@@ -71,11 +69,10 @@ function dedupeRoots(roots: SkillRoot[]): SkillRoot[] {
 /** Resolve every managed and supplemental skill root for detected platforms. */
 export async function listSkillRoots(projectRoots: string[] = []): Promise<SkillRoot[]> {
   const roots: SkillRoot[] = []
-  const detected = new Set<AgentId>()
 
   for (const adapter of allAdapters()) {
     if (!(await adapter.detect())) continue
-    detected.add(adapter.agent)
+    const canToggle = adapter.supportsToggle !== false && adapter.capabilities?.canToggle !== false
     const userPath = adapter.skillsDir('user')
     if (userPath) {
       roots.push({
@@ -84,9 +81,24 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
         path: userPath,
         origin: 'user',
         readOnly: false,
-        canToggle: adapter.supportsToggle !== false,
+        canToggle,
       })
     }
+
+    const supplementalRoots = await adapter.supplementalRoots?.()
+    if (supplementalRoots) {
+      roots.push(...supplementalRoots)
+    } else {
+      const legacyRoots = await adapter.supplementalSkillRoots?.()
+      roots.push(
+        ...(legacyRoots ?? []).map((root) => ({
+          ...root,
+          agent: adapter.agent,
+          canToggle: false,
+        })),
+      )
+    }
+
     for (const projectRoot of projectRoots) {
       const projectPath = adapter.skillsDir('project', projectRoot)
       if (!projectPath) continue
@@ -97,15 +109,11 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
         projectRoot,
         origin: 'project',
         readOnly: false,
-        canToggle: adapter.supportsToggle !== false,
+        canToggle,
       })
     }
   }
 
-  for (const adapter of allAdapters()) {
-    if (!detected.has(adapter.agent)) continue
-    roots.push(...(await (adapter.supplementalRoots?.() ?? [])))
-  }
   return dedupeRoots(roots)
 }
 
@@ -117,9 +125,8 @@ async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
     if (!state) continue
     let modifiedAt: number | undefined
     try {
-      modifiedAt = (
-        await fs.stat(join(skillPath, state.enabled ? 'SKILL.md' : 'SKILL.md.disabled'))
-      ).mtimeMs
+      modifiedAt = (await fs.stat(join(skillPath, state.enabled ? 'SKILL.md' : 'SKILL.md.disabled')))
+        .mtimeMs
     } catch {
       modifiedAt = undefined
     }
@@ -145,5 +152,20 @@ export async function scanInstalledSkills(
   resolvedRoots?: readonly SkillRoot[],
 ): Promise<InstalledSkill[]> {
   const roots = resolvedRoots ?? (await listSkillRoots(projectRoots))
-  return (await Promise.all(roots.map(scanSkillRoot))).flat()
+  const installations = (await Promise.all(roots.map(scanSkillRoot))).flat()
+  const reconciled: InstalledSkill[] = []
+  const registeredAgents = new Set<AgentId>()
+  for (const adapter of allAdapters()) {
+    registeredAgents.add(adapter.agent)
+    const agentInstallations = installations.filter(
+      (installation) => installation.agent === adapter.agent,
+    )
+    reconciled.push(
+      ...(adapter.reconcileInstallations?.(agentInstallations) ?? agentInstallations),
+    )
+  }
+  reconciled.push(
+    ...installations.filter((installation) => !registeredAgents.has(installation.agent)),
+  )
+  return reconciled
 }
