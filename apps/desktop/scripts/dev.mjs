@@ -6,6 +6,7 @@ delete env.NODE_OPTIONS
 const executable = process.platform === 'win32' ? 'electron-vite.cmd' : 'electron-vite'
 const child = spawn(executable, ['dev', '--watch'], {
   env,
+  shell: process.platform === 'win32',
   stdio: 'inherit',
 })
 

@@ -12,6 +12,7 @@ import SidebarToggle from '@/components/SidebarToggle.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { useMcpServers } from '@/composables/useMcpServers'
 import { useSettings } from '@/composables/useSettings'
 import { showToast } from '@/composables/useToast'
@@ -228,19 +229,21 @@ async function executePlan(): Promise<void> {
       </div>
     </div>
     <div v-else class="grid min-h-0 flex-1 grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-      <aside class="min-h-0 overflow-y-auto border-r">
-        <p
-          v-if="filteredServers.length === 0"
-          class="px-4 py-12 text-center text-sm text-muted-foreground"
-        >
-          {{ t('mcp.noMatch') }}
-        </p>
-        <McpServerList
-          v-else
-          :servers="filteredServers"
-          :selected-name="selectedName"
-          @select="selectedName = $event.name"
-        />
+      <aside class="min-h-0 border-r">
+        <ScrollArea class="h-full">
+          <p
+            v-if="filteredServers.length === 0"
+            class="px-4 py-12 text-center text-sm text-muted-foreground"
+          >
+            {{ t('mcp.noMatch') }}
+          </p>
+          <McpServerList
+            v-else
+            :servers="filteredServers"
+            :selected-name="selectedName"
+            @select="selectedName = $event.name"
+          />
+        </ScrollArea>
       </aside>
       <McpServerDetail
         v-if="selectedServer"

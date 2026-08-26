@@ -136,7 +136,9 @@ watch(
   appearance,
   (v) => {
     localStorage.setItem('skm.appearance', JSON.stringify(v))
-    applyAppearance(document.documentElement.classList.contains('dark'))
+    const dark = document.documentElement.classList.contains('dark')
+    applyAppearance(dark)
+    syncWindowChromeTheme()
   },
   { deep: true },
 )
@@ -256,6 +258,16 @@ export function applyAppearance(dark: boolean): void {
 
   // vibrancy 材质只在 macOS 存在；关闭后侧边栏回到不透明的 muted 底色
   root.classList.toggle('vibrancy', isMac && appearance.value.translucentSidebar)
+}
+
+/** 将实际生效的页面背景和前景色同步给 Windows 原生标题栏。 */
+export function syncWindowChromeTheme(): void {
+  if (typeof document === 'undefined') return
+  const styles = getComputedStyle(document.documentElement)
+  const background = styles.getPropertyValue('--background').trim()
+  const foreground = styles.getPropertyValue('--foreground').trim()
+  if (!background || !foreground) return
+  void window.skillsManager?.setWindowChromeTheme({ background, foreground })
 }
 
 /** 导出当前配置（用于「复制主题」）。 */

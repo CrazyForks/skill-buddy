@@ -115,15 +115,15 @@ SkillBuddy 桌面端当前提供以下构建目标：
 | 操作系统 | 处理器架构 | 最低版本 | 支持状态 |
 | --- | --- | --- | --- |
 | macOS | Apple Silicon（`arm64`） | macOS 11 Big Sur | 正式支持，DMG 和 ZIP |
-| macOS | Intel（`x64`） | - | 不支持 |
+| macOS | Intel（`x64`） | macOS 11 Big Sur | 正式支持，DMG 和 ZIP |
 | Windows | `x64` | Windows 10 及以上 | 正式支持，NSIS 安装包和 ZIP |
 | Windows | `arm64` | Windows 11 | 预览构建，NSIS 安装包和 ZIP，待 ARM64 真机验证 |
 | Linux | `x64` | 现代桌面发行版 | 正式支持，AppImage、DEB 和 RPM |
 | Linux | `arm64` | 现代桌面发行版 | 预览构建，AppImage、DEB 和 RPM，待 ARM64 真机验证 |
 
-发布文件统一采用 `SkillBuddy-v<版本>-<系统>-<架构>.<扩展名>` 命名。暂不构建 Intel macOS 安装包。
+发布文件统一采用 `SkillBuddy-v<版本>-<系统>-<架构>.<扩展名>` 命名。
 
-- macOS：`SkillBuddy-v<版本>-macos-arm64.dmg` 和 `.zip`
+- macOS arm64/x64：`SkillBuddy-v<版本>-macos-<架构>.dmg` 和 `.zip`
 - Windows x64/arm64：`SkillBuddy-v<版本>-windows-<架构>.exe` 和 `.zip`
 - Linux x64/arm64：`SkillBuddy-v<版本>-linux-<架构>.AppImage`、`.deb` 和 `.rpm`（x64 构建使用 `x86_64`）
 

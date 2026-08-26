@@ -2,7 +2,7 @@
  * @Author: wjc
  * @Date: 2026-08-10 10:14:11
  * @LastEditors: wjc
- * @LastEditTime: 2026-08-19 00:02:10
+ * @LastEditTime: 2026-08-26 09:29:38
  * @Description:
  */
 import claudeIcon from '@lobehub/icons-static-svg/icons/claude-color.svg'
@@ -32,11 +32,11 @@ interface PlatformIconDef {
 
 const ICONS: Record<string, PlatformIconDef> = {
   'claude-code': { src: claudeIcon },
-  codex: { src: codexIcon },
-  copilot: { src: githubcopilotIcon },
-  cursor: { src: cursorIcon },
+  codex: { maskSrc: codexIcon },
+  copilot: { maskSrc: githubcopilotIcon },
+  cursor: { maskSrc: cursorIcon },
   'gemini-cli': { src: geminiIcon },
-  opencode: { src: opencodeIcon },
+  opencode: { maskSrc: opencodeIcon },
   codebuddy: { src: codebuddyIcon },
   trae: { src: traeIcon },
   'trae-cn': { src: traeIcon },

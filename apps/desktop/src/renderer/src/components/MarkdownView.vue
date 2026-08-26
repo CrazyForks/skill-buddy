@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { config as configureMarkdown, MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import hljs from '@/lib/highlight'
+import { sanitizeMarkdownHtml } from '@/lib/sanitize-markdown'
 
 const props = defineProps<{ content: string; previewId?: string }>()
 
@@ -38,6 +39,7 @@ const id = computed(() => props.previewId ?? 'md-view')
     preview-theme="github"
     code-theme="github"
     :show-code-row-number="false"
+    :sanitize="sanitizeMarkdownHtml"
     class="markdown-view"
   />
 </template>

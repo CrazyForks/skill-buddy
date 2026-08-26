@@ -278,6 +278,8 @@ const api = {
   },
   setTheme: (mode: 'system' | 'light' | 'dark'): Promise<void> =>
     ipcRenderer.invoke('theme:set', mode),
+  setWindowChromeTheme: (colors: { background: string; foreground: string }): Promise<void> =>
+    ipcRenderer.invoke('window:set-theme', colors),
   getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:info'),
   checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('app:check-update'),
   downloadUpdate: (latest: string): Promise<UpdateDownloadResult> =>

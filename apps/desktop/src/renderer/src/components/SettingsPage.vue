@@ -109,7 +109,7 @@ const {
 </script>
 
 <template>
-  <div class="flex h-screen">
+  <div class="flex min-h-0 flex-1">
     <SettingsSidebar
       :groups="groups"
       :category="category"

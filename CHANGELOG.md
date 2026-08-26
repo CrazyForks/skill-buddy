@@ -2,6 +2,36 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.6 - 2026-08-26
+
+### Added
+
+- Added Intel macOS (`x64`) desktop builds, release assets, and architecture-aware in-app updates.
+- Improved Windows window behavior and file handling.
+- Improved installation target hierarchy, resource browsing, and page cache refresh behavior.
+
+### Fixed
+
+- Fixed Linux application icons and preserved the default installation flow.
+- Added custom scrollbars to MCP pages and preserved marketplace installation success feedback.
+- Fixed dark-mode icon and label alignment.
+- Sanitized rendered Markdown preview HTML.
+
+---
+
+### 新增
+
+- 增加 Intel macOS（`x64`）桌面构建、发布安装包及按架构匹配的应用内更新。
+- 完善 Windows 窗口行为与文件处理。
+- 优化安装目标层级、详情资源浏览和页面缓存刷新策略。
+
+### 修复
+
+- 修复 Linux 应用图标，并保留默认安装流程。
+- 为 MCP 页面统一自定义滚动条，并保留市场安装成功提示。
+- 修复深色模式下的图标与标签对齐。
+- 对 Markdown 预览 HTML 进行安全净化。
+
 ## 0.1.5 - 2026-08-24
 
 ### Added

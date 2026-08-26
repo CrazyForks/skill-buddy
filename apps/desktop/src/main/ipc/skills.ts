@@ -20,7 +20,9 @@ import {
 import type { CustomPlatformInput, InstallTarget } from '#shared/ipc'
 import { readFilePreview } from '../file-preview'
 import { readSecret, writeSecret } from '../secrets'
+import { copyUndoSnapshot } from '../undo-stash'
 import { PathAccessPolicy, validateCustomPlatform } from '../path-policy'
+import { setWindowChromeTheme } from '../window'
 import { installTarget, runTargets } from './targets'
 
 const execFileAsync = promisify(execFile)
@@ -227,6 +229,22 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     nativeTheme.themeSource = mode
   })
 
+  ipcMain.handle('window:set-theme', (_event, colors: unknown) => {
+    if (!colors || typeof colors !== 'object') return
+    const { background, foreground } = colors as Record<string, unknown>
+    if (
+      typeof background !== 'string' ||
+      typeof foreground !== 'string' ||
+      background.trim().length === 0 ||
+      foreground.trim().length === 0 ||
+      background.length > 128 ||
+      foreground.length > 128
+    ) {
+      return
+    }
+    setWindowChromeTheme({ background: background.trim(), foreground: foreground.trim() })
+  })
+
   ipcMain.handle('secure:get', (_event, key: string) => readSecret(key))
 
   ipcMain.handle('secure:set', (_event, key: string, value: string) => writeSecret(key, value))
@@ -243,7 +261,7 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const entries: { path: string; stashPath: string }[] = []
     for (const [index, path] of paths.entries()) {
       const stashPath = join(stashRoot, `${index}-${basename(path)}`)
-      await fs.cp(path, stashPath, { recursive: true })
+      await copyUndoSnapshot(path, stashPath)
       entries.push({ path, stashPath })
     }
     const settled = await Promise.allSettled(paths.map((path) => shell.trashItem(path)))

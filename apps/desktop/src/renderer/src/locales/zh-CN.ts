@@ -652,6 +652,7 @@ export default {
     viewSource: '查看仓库',
     install: '安装',
     installing: '安装中',
+    installSuccess: '技能「{name}」安装成功',
     addToGroups: '加入技能包',
     addToGroupsAction: '加入 {n} 个技能包',
     addedToGroups: '已加入 {n} 个技能包',

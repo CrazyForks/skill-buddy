@@ -652,6 +652,7 @@ export default {
     viewSource: 'View repo',
     install: 'Install',
     installing: 'Installing',
+    installSuccess: 'Skill "{name}" installed successfully',
     addToGroups: 'Add to skill packages',
     addToGroupsAction: 'Add to {n} skill package(s)',
     addedToGroups: 'Added to {n} skill package(s)',
