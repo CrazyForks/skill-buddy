@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, WebContentsView, ipcMain, shell } from 'electron'
 import type { InAppBrowserState, LinkOpenMode } from '#shared/ipc'
 
 /** 与渲染进程 InAppBrowser.vue 工具栏（h-12）保持一致的高度。 */
@@ -35,7 +35,11 @@ function openInApp(win: BrowserWindow, url: string): void {
   host = win
   if (!view) {
     view = new WebContentsView({
-      webPreferences: { sandbox: true, contextIsolation: true },
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        devTools: !app.isPackaged,
+      },
     })
     view.setBackgroundColor('#ffffff')
     const wc = view.webContents
