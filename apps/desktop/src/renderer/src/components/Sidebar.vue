@@ -8,6 +8,7 @@ import SidebarAgentsSection from '@/components/sidebar/SidebarAgentsSection.vue'
 import SidebarPrimaryNav from '@/components/sidebar/SidebarPrimaryNav.vue'
 import SidebarScopesSection from '@/components/sidebar/SidebarScopesSection.vue'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAppUpdate } from '@/composables/useAppUpdate'
 import { useGroups } from '@/composables/useGroups'
 import { useMcpServers } from '@/composables/useMcpServers'
 import { useSettings } from '@/composables/useSettings'
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { projectRoots, sidebarCollapsed } = useSettings()
+const { appInfo } = useAppUpdate()
 const collapsing = shallowRef(false)
 let collapseTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -214,6 +216,9 @@ async function removeProjectRoot(root: string): Promise<void> {
         >
           <Settings class="size-4 shrink-0" />
           <span class="truncate">{{ t('common.settings') }}</span>
+          <span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground/80">
+            v{{ appInfo?.version ?? '-' }}
+          </span>
         </button>
         <AppUpdateNotice />
       </div>
