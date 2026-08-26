@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   discoverClaudePluginRoots,
   discoverCodexSupplementalRoots,
-  discoverLingxiSupplementalRoots,
+  scanInstalledSkills,
+  type SkillRoot,
 } from './scanner.js'
 
 const cleanup: string[] = []
@@ -127,20 +128,27 @@ describe('supplemental skill roots', () => {
   })
 })
 
-describe('discoverLingxiSupplementalRoots', () => {
-  it.each([
-    ['darwin', ['Library', 'Application Support', 'WPS 灵犀']],
-    ['win32', ['AppData', 'Roaming', 'WPS 灵犀']],
-    ['linux', ['.config', 'WPS 灵犀']],
-  ] as const)('points at the bundled official_skills dir on %s', (os, segments) => {
-    expect(discoverLingxiSupplementalRoots('/home/test', os)).toEqual([
+describe('scanInstalledSkills', () => {
+  it('保留调用方传入的未注册平台根', async () => {
+    const home = await tempHome()
+    const root = join(home, 'custom-skills')
+    await fs.mkdir(join(root, 'custom-skill'), { recursive: true })
+    await fs.writeFile(
+      join(root, 'custom-skill', 'SKILL.md'),
+      '---\nname: custom-skill\ndescription: test\n---\n',
+    )
+    const roots: SkillRoot[] = [
       {
-        agent: 'wps-lingxi',
+        agent: 'custom-agent',
         scope: 'user',
-        path: join('/home/test', ...segments, 'serverdir', 'official_skills'),
-        origin: 'system',
-        readOnly: true,
+        path: root,
+        origin: 'user',
+        readOnly: false,
       },
+    ]
+
+    expect(await scanInstalledSkills([], roots)).toEqual([
+      expect.objectContaining({ agent: 'custom-agent', path: join(root, 'custom-skill') }),
     ])
   })
 })

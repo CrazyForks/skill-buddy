@@ -6,7 +6,10 @@ import { useSkills } from '@/composables/useSkills'
 import { showToast } from '@/composables/useToast'
 import type { BatchAction, BatchItem, BatchRequest } from '@/lib/skill-action-types'
 import { pathBasename } from '@/lib/paths'
-import { manageableSkillInstallations } from '@/lib/skill-installations'
+import {
+  manageableSkillInstallations,
+  toggleableSkillInstallations,
+} from '@/lib/skill-installations'
 
 /** 管理技能列表的选择状态、批量确认快照和批量异步写入流程。 */
 export function useSkillBatchActions() {
@@ -181,7 +184,10 @@ export function useSkillBatchActions() {
   function requestBatch(action: BatchAction): void {
     const items = selectedSkills.value
       .map((skill): BatchItem => {
-        const installations = manageableSkillInstallations(skill, installationFilter.value)
+        const installations =
+          action === 'uninstall'
+            ? manageableSkillInstallations(skill, installationFilter.value)
+            : toggleableSkillInstallations(skill, installationFilter.value)
         return {
           name: skill.name,
           targets: installations.map((installation) => ({

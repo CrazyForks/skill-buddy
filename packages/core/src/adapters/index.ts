@@ -1,9 +1,13 @@
 import { BUILTIN_PLATFORMS, type PlatformDef } from '../platforms.js'
 import type { AgentAdapter, AgentId } from '../types.js'
+import { LingxiAdapter } from './lingxi-adapter.js'
 import { PlatformAdapter } from './platform-adapter.js'
 
 const registry = new Map<AgentId, AgentAdapter>(
-  BUILTIN_PLATFORMS.map((def) => [def.id, new PlatformAdapter(def)]),
+  BUILTIN_PLATFORMS.map((def) => [
+    def.id,
+    def.id === 'wps-lingxi' ? new LingxiAdapter() : new PlatformAdapter(def),
+  ]),
 )
 
 export function getAdapter(agent: AgentId): AgentAdapter {
@@ -28,4 +32,5 @@ export function registerPlatform(def: PlatformDef, homeDir?: string): AgentAdapt
 }
 
 export { PlatformAdapter }
+export { LingxiAdapter }
 export { SkillDirAdapter } from './skill-dir-adapter.js'

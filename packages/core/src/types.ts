@@ -57,8 +57,25 @@ export interface InstalledSkill {
   readOnly?: boolean
   /** Whether the installation is discoverable by the target agent. */
   enabled?: boolean
+  /** Whether the target agent supports toggling this installation through SkillBuddy. */
+  canToggle?: boolean
   /** SKILL.md mtime, ms since epoch. */
   modifiedAt?: number
+}
+
+/** Additional, non-managed skill root exposed by an agent runtime. */
+export interface SupplementalSkillRoot {
+  scope: InstallScope
+  path: string
+  projectRoot?: string
+  origin: SkillOrigin
+  readOnly: boolean
+}
+
+/** Agent capabilities that differ from the default SkillBuddy behavior. */
+export interface AdapterCapabilities {
+  /** Whether the agent supports enabling and disabling installed skills. */
+  canToggle?: boolean
 }
 
 /**
@@ -68,6 +85,7 @@ export interface InstalledSkill {
 export interface AgentAdapter {
   readonly agent: AgentId
   readonly displayName: string
+  readonly capabilities?: AdapterCapabilities
   /** Directory that holds skills for the given scope; null if unsupported. */
   skillsDir(scope: InstallScope, projectRoot?: string): string | null
   /** Whether this agent appears to be present on this machine. */
@@ -85,4 +103,10 @@ export interface AgentAdapter {
     scope: InstallScope,
     projectRoot?: string,
   ): Promise<void>
+  /** Read-only or bundled skill directories supplied by this agent. */
+  supplementalSkillRoots?(): Promise<SupplementalSkillRoot[]> | SupplementalSkillRoot[]
+  /** Apply platform-specific visibility rules to this agent's scanned installations. */
+  reconcileInstallations?(installations: InstalledSkill[]): InstalledSkill[]
+  /** Synchronize platform-owned runtime state after a skill directory changes. */
+  refreshRuntime?(): Promise<void>
 }

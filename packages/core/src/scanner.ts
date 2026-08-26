@@ -8,6 +8,7 @@ import type {
   AgentId,
   InstallScope,
   InstalledSkill,
+  SupplementalSkillRoot,
   SkillOrigin,
 } from './types.js'
 
@@ -19,13 +20,8 @@ export interface PlatformStatus {
 }
 
 /** One directory whose immediate children are SKILL.md folders. */
-export interface SkillRoot {
+export interface SkillRoot extends SupplementalSkillRoot {
   agent: AgentId
-  scope: InstallScope
-  path: string
-  projectRoot?: string
-  origin: SkillOrigin
-  readOnly: boolean
 }
 
 interface ClaudePluginRecord {
@@ -185,33 +181,6 @@ export function discoverDoubaoSupplementalRoots(homeDir: string = homedir()): Sk
   ]
 }
 
-/**
- * Bundled WPS 灵犀 skills ship inside the app sandbox and are exposed to the
- * agent through a `official_skills` symlink next to the writable `user_skills`
- * directory. They are inventory-only: the desktop app replaces them on every
- * version upgrade.
- */
-export function discoverLingxiSupplementalRoots(
-  homeDir: string = homedir(),
-  os: NodeJS.Platform = process.platform,
-): SkillRoot[] {
-  const userDataDir =
-    os === 'darwin'
-      ? join(homeDir, 'Library', 'Application Support', 'WPS 灵犀')
-      : os === 'win32'
-        ? join(homeDir, 'AppData', 'Roaming', 'WPS 灵犀')
-        : join(homeDir, '.config', 'WPS 灵犀')
-  return [
-    {
-      agent: 'wps-lingxi',
-      scope: 'user',
-      path: join(userDataDir, 'serverdir', 'official_skills'),
-      origin: 'system',
-      readOnly: true,
-    },
-  ]
-}
-
 function dedupeRoots(roots: SkillRoot[]): SkillRoot[] {
   const seen = new Set<string>()
   return roots.filter((root) => {
@@ -240,6 +209,13 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
         readOnly: false,
       })
     }
+    const supplementalRoots = await adapter.supplementalSkillRoots?.()
+    roots.push(
+      ...(supplementalRoots ?? []).map((root) => ({
+        ...root,
+        agent: adapter.agent,
+      })),
+    )
     for (const projectRoot of projectRoots) {
       const projectPath = adapter.skillsDir('project', projectRoot)
       if (!projectPath) continue
@@ -257,7 +233,6 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
   if (detected.has('codex')) roots.push(...(await discoverCodexSupplementalRoots()))
   if (detected.has('claude-code')) roots.push(...(await discoverClaudePluginRoots()))
   if (detected.has('doubao')) roots.push(...discoverDoubaoSupplementalRoots())
-  if (detected.has('wps-lingxi')) roots.push(...discoverLingxiSupplementalRoots())
   return dedupeRoots(roots)
 }
 
@@ -296,5 +271,20 @@ export async function scanInstalledSkills(
   resolvedRoots?: readonly SkillRoot[],
 ): Promise<InstalledSkill[]> {
   const roots = resolvedRoots ?? (await listSkillRoots(projectRoots))
-  return (await Promise.all(roots.map(scanSkillRoot))).flat()
+  const installations = (await Promise.all(roots.map(scanSkillRoot))).flat()
+  const reconciled: InstalledSkill[] = []
+  const registeredAgents = new Set<AgentId>()
+  for (const adapter of allAdapters()) {
+    registeredAgents.add(adapter.agent)
+    const agentInstallations = installations.filter(
+      (installation) => installation.agent === adapter.agent,
+    )
+    reconciled.push(
+      ...(adapter.reconcileInstallations?.(agentInstallations) ?? agentInstallations),
+    )
+  }
+  reconciled.push(
+    ...installations.filter((installation) => !registeredAgents.has(installation.agent)),
+  )
+  return reconciled
 }
