@@ -2,17 +2,35 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
-## Unreleased
+## 0.1.7 - 2026-08-27
+
+### Added
+
+- Added Qwen Code Skills support.
+- Added WPS Lingxi user-scope Skill support, including Windows runtime directory synchronization.
+- Added custom platform discovery and management in Settings.
+- Displayed the running application version beside the sidebar Settings entry.
 
 ### Fixed
 
-- Fixed monochrome Agent icons rendering as solid squares on Intel macOS.
+- Fixed monochrome Agent icons rendering as solid squares in packaged macOS builds.
+- Prevented built-in Skill directories from being suggested again as custom platforms.
+- Stabilized the sidebar collapse transition and added a loading skeleton when Settings first opens.
 
 ---
 
+### 新增
+
+- 增加 Qwen Code Skills 支持。
+- 增加 WPS 灵犀用户级 Skill 支持，并在 Windows 同步运行时技能目录。
+- 支持在设置中发现和管理自定义平台。
+- 在侧边栏设置入口右侧显示当前应用版本。
+
 ### 修复
 
-- 修复 Intel macOS 上单色 Agent 图标显示为实心方块的问题。
+- 修复 macOS 打包版中单色 Agent 图标显示为实心方块的问题。
+- 避免将内置平台的 Skill 目录重复推荐为自定义平台。
+- 优化侧边栏收起过渡，并为首次打开设置页增加加载骨架。
 
 ## 0.1.6 - 2026-08-26
 
