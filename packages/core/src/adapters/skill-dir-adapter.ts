@@ -18,6 +18,7 @@ import { exists, isKebabCase } from './shared.js'
 export abstract class SkillDirAdapter implements AgentAdapter {
   abstract readonly agent: AgentId
   abstract readonly displayName: string
+  readonly supportsToggle: boolean = true
 
   abstract skillsDir(scope: InstallScope, projectRoot?: string): string | null
   abstract detect(): Promise<boolean>
@@ -46,6 +47,7 @@ export abstract class SkillDirAdapter implements AgentAdapter {
         path: skillPath,
         origin: scope,
         readOnly: false,
+        canToggle: this.supportsToggle,
         enabled: state.enabled,
         modifiedAt,
         skill: state.skill,
@@ -109,6 +111,9 @@ export abstract class SkillDirAdapter implements AgentAdapter {
     scope: InstallScope,
     projectRoot?: string,
   ): Promise<void> {
+    if (!this.supportsToggle) {
+      throw new Error(`${this.agent}: enable/disable is not supported safely`)
+    }
     if (!isKebabCase(name)) throw new Error(`skill name must be kebab-case, got "${name}"`)
     const dir = this.skillsDir(scope, projectRoot)
     if (!dir) throw new Error(`${this.agent}: no skills directory for scope "${scope}"`)

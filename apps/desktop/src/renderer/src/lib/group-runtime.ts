@@ -46,7 +46,9 @@ export function deriveGroupRuntimeState(
     else installedSkills += 1
 
     if (!skill) continue
-    const manageable = manageableSkillInstallations(skill, filter)
+    const manageable = manageableSkillInstallations(skill, filter).filter(
+      (installation) => installation.canToggle !== false,
+    )
     manageableInstallations += manageable.length
     enabledInstallations += manageable.filter(
       (installation) => installation.enabled !== false,

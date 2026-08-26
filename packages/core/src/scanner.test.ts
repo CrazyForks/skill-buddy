@@ -140,6 +140,7 @@ describe('discoverLingxiSupplementalRoots', () => {
         path: join('/home/test', ...segments, 'serverdir', 'official_skills'),
         origin: 'system',
         readOnly: true,
+        canToggle: false,
       },
     ])
   })

@@ -145,7 +145,7 @@ export function useSkillItemActions() {
       platformId: requestedPlatformId,
       projectFilter: requestedProjectFilter,
       ownershipFilter: ownershipFilter.value,
-    })
+    }).filter((installation) => installation.canToggle !== false)
     if (installations.length === 0) return
     pendingToggle.value = {
       skill,

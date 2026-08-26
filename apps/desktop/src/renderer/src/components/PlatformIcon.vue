@@ -19,14 +19,11 @@ const def = computed(() => platformIcon(props.id))
 <template>
   <span
     v-if="def.maskSrc"
+    class="platform-icon-mask"
     :style="{
       width: `${size}px`,
       height: `${size}px`,
-      backgroundColor: 'currentColor',
-      maskImage: `url(${def.maskSrc})`,
-      maskPosition: 'center',
-      maskRepeat: 'no-repeat',
-      maskSize: 'contain',
+      '--platform-icon-mask': `url(${def.maskSrc})`,
     }"
     :class="cn('inline-block shrink-0', props.class)"
     aria-hidden="true"
@@ -60,3 +57,21 @@ const def = computed(() => platformIcon(props.id))
     {{ def.monogram }}
   </span>
 </template>
+
+<style scoped>
+.platform-icon-mask {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentcolor;
+  mask-image: var(--platform-icon-mask);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  /* stylelint-disable property-no-vendor-prefix */
+  -webkit-mask-image: var(--platform-icon-mask);
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  /* stylelint-enable property-no-vendor-prefix */
+}
+</style>

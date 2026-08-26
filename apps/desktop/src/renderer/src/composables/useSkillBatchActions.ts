@@ -53,6 +53,16 @@ export function useSkillBatchActions() {
       0,
     ),
   )
+  const selectedToggleTargetCount = computed(() =>
+    selectedSkills.value.reduce(
+      (count, skill) =>
+        count +
+        manageableSkillInstallations(skill, installationFilter.value).filter(
+          (installation) => installation.canToggle !== false,
+        ).length,
+      0,
+    ),
+  )
   const projectCapablePlatforms = computed(() =>
     detectedPlatforms.value.filter((platform) => platform.hasProjectScope),
   )
@@ -181,7 +191,9 @@ export function useSkillBatchActions() {
   function requestBatch(action: BatchAction): void {
     const items = selectedSkills.value
       .map((skill): BatchItem => {
-        const installations = manageableSkillInstallations(skill, installationFilter.value)
+        const installations = manageableSkillInstallations(skill, installationFilter.value).filter(
+          (installation) => action === 'uninstall' || installation.canToggle !== false,
+        )
         return {
           name: skill.name,
           targets: installations.map((installation) => ({
@@ -280,6 +292,7 @@ export function useSkillBatchActions() {
     selectedSkills,
     allVisibleSelected,
     selectedTargetCount,
+    selectedToggleTargetCount,
     projectCapablePlatforms,
     projectOptions,
     setBatchMode,

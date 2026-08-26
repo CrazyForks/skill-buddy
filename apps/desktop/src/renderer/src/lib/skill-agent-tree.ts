@@ -17,6 +17,7 @@ export interface SkillTreeLeaf {
   allDisabled: boolean
   partiallyDisabled: boolean
   hasEnabled: boolean
+  canToggle: boolean
 }
 
 interface SkillTreeScope {
@@ -151,6 +152,7 @@ export function buildSkillAgentTree(options: BuildSkillAgentTreeOptions): SkillT
               allDisabled: status.allDisabled,
               partiallyDisabled: status.partiallyDisabled,
               hasEnabled: status.hasEnabled,
+              canToggle: status.toggleable.length > 0,
             }
           }),
         }))

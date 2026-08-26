@@ -11,6 +11,7 @@ export interface SkillInstallationFilter {
 
 export interface SkillInstallationStatus {
   writable: SkillInstallation[]
+  toggleable: SkillInstallation[]
   disabledCount: number
   readOnly: boolean
   allDisabled: boolean
@@ -23,14 +24,16 @@ export function deriveSkillInstallationStatus(
   installations: SkillInstallation[],
 ): SkillInstallationStatus {
   const writable = installations.filter((installation) => !installation.readOnly)
-  const disabledCount = writable.filter((installation) => installation.enabled === false).length
+  const toggleable = writable.filter((installation) => installation.canToggle !== false)
+  const disabledCount = toggleable.filter((installation) => installation.enabled === false).length
   return {
     writable,
+    toggleable,
     disabledCount,
     readOnly: installations.length > 0 && writable.length === 0,
-    allDisabled: writable.length > 0 && disabledCount === writable.length,
-    partiallyDisabled: disabledCount > 0 && disabledCount < writable.length,
-    hasEnabled: writable.some((installation) => installation.enabled !== false),
+    allDisabled: toggleable.length > 0 && disabledCount === toggleable.length,
+    partiallyDisabled: disabledCount > 0 && disabledCount < toggleable.length,
+    hasEnabled: toggleable.some((installation) => installation.enabled !== false),
   }
 }
 

@@ -176,7 +176,7 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   }
 
   async function toggleInstallation(installation: Installation): Promise<void> {
-    if (installation.readOnly) return
+    if (installation.readOnly || installation.canToggle === false) return
     const requestedSkillName = skill.value.name
     const requestedTarget: InstallTarget = {
       agent: installation.agent,

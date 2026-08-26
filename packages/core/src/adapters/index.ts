@@ -1,9 +1,10 @@
 import { BUILTIN_PLATFORMS, type PlatformDef } from '../platforms.js'
 import type { AgentAdapter, AgentId } from '../types.js'
+import { createPlatformAdapter } from './factory.js'
 import { PlatformAdapter } from './platform-adapter.js'
 
 const registry = new Map<AgentId, AgentAdapter>(
-  BUILTIN_PLATFORMS.map((def) => [def.id, new PlatformAdapter(def)]),
+  BUILTIN_PLATFORMS.map((def) => [def.id, createPlatformAdapter(def)]),
 )
 
 export function getAdapter(agent: AgentId): AgentAdapter {
@@ -22,10 +23,18 @@ export function allAdapters(): AgentAdapter[] {
  * a built-in platform's paths.
  */
 export function registerPlatform(def: PlatformDef, homeDir?: string): AgentAdapter {
-  const adapter = new PlatformAdapter(def, homeDir)
+  const adapter = createPlatformAdapter(def, homeDir)
   registry.set(def.id, adapter)
   return adapter
 }
 
 export { PlatformAdapter }
+export { createPlatformAdapter, type AdapterFactory } from './factory.js'
+export {
+  ClaudeCodeAdapter,
+  discoverClaudePluginRoots,
+} from './claude-code-adapter.js'
+export { CodexAdapter, discoverCodexSupplementalRoots } from './codex-adapter.js'
+export { DoubaoAdapter, discoverDoubaoSupplementalRoots } from './doubao-adapter.js'
+export { LingxiAdapter, discoverLingxiSupplementalRoots } from './lingxi-adapter.js'
 export { SkillDirAdapter } from './skill-dir-adapter.js'

@@ -123,6 +123,13 @@ describe.each(cases)('PlatformAdapter($id)', (def) => {
     await adapter.install(sample, 'user')
     const skillPath = join(at(home, userSkillsDir!), 'commit-style')
 
+    if (!adapter.supportsToggle) {
+      await expect(adapter.setEnabled('commit-style', false, 'user')).rejects.toThrow(
+        /not supported safely/,
+      )
+      return
+    }
+
     await adapter.setEnabled('commit-style', false, 'user')
     expect(await fs.stat(join(skillPath, 'SKILL.md.disabled'))).toBeTruthy()
     expect(await adapter.list('user')).toEqual([

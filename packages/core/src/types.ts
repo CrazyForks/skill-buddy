@@ -42,6 +42,17 @@ export type InstallScope = 'user' | 'project'
 /** How a discovered skill is managed on disk. */
 export type SkillOrigin = InstallScope | 'legacy' | 'admin' | 'system' | 'plugin'
 
+/** A discovered Skill root, including read-only supplemental platform roots. */
+export interface SkillRoot {
+  agent: AgentId
+  scope: InstallScope
+  path: string
+  projectRoot?: string
+  origin: SkillOrigin
+  readOnly: boolean
+  canToggle?: boolean
+}
+
 /** A skill discovered on disk in some agent's native location. */
 export interface InstalledSkill {
   skill: Skill
@@ -57,6 +68,8 @@ export interface InstalledSkill {
   readOnly?: boolean
   /** Whether the installation is discoverable by the target agent. */
   enabled?: boolean
+  /** Whether SkillBuddy can safely toggle this installation. */
+  canToggle?: boolean
   /** SKILL.md mtime, ms since epoch. */
   modifiedAt?: number
 }
@@ -68,6 +81,10 @@ export interface InstalledSkill {
 export interface AgentAdapter {
   readonly agent: AgentId
   readonly displayName: string
+  /** Whether the adapter supports SkillBuddy's file-based enable/disable flow. */
+  readonly supportsToggle?: boolean
+  /** Additional read-only or derived roots owned by the platform. */
+  supplementalRoots?: () => SkillRoot[] | Promise<SkillRoot[]>
   /** Directory that holds skills for the given scope; null if unsupported. */
   skillsDir(scope: InstallScope, projectRoot?: string): string | null
   /** Whether this agent appears to be present on this machine. */

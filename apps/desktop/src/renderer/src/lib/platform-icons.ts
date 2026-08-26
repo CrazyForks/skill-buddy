@@ -42,8 +42,8 @@ const ICONS: Record<string, PlatformIconDef> = {
   'trae-cn': { src: traeIcon },
   workbuddy: { src: workbuddyIcon },
   doubao: { src: doubaoIcon },
-  kimi: { src: kimiIcon },
-  zcode: { src: zcodeIcon },
+  kimi: { maskSrc: kimiIcon },
+  zcode: { maskSrc: zcodeIcon },
   'wps-lingxi': { src: wpsLingxiIcon },
 }
 
