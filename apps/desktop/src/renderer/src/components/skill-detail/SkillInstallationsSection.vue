@@ -119,7 +119,7 @@ function originLabel(installation: Installation): string {
             :title="t('detail.readOnly')"
           />
           <button
-            v-if="!installation.readOnly"
+            v-if="!installation.readOnly && installation.canToggle !== false"
             type="button"
             role="switch"
             :aria-checked="installationEnabled(installation)"

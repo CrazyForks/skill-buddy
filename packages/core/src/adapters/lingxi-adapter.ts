@@ -1,16 +1,19 @@
 import { promises as fs, type Dirent } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { BUILTIN_PLATFORMS, resolvePlatformOsPath, type PlatformDef } from '../platforms.js'
+import { readSkillDirState } from '../skill-io.js'
 import type {
   AdapterCapabilities,
-  AgentId,
   InstallScope,
   InstalledSkill,
+  SkillRoot,
   SupplementalSkillRoot,
 } from '../types.js'
+import { PlatformAdapter } from './platform-adapter.js'
 import { exists } from './shared.js'
-import { SkillDirAdapter } from './skill-dir-adapter.js'
-import { readSkillDirState } from '../skill-io.js'
+
+const LINGXI_PLATFORM = BUILTIN_PLATFORMS.find((platform) => platform.id === 'wps-lingxi')!
 
 export interface LingxiAdapterOptions {
   homeDir?: string
@@ -19,64 +22,88 @@ export interface LingxiAdapterOptions {
 }
 
 /** WPS 灵犀仅支持用户范围的技能，并将官方技能以只读目录暴露给运行时。 */
-export class LingxiAdapter extends SkillDirAdapter {
-  readonly agent: AgentId = 'wps-lingxi'
-  readonly displayName = 'WPS 灵犀'
+export class LingxiAdapter extends PlatformAdapter {
+  readonly supportsToggle = false
   readonly capabilities: AdapterCapabilities = { canToggle: false }
+  private readonly lingxiHomeDir: string
+  private readonly lingxiOs: NodeJS.Platform
+  private readonly appDataDir?: string
 
-  private readonly userDataDir: string
-  private readonly os: NodeJS.Platform
-
-  constructor(options: LingxiAdapterOptions = {}) {
-    super()
-    const homeDir = options.homeDir ?? homedir()
-    this.os = options.os ?? process.platform
-    this.userDataDir =
-      this.os === 'darwin'
-        ? join(homeDir, 'Library', 'Application Support', 'WPS 灵犀')
-        : this.os === 'win32'
-          ? join(
-              options.appDataDir ?? process.env.APPDATA ?? join(homeDir, 'AppData', 'Roaming'),
-              'WPS 灵犀',
-            )
-          : join(homeDir, '.config', 'WPS 灵犀')
+  constructor(
+    definitionOrOptions: PlatformDef | LingxiAdapterOptions = LINGXI_PLATFORM,
+    homeDir: string = homedir(),
+    os: NodeJS.Platform = process.platform,
+    appDataDir: string | null | undefined = os === process.platform ? process.env.APPDATA : undefined,
+  ) {
+    const isOptions = !('id' in definitionOrOptions)
+    const options = isOptions ? definitionOrOptions : undefined
+    const definition = isOptions ? LINGXI_PLATFORM : definitionOrOptions
+    const resolvedHomeDir = options?.homeDir ?? homeDir
+    const resolvedOs = options?.os ?? os
+    const resolvedAppDataDir = options?.appDataDir ?? appDataDir
+    super(definition, resolvedHomeDir, resolvedOs)
+    this.lingxiHomeDir = resolvedHomeDir
+    this.lingxiOs = resolvedOs
+    this.appDataDir = resolvedAppDataDir ?? undefined
   }
 
-  skillsDir(scope: InstallScope): string | null {
-    return scope === 'user' ? join(this.userDataDir, 'serverdir', 'user_skills') : null
+  private userDataDir(): string {
+    if (this.lingxiOs === 'win32' && this.appDataDir) {
+      return join(this.appDataDir, 'WPS 灵犀')
+    }
+    const detectPath = resolvePlatformOsPath(
+      this.def.detectPath,
+      this.def.detectPathByOs,
+      this.lingxiOs,
+    )
+    return detectPath!.startsWith('~/')
+      ? join(this.lingxiHomeDir, detectPath.slice(2))
+      : detectPath!
   }
 
-  async detect(): Promise<boolean> {
-    return exists(join(this.userDataDir, 'serverdir'))
+  override skillsDir(scope: InstallScope): string | null {
+    return scope === 'user' ? join(this.userDataDir(), 'serverdir', 'user_skills') : null
   }
 
-  async list(scope: InstallScope, projectRoot?: string): Promise<InstalledSkill[]> {
+  override async detect(): Promise<boolean> {
+    const serverDir = join(this.userDataDir(), 'serverdir')
+    return (await exists(join(serverDir, 'user_skills'))) ||
+      (await exists(join(serverDir, 'official_skills')))
+  }
+
+  override async list(scope: InstallScope, projectRoot?: string): Promise<InstalledSkill[]> {
     return (await super.list(scope, projectRoot)).map((installation) => ({
       ...installation,
       canToggle: false,
     }))
   }
 
-  async install(skill: InstalledSkill['skill'], scope: InstallScope): Promise<string> {
+  override async install(skill: InstalledSkill['skill'], scope: InstallScope): Promise<string> {
     const path = await super.install(skill, scope)
     await this.refreshRuntime()
     return path
   }
 
-  async uninstall(name: string, scope: InstallScope): Promise<void> {
+  override async uninstall(name: string, scope: InstallScope): Promise<void> {
     await super.uninstall(name, scope)
     await this.refreshRuntime()
   }
 
-  supplementalSkillRoots(): SupplementalSkillRoot[] {
+  supplementalRoots(): SkillRoot[] {
     return [
       {
+        agent: this.agent,
         scope: 'user',
-        path: join(this.userDataDir, 'serverdir', 'official_skills'),
+        path: join(this.userDataDir(), 'serverdir', 'official_skills'),
         origin: 'system',
         readOnly: true,
+        canToggle: false,
       },
     ]
+  }
+
+  supplementalSkillRoots(): SupplementalSkillRoot[] {
+    return this.supplementalRoots().map(({ agent: _agent, canToggle: _canToggle, ...root }) => root)
   }
 
   reconcileInstallations(installations: InstalledSkill[]): InstalledSkill[] {
@@ -96,10 +123,10 @@ export class LingxiAdapter extends SkillDirAdapter {
 
   /** Rebuild Windows runtime Junctions from the immutable official and writable user roots. */
   async refreshRuntime(): Promise<void> {
-    if (this.os !== 'win32') return
-    const officialDir = this.supplementalSkillRoots()[0]!.path
+    if (this.lingxiOs !== 'win32') return
+    const officialDir = this.supplementalRoots()[0]!.path
     const userDir = this.skillsDir('user')!
-    const targetDir = join(this.userDataDir, 'serverdir', 'target_skills')
+    const targetDir = join(this.userDataDir(), 'serverdir', 'target_skills')
     const sources = new Map<string, { name: string; path: string }>()
     for (const root of [officialDir, userDir]) {
       for (const source of await this.listSkillDirectories(root)) {
@@ -109,23 +136,16 @@ export class LingxiAdapter extends SkillDirAdapter {
 
     if (sources.size === 0 && !(await exists(targetDir))) return
     await fs.mkdir(targetDir, { recursive: true })
-    const entries = await fs.readdir(targetDir, { withFileTypes: true })
-    for (const entry of entries) {
-      const target = join(targetDir, entry.name)
-      const source = sources.get(entry.name.toLowerCase())
+    for (const entry of await fs.readdir(targetDir, { withFileTypes: true })) {
       if (!entry.isSymbolicLink()) continue
-      if (!source || source.name.toLowerCase() === entry.name.toLowerCase()) {
-        await fs.rm(target, { recursive: true, force: true })
-      }
+      await fs.rm(join(targetDir, entry.name), { recursive: true, force: true })
     }
     for (const source of sources.values()) {
-      const target = join(targetDir, source.name)
-      if (await exists(target)) continue
-      await fs.symlink(source.path, target, 'junction')
+      await fs.symlink(source.path, join(targetDir, source.name), 'junction')
     }
   }
 
-  async setEnabled(
+  override async setEnabled(
     _name: string,
     _enabled: boolean,
     _scope: InstallScope,
@@ -149,4 +169,12 @@ export class LingxiAdapter extends SkillDirAdapter {
     }
     return skills
   }
+}
+
+/** @deprecated Use LingxiAdapter.supplementalRoots(). */
+export function discoverLingxiSupplementalRoots(
+  homeDir: string = homedir(),
+  os: NodeJS.Platform = process.platform,
+): SkillRoot[] {
+  return new LingxiAdapter(LINGXI_PLATFORM, homeDir, os, null).supplementalRoots()
 }

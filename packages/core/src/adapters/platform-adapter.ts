@@ -6,7 +6,7 @@ import { exists } from './shared.js'
 import { SkillDirAdapter } from './skill-dir-adapter.js'
 
 /** Resolve a `~/`-prefixed path against a home directory. */
-function expand(path: string, homeDir: string): string {
+export function expandPlatformPath(path: string, homeDir: string): string {
   return path.startsWith('~/') ? join(homeDir, path.slice(2)) : path
 }
 
@@ -36,7 +36,7 @@ export class PlatformAdapter extends SkillDirAdapter {
         this.def.userSkillsDirByOs,
         this.os,
       )
-      return dir ? expand(dir, this.homeDir) : null
+      return dir ? expandPlatformPath(dir, this.homeDir) : null
     }
     return this.def.projectSkillsDir && projectRoot
       ? join(projectRoot, this.def.projectSkillsDir)
@@ -52,6 +52,6 @@ export class PlatformAdapter extends SkillDirAdapter {
       this.def.detectPathByOs,
       this.os,
     )
-    return exists(expand(detectPath, this.homeDir))
+    return exists(expandPlatformPath(detectPath, this.homeDir))
   }
 }

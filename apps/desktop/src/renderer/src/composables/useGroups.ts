@@ -448,7 +448,9 @@ export function useGroups() {
     const targets = group.skills.flatMap((name) => {
       const skill = skills.value.find((item) => item.name === name)
       if (!skill) return []
-      const installations = toggleableSkillInstallations(skill, filter)
+      const installations = manageableSkillInstallations(skill, filter).filter(
+        (installation) => installation.canToggle !== false,
+      )
       return installations.length > 0
         ? [{
             name,

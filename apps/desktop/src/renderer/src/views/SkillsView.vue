@@ -64,6 +64,7 @@ const {
   selectedSkills,
   allVisibleSelected,
   selectedTargetCount,
+  selectedToggleTargetCount,
   projectCapablePlatforms,
   projectOptions,
   setBatchMode,
@@ -247,6 +248,7 @@ function clearFilters(): void {
       <SkillBatchActionBar
         :selected-count="selectedSkills.length"
         :target-count="selectedTargetCount"
+        :toggle-target-count="selectedToggleTargetCount"
         :busy="batchBusy"
         :has-projects="projectRoots.length > 0"
         :has-project-platforms="projectCapablePlatforms.length > 0"

@@ -10,6 +10,9 @@
   "scripts": {
     "dev": "pnpm --filter @skillbuddy/desktop dev",
     "build": "pnpm -r build",
+    "lint": "pnpm run lint:eslint && pnpm run lint:stylelint",
+    "lint:eslint": "eslint .",
+    "lint:stylelint": "stylelint \"**/*.{css,scss,vue}\"",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @skillbuddy/desktop test:e2e",
     "typecheck": "pnpm -r typecheck",
@@ -21,7 +24,19 @@
     "dist:linux:arm64": "pnpm --filter @skillbuddy/desktop dist:linux:arm64"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-vue": "catalog:",
+    "globals": "catalog:",
+    "lefthook": "catalog:",
+    "postcss-html": "catalog:",
+    "postcss-scss": "catalog:",
+    "stylelint": "catalog:",
+    "stylelint-config-standard-scss": "catalog:",
+    "typescript-eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

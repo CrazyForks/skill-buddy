@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   discoverClaudePluginRoots,
   discoverCodexSupplementalRoots,
+  discoverLingxiSupplementalRoots,
   scanInstalledSkills,
   type SkillRoot,
 } from './scanner.js'
@@ -149,6 +150,25 @@ describe('scanInstalledSkills', () => {
 
     expect(await scanInstalledSkills([], roots)).toEqual([
       expect.objectContaining({ agent: 'custom-agent', path: join(root, 'custom-skill') }),
+    ])
+  })
+})
+
+describe('discoverLingxiSupplementalRoots', () => {
+  it.each([
+    ['darwin', ['Library', 'Application Support', 'WPS 灵犀']],
+    ['win32', ['AppData', 'Roaming', 'WPS 灵犀']],
+    ['linux', ['.config', 'WPS 灵犀']],
+  ] as const)('points at the bundled official_skills dir on %s', (os, segments) => {
+    expect(discoverLingxiSupplementalRoots('/home/test', os)).toEqual([
+      {
+        agent: 'wps-lingxi',
+        scope: 'user',
+        path: join('/home/test', ...segments, 'serverdir', 'official_skills'),
+        origin: 'system',
+        readOnly: true,
+        canToggle: false,
+      },
     ])
   })
 })

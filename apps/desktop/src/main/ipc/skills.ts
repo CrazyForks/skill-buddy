@@ -213,6 +213,9 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
       runTargets(targets, (target) =>
         enqueueSkillStateMutation(async () => {
           const adapter = getAdapter(target.agent)
+          if (adapter.supportsToggle === false) {
+            throw new Error(`${target.agent}: enable/disable is not supported safely`)
+          }
           const targetRoot = adapter.skillsDir(target.scope, target.projectRoot)
           if (!targetRoot) {
             throw new Error(`${target.agent}: no skills directory for scope "${target.scope}"`)

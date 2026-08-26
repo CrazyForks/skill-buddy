@@ -6,22 +6,23 @@
 `name`/`description` 必填，可选 `scripts/` `references/` `assets/`）已成为
 跨工具事实标准，五个平台全部兼容。差异只剩目录位置。
 
-| 平台           | user 级                        | project 级                 | 检测                         | 置信度                   |
-| -------------- | ------------------------------ | -------------------------- | ---------------------------- | ------------------------ |
-| Claude Code    | `~/.claude/skills/`          | `.claude/skills/`        | `~/.claude`                | 官方                     |
-| Codex          | `~/.agents/skills/`          | `.agents/skills/`        | `~/.codex`（=$CODEX_HOME） | 官方                     |
-| Cursor 2.4+    | `~/.cursor/skills/`          | `.cursor/skills/`        | `~/.cursor`                | 官方                     |
-| OpenCode       | `~/.config/opencode/skills/` | `.opencode/skills/`      | `~/.config/opencode`       | 官方                     |
-| WorkBuddy      | `~/.workbuddy/skills/`       | 无（桌面助手，无项目概念） | `~/.workbuddy`             | 多来源一致（非官方一手） |
-| GitHub Copilot | `~/.copilot/skills/`         | `.github/skills/`        | `~/.copilot`               | 官方                     |
-| Gemini CLI     | `~/.gemini/skills/`          | `.gemini/skills/`        | `~/.gemini`                | 官方                     |
-| Qwen Code      | `~/.qwen/skills/`            | `.qwen/skills/`          | `~/.qwen`                  | 官方                     |
-| CodeBuddy      | `~/.codebuddy/skills/`       | `.codebuddy/skills/`     | `~/.codebuddy`             | 官方                     |
-| Trae（国际版） | `~/.trae/skills/`            | `.trae/skills/`          | `~/.trae`                  | 官方（间接确认）         |
-| Trae CN        | `~/.trae-cn/skills/`         | `.trae/skills/`          | `~/.trae-cn`               | 官方社区帖               |
-| 豆包           | `~/Doubao/skills/`           | 无（桌面助手）             | `~/Doubao`                 | 实测                 |
-| Kimi Code      | `~/.kimi/skills/`            | `.kimi/skills/`          | `~/.kimi`                  | 待复核               |
-| Z Code         | `~/.zcode/skills/`           | `.zcode/skills/`         | `~/.zcode`                 | 待复核               |
+| 平台 | user 级 | project 级 | 检测 | 置信度 |
+|---|---|---|---|---|
+| Claude Code | `~/.claude/skills/` | `.claude/skills/` | `~/.claude` | 官方 |
+| Codex | `~/.agents/skills/` | `.agents/skills/` | `~/.codex`（=$CODEX_HOME） | 官方 |
+| Cursor 2.4+ | `~/.cursor/skills/` | `.cursor/skills/` | `~/.cursor` | 官方 |
+| OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` | `~/.config/opencode` | 官方 |
+| WorkBuddy | `~/.workbuddy/skills/` | 无（桌面助手，无项目概念） | `~/.workbuddy` | 多来源一致（非官方一手） |
+| GitHub Copilot | `~/.copilot/skills/` | `.github/skills/` | `~/.copilot` | 官方 |
+| Gemini CLI | `~/.gemini/skills/` | `.gemini/skills/` | `~/.gemini` | 官方 |
+| Qwen Code | `~/.qwen/skills/` | `.qwen/skills/` | `~/.qwen` | 官方 |
+| CodeBuddy | `~/.codebuddy/skills/` | `.codebuddy/skills/` | `~/.codebuddy` | 官方 |
+| Trae（国际版） | `~/.trae/skills/` | `.trae/skills/` | `~/.trae` | 官方（间接确认） |
+| Trae CN | `~/.trae-cn/skills/` | `.trae/skills/` | `~/.trae-cn` | 官方社区帖 |
+| 豆包 | `~/Doubao/skills/` | 无（桌面助手） | `~/Doubao` | 本机实测 |
+| Kimi Code | `~/.kimi/skills/` | `.kimi/skills/` | `~/.kimi` | 待真机复核 |
+| Z Code | `~/.zcode/skills/` | `.zcode/skills/` | `~/.zcode` | 待真机复核 |
+| WPS 灵犀 | `<userData>/serverdir/user_skills/` | 无（桌面助手） | `<userData>` | 本机实测（macOS） |
 
 ## 平台备注
 
@@ -100,13 +101,6 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - 原生 `~/.gemini/skills/` 与 `.gemini/skills/`，同层级 `.agents/skills`
   别名优先；skills 激活需用户 consent、workspace 需 `/trust`
 - 另有 commands（TOML）与 extensions 体系；GEMINI.md 三层拼接
-
-### Qwen Code（QwenLM/qwen-code docs）
-
-- 个人 Skill 位于 `~/.qwen/skills/`，项目 Skill 位于 `.qwen/skills/`；两者均为
-  标准 SKILL.md 文件夹约定，目录变更会被正常会话自动监听
-- 扩展和内置 Skill 由 Qwen Code 运行时自行管理，SkillBuddy 只管理上述两个可写目录
-- bare mode 不会启动目录监听；在该模式下安装、编辑或删除 Skill 后需重启 Qwen Code
 
 ### CodeBuddy（codebuddy.ai/docs/cli/skills，官方）
 
