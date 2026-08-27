@@ -607,6 +607,9 @@ export default {
     renameTitle: 'Rename skill bundle',
     renameAction: 'Rename',
     renameDuplicate: 'A skill bundle with this name already exists',
+    editTitle: 'Edit skill bundle',
+    editAction: 'Save',
+    descriptionPh: 'Description (optional)',
     enableConfirmAll: 'Enable {skills} skills in "{name}" across {installations} installations?',
     disableConfirmAll: 'Disable {skills} skills in "{name}" across {installations} installations?',
   },
@@ -771,6 +774,12 @@ export default {
     disabled: 'Disabled',
     enable: 'Enable this installation',
     disable: 'Disable this installation',
+    linked: 'Linked',
+    linkedHint:
+      'References an upstream Skill: {target}\nToggling moves only this link and never touches the upstream.',
+    linkBroken: 'Broken link',
+    linkBrokenHint:
+      'The upstream Skill no longer exists: {target}\nRemoving this link leaves the upstream untouched.',
     allInstalled: 'Already installed on every detected platform in this scope',
     installing: 'Installing',
     installN: 'Install ({n})',

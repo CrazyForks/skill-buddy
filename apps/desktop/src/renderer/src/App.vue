@@ -2,10 +2,13 @@
 import { defineAsyncComponent, shallowRef } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import InAppBrowser from '@/components/InAppBrowser.vue'
+import GroupDeleteDialog from '@/components/groups/GroupDeleteDialog.vue'
+import GroupToggleDialog from '@/components/groups/GroupToggleDialog.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import SettingsPageSkeleton from '@/components/SettingsPageSkeleton.vue'
 import WindowTopBar from '@/components/WindowTopBar.vue'
 import { useAppLifecycle } from '@/composables/useAppLifecycle'
+import { useGroups } from '@/composables/useGroups'
 import { useSettings } from '@/composables/useSettings'
 import { useTrayIntegration } from '@/composables/useTrayIntegration'
 import type { SettingsCategory, WorkspaceView } from '@/lib/navigation'
@@ -22,6 +25,16 @@ const SettingsPage = defineAsyncComponent({
 })
 
 const { sidebarCollapsed } = useSettings()
+// 技能包操作在多个视图都有入口，确认弹窗随单例状态挂在这里，保证全局只有一个。
+const {
+  pendingGroupDelete,
+  updateGroupDeleteDialog,
+  confirmGroupDelete,
+  pendingGroupToggle,
+  groupToggleBusy,
+  updateGroupToggleDialog,
+  confirmGroupToggle,
+} = useGroups()
 const view = shallowRef<WorkspaceView>('dashboard')
 const navigationRevision = shallowRef(0)
 const attentionRevision = shallowRef(0)
@@ -46,6 +59,10 @@ function openAttention(): void {
 function navigate(viewName: WorkspaceView): void {
   view.value = viewName
   navigationRevision.value += 1
+}
+
+function handleConfirmGroupDelete(): void {
+  if (confirmGroupDelete() && view.value === 'skills') navigate('groups')
 }
 
 const { refreshLocal } = useTrayIntegration({
@@ -88,6 +105,17 @@ useAppLifecycle({ refreshLocal })
         v-if="advancedImportOpen"
         :open="true"
         @close="advancedImportOpen = false"
+      />
+      <GroupToggleDialog
+        :request="pendingGroupToggle"
+        :busy="groupToggleBusy"
+        @open-change="updateGroupToggleDialog"
+        @confirm="confirmGroupToggle"
+      />
+      <GroupDeleteDialog
+        :request="pendingGroupDelete"
+        @open-change="updateGroupDeleteDialog"
+        @confirm="handleConfirmGroupDelete"
       />
     </div>
   </div>

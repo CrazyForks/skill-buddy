@@ -33,6 +33,7 @@ interface SortOption {
 const props = defineProps<{
   inset?: boolean
   groupFilter: string | null
+  groupDescription: string
   activeGroupState: GroupRuntimeState | null
   activeGroupEmpty: boolean
   groupStatusVariant: 'success' | 'default' | 'secondary'
@@ -120,6 +121,7 @@ const batchModel = computed({
     <GroupContextHeader
       v-if="props.groupFilter && props.activeGroupState"
       :group-filter="props.groupFilter"
+      :description="props.groupDescription"
       :active-group-state="props.activeGroupState"
       :active-group-empty="props.activeGroupEmpty"
       :group-status-variant="props.groupStatusVariant"

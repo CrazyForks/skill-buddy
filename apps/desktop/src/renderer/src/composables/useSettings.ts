@@ -123,6 +123,8 @@ watch(teamLibraries, (value) => localStorage.setItem('skm.teamLibraries', JSON.s
 export interface SkillGroup {
   name: string
   skills: string[]
+  /** 可选描述，长度上限见 GROUP_DESCRIPTION_MAX_LENGTH。 */
+  description?: string
 }
 
 const groups = ref<SkillGroup[]>(load('skm.groups', []))

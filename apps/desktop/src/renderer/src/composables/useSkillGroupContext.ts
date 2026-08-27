@@ -21,7 +21,7 @@ export function useSkillGroupContext(options: UseSkillGroupContextOptions) {
     groupToggleBusy,
     groupCount,
     filterGroup,
-    renameGroup,
+    updateGroup,
     deleteGroup,
     exportGroup,
     setGroupSkills,
@@ -34,8 +34,10 @@ export function useSkillGroupContext(options: UseSkillGroupContextOptions) {
   const activeGroup = computed(() =>
     groups.value.find((group) => group.name === groupFilter.value),
   )
+  const activeGroupDescription = computed(() => activeGroup.value?.description ?? '')
   const renameOpen = shallowRef(false)
   const renameValue = shallowRef('')
+  const renameDescription = shallowRef('')
   const memberEditorOpen = shallowRef(false)
   const memberSearch = shallowRef('')
   const draftMemberNames = ref(new Set<string>())
@@ -85,19 +87,21 @@ export function useSkillGroupContext(options: UseSkillGroupContextOptions) {
   function openRenameGroup(): void {
     if (!groupFilter.value) return
     renameValue.value = groupFilter.value
+    renameDescription.value = activeGroup.value?.description ?? ''
     renameOpen.value = true
   }
 
   function submitRenameGroup(): void {
     if (!groupFilter.value || renameDuplicate.value) return
-    if (renameGroup(groupFilter.value, renameValue.value)) renameOpen.value = false
+    if (updateGroup(groupFilter.value, renameValue.value, renameDescription.value)) {
+      renameOpen.value = false
+    }
   }
 
-  async function removeActiveGroup(): Promise<void> {
+  function removeActiveGroup(): void {
     const name = groupFilter.value
     if (!name) return
-    await deleteGroup(name)
-    if (groupFilter.value === null) options.navigateToGroups()
+    deleteGroup(name)
   }
 
   function exportActiveGroup(): void {
@@ -166,8 +170,10 @@ export function useSkillGroupContext(options: UseSkillGroupContextOptions) {
     applyGroupTemp,
     endTemp,
     activeGroupEmpty,
+    activeGroupDescription,
     renameOpen,
     renameValue,
+    renameDescription,
     memberEditorOpen,
     memberSearch,
     draftMemberNames,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { mergePreset, parsePresetDocument, serializePreset } from './preset-format.js'
+import {
+  GROUP_DESCRIPTION_MAX_LENGTH,
+  mergePreset,
+  parsePresetDocument,
+  serializePreset,
+} from './preset-format.js'
 
 describe('Preset portable format', () => {
   it('只序列化版本、名称和去重后的 Skill 名称', () => {
@@ -73,5 +78,69 @@ describe('Preset portable format', () => {
     })
     expect(unchanged.result).toBe('unchanged')
     expect(unchanged.groups).toBe(merged.groups)
+  })
+})
+
+describe('Preset 技能包描述', () => {
+  const doc = (preset: unknown): string =>
+    JSON.stringify({ kind: 'skillbuddy-preset', version: 1, preset })
+
+  it('有描述时写入并去掉首尾空白', () => {
+    expect(
+      JSON.parse(serializePreset({ name: 'Docs', skills: ['pdf'], description: '  文档相关  ' })),
+    ).toEqual({
+      kind: 'skillbuddy-preset',
+      version: 1,
+      preset: { name: 'Docs', skills: ['pdf'], description: '文档相关' },
+    })
+  })
+
+  it.each([undefined, '', '   '])('没有实际描述时不写这个键，导出与旧版一致：%s', (value) => {
+    const content = serializePreset({ name: 'Docs', skills: ['pdf'], description: value })
+    expect(JSON.parse(content).preset).toEqual({ name: 'Docs', skills: ['pdf'] })
+    expect(content).not.toContain('description')
+  })
+
+  it('解析带描述的文档，并把空描述折叠掉', () => {
+    expect(parsePresetDocument(doc({ name: 'Docs', skills: [], description: ' 说明 ' }))).toEqual({
+      name: 'Docs',
+      skills: [],
+      description: '说明',
+    })
+    expect(parsePresetDocument(doc({ name: 'Docs', skills: [], description: '  ' }))).toEqual({
+      name: 'Docs',
+      skills: [],
+    })
+  })
+
+  it('接受恰好达到上限的描述', () => {
+    const description = 'a'.repeat(GROUP_DESCRIPTION_MAX_LENGTH)
+    expect(parsePresetDocument(doc({ name: 'A', skills: [], description }))).toEqual({
+      name: 'A',
+      skills: [],
+      description,
+    })
+  })
+
+  it.each([
+    ['超过上限', 'a'.repeat(GROUP_DESCRIPTION_MAX_LENGTH + 1)],
+    ['非字符串', 42],
+  ])('拒绝非法描述：%s', (_label, description) => {
+    expect(() => parsePresetDocument(doc({ name: 'A', skills: [], description }))).toThrow()
+  })
+
+  it('合并同名技能包时不覆盖已有描述', () => {
+    const groups = [{ name: 'Frontend', skills: ['vue'], description: '本地说明' }]
+    const merged = mergePreset(groups, {
+      name: 'Frontend',
+      skills: ['vue', 'vite'],
+      description: '导入说明',
+    })
+    expect(merged.result).toBe('merged')
+    expect(merged.groups[0]).toEqual({
+      name: 'Frontend',
+      skills: ['vue', 'vite'],
+      description: '本地说明',
+    })
   })
 })

@@ -1,6 +1,10 @@
+/** 技能包描述的最大长度；输入框硬限与导入校验共用这一份约束。 */
+export const GROUP_DESCRIPTION_MAX_LENGTH = 200
+
 export interface PortablePreset {
   name: string
   skills: string[]
+  description?: string
 }
 
 export interface PresetDocumentV1 {
@@ -17,16 +21,29 @@ export interface PresetMergeOutcome {
   addedSkills: number
 }
 
-const exactKeys = (value: Record<string, unknown>, keys: string[]): boolean => {
-  const actual = Object.keys(value).sort()
-  const expected = [...keys].sort()
-  return actual.length === expected.length && actual.every((key, index) => key === expected[index])
+/** 必填键必须齐全，其余键只允许出现在白名单里；未知字段一律拒绝。 */
+const allowedKeys = (
+  value: Record<string, unknown>,
+  required: string[],
+  optional: string[] = [],
+): boolean => {
+  const actual = Object.keys(value)
+  if (!required.every((key) => actual.includes(key))) return false
+  return actual.every((key) => required.includes(key) || optional.includes(key))
+}
+
+/** 去掉首尾空白；空描述一律折叠成 undefined，避免导出多写一个空字段。 */
+export function normalizeGroupDescription(value: string | undefined | null): string | undefined {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  return trimmed ? trimmed : undefined
 }
 
 function normalizePreset(value: unknown): PortablePreset {
   if (typeof value !== 'object' || value === null) throw new Error('invalid preset')
   const preset = value as Record<string, unknown>
-  if (!exactKeys(preset, ['name', 'skills'])) throw new Error('invalid preset fields')
+  if (!allowedKeys(preset, ['name', 'skills'], ['description'])) {
+    throw new Error('invalid preset fields')
+  }
 
   const name = typeof preset.name === 'string' ? preset.name.trim() : ''
   if (!name || !Array.isArray(preset.skills)) throw new Error('invalid preset data')
@@ -41,7 +58,16 @@ function normalizePreset(value: unknown): PortablePreset {
       skills.push(skill)
     }
   }
-  return { name, skills }
+  if (preset.description !== undefined && typeof preset.description !== 'string') {
+    throw new Error('invalid preset description')
+  }
+  const description = normalizeGroupDescription(preset.description as string | undefined)
+  // 超长直接拒绝，与其他字段一样不做静默截断。
+  if (description && description.length > GROUP_DESCRIPTION_MAX_LENGTH) {
+    throw new Error('preset description too long')
+  }
+  // 没有描述时不写这个键，导出结果与旧版本逐字节一致。
+  return description ? { name, skills, description } : { name, skills }
 }
 
 /** 将单个 Preset 序列化为不含本机运行信息的 v1 可移植文档。 */
@@ -59,7 +85,7 @@ export function parsePresetDocument(content: string): PortablePreset {
   const value: unknown = JSON.parse(content)
   if (typeof value !== 'object' || value === null) throw new Error('invalid document')
   const document = value as Record<string, unknown>
-  if (!exactKeys(document, ['kind', 'version', 'preset'])) {
+  if (!allowedKeys(document, ['kind', 'version', 'preset'])) {
     throw new Error('invalid document fields')
   }
   if (document.kind !== 'skillbuddy-preset' || document.version !== 1) {

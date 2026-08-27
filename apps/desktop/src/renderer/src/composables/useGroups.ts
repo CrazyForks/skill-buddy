@@ -12,9 +12,10 @@ import {
   resolveMarketSkillSource,
   type MarketSkillSource,
 } from '@/lib/market'
-import { serializePreset } from '@/lib/preset-format'
+import { normalizeGroupDescription, serializePreset } from '@/lib/preset-format'
+import type { GroupDeleteRequest, GroupToggleRequest } from '@/lib/skill-action-types'
 import {
-  toggleableSkillInstallations,
+  manageableSkillInstallations,
   type SkillInstallationFilter,
 } from '@/lib/skill-installations'
 
@@ -23,6 +24,8 @@ const groupApplyTargets = ref<InstallTarget[]>([])
 const groupApplyBusy = shallowRef(false)
 const groupApplyNote = shallowRef<string | null>(null)
 const groupToggleBusy = shallowRef(false)
+const pendingGroupDelete = shallowRef<GroupDeleteRequest | null>(null)
+const pendingGroupToggle = shallowRef<GroupToggleRequest | null>(null)
 
 /** 管理分组筛选、批量应用与临时应用的完整生命周期。 */
 export function useGroups() {
@@ -79,24 +82,37 @@ export function useGroups() {
     groupApplyNote.value = null
   }
 
-  /** 确认后删除合集名单，并连带清理其临时应用记录（合集删除后记录再无 UI 出口）。 */
-  async function deleteGroup(name: string): Promise<void> {
+  /** 请求删除技能包，确认前冻结名称和成员数量。 */
+  function deleteGroup(name: string): void {
     const group = groups.value.find((item) => item.name === name)
-    if (!group) return
-    const confirmed = await window.skillsManager.confirmDialog({
-      title: t('groups.deleteTitle'),
-      message: t('groups.deleteConfirm', { name: group.name, n: group.skills.length }),
-      confirmLabel: t('groups.deleteAction'),
-      cancelLabel: t('common.cancel'),
-      danger: true,
-    })
-    if (!confirmed) return
-    groups.value = groups.value.filter((item) => item.name !== name)
+    if (!group || pendingGroupDelete.value) return
+    pendingGroupDelete.value = { groupName: group.name, skillCount: group.skills.length }
+  }
+
+  /** 关闭技能包删除确认弹窗。 */
+  function updateGroupDeleteDialog(open: boolean): void {
+    if (!open) pendingGroupDelete.value = null
+  }
+
+  /** 删除已确认的技能包，并连带清理失去 UI 入口的临时应用记录。 */
+  function confirmGroupDelete(): boolean {
+    const request = pendingGroupDelete.value
+    if (!request) return false
+    const { groupName } = request
+    const groupExists = groups.value.some((item) => item.name === groupName)
+    if (!groupExists) {
+      pendingGroupDelete.value = null
+      return false
+    }
+
+    groups.value = groups.value.filter((item) => item.name !== groupName)
     const sources = { ...marketSkillSources.value }
-    delete sources[name]
+    delete sources[groupName]
     marketSkillSources.value = sources
-    tempApplications.value = tempApplications.value.filter((record) => record.group !== name)
-    if (groupFilter.value === name) groupFilter.value = null
+    tempApplications.value = tempApplications.value.filter((record) => record.group !== groupName)
+    if (groupFilter.value === groupName) groupFilter.value = null
+    pendingGroupDelete.value = null
+    return true
   }
 
   /** 新建合集并写入可选初始成员；空名或重名时返回 false。 */
@@ -104,11 +120,17 @@ export function useGroups() {
     name: string,
     skillNames: string[] = [],
     skillSources: Record<string, MarketSkillSource> = {},
+    description?: string,
   ): boolean {
     const trimmed = name.trim()
     if (!trimmed || groups.value.some((group) => group.name === trimmed)) return false
     const members = [...new Set(skillNames)]
-    groups.value = [...groups.value, { name: trimmed, skills: members }]
+    const summary = normalizeGroupDescription(description)
+    // 没填描述就不写这个键，未使用该字段的技能包与改动前完全一致。
+    groups.value = [
+      ...groups.value,
+      { name: trimmed, skills: members, ...(summary ? { description: summary } : {}) },
+    ]
     const sources = Object.fromEntries(
       Object.entries(skillSources).filter(([skillName]) => members.includes(skillName)),
     )
@@ -118,15 +140,26 @@ export function useGroups() {
     return true
   }
 
-  /** 重命名合集并同步筛选与临时应用中的引用；与其他合集重名或空名时返回 false。 */
-  function renameGroup(oldName: string, newName: string): boolean {
+  /**
+   * 更新合集的名称与描述，并同步筛选与临时应用中的引用。
+   * 与其他合集重名或名称为空时返回 false。
+   */
+  function updateGroup(oldName: string, newName: string, description?: string): boolean {
     const name = newName.trim()
     if (!name) return false
-    if (name === oldName) return true
-    if (groups.value.some((group) => group.name === name)) return false
-    groups.value = groups.value.map((group) =>
-      group.name === oldName ? { ...group, name } : group,
-    )
+    const renamed = name !== oldName
+    if (renamed && groups.value.some((group) => group.name === name)) return false
+
+    const summary = normalizeGroupDescription(description)
+    groups.value = groups.value.map((group) => {
+      if (group.name !== oldName) return group
+      // 先剔除旧描述再按需写回，清空描述时不留下空字段。
+      const { description: _previous, ...rest } = group
+      return summary ? { ...rest, name, description: summary } : { ...rest, name }
+    })
+    // 只改了描述时，下面这些引用都不需要迁移。
+    if (!renamed) return true
+
     tempApplications.value = tempApplications.value.map((record) =>
       record.group === oldName ? { ...record, group: name } : record,
     )
@@ -435,16 +468,20 @@ export function useGroups() {
     }
   }
 
-  /** 按给定安装视图启用或禁用合集内的所有可写安装。 */
-  async function toggleGroupInstallations(
+  /**
+   * 按给定安装视图收集可写安装，交由确认弹窗决定是否执行。
+   *
+   * 目标在此刻冻结，确认期间筛选条件变化不会影响最终执行范围。
+   */
+  function requestGroupToggle(
     group: SkillGroup,
     enabled: boolean,
     filter: SkillInstallationFilter,
     confirmMessageKey: string,
-  ): Promise<void> {
+  ): void {
     if (groupToggleBusy.value) return
 
-    const targets = group.skills.flatMap((name) => {
+    const items = group.skills.flatMap((name) => {
       const skill = skills.value.find((item) => item.name === name)
       if (!skill) return []
       const installations = manageableSkillInstallations(skill, filter).filter(
@@ -461,28 +498,28 @@ export function useGroups() {
           }]
         : []
     })
-    if (targets.length === 0) return
+    if (items.length === 0) return
 
-    const installationCount = targets.reduce((count, item) => count + item.targets.length, 0)
+    pendingGroupToggle.value = { groupName: group.name, enabled, confirmMessageKey, items }
+  }
+
+  /** 关闭技能包启停确认弹窗；执行期间不允许被关掉。 */
+  function updateGroupToggleDialog(open: boolean): void {
+    if (!open && !groupToggleBusy.value) pendingGroupToggle.value = null
+  }
+
+  /** 执行已确认的技能包启停。 */
+  async function confirmGroupToggle(): Promise<void> {
+    const request = pendingGroupToggle.value
+    if (!request || groupToggleBusy.value) return
+    const { enabled, items } = request
     const action = enabled ? 'enable' : 'disable'
-    const confirmed = await window.skillsManager.confirmDialog({
-      title: t(`groups.${action}Title`),
-      message: t(confirmMessageKey, {
-        name: group.name,
-        skills: targets.length,
-        installations: installationCount,
-      }),
-      confirmLabel: t(`groups.${action}Action`),
-      cancelLabel: t('common.cancel'),
-      danger: !enabled,
-    })
-    if (!confirmed) return
 
     groupToggleBusy.value = true
     try {
       let completed = 0
       const failures: string[] = []
-      for (const item of targets) {
+      for (const item of items) {
         const results = await setEnabled(item.name, item.targets, enabled, { refresh: false })
         completed += results.filter((result) => result.ok).length
         failures.push(
@@ -496,33 +533,30 @@ export function useGroups() {
         showToast.success(t(`groups.${action}Done`, { n: completed }))
       }
       if (failures.length > 0) showToast.error(failures.join('；'))
-    } catch {
-      showToast.error(t('groups.toggleFailed'))
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      showToast.error(detail ? `${t('groups.toggleFailed')}｜${detail}` : t('groups.toggleFailed'))
     } finally {
+      pendingGroupToggle.value = null
       await refresh({ silent: true })
       groupToggleBusy.value = false
     }
   }
 
   /** 按当前筛选快照启用或禁用正在查看的合集。 */
-  async function setGroupEnabled(enabled: boolean): Promise<void> {
+  function setGroupEnabled(enabled: boolean): void {
     const group = groups.value.find((item) => item.name === groupFilter.value)
     if (!group) return
     const action = enabled ? 'enable' : 'disable'
-    await toggleGroupInstallations(
-      group,
-      enabled,
-      installationFilter.value,
-      `groups.${action}Confirm`,
-    )
+    requestGroupToggle(group, enabled, installationFilter.value, `groups.${action}Confirm`)
   }
 
   /** 不受筛选影响，按名称启用或禁用任意合集（管理页使用）。 */
-  async function setGroupEnabledFor(name: string, enabled: boolean): Promise<void> {
+  function setGroupEnabledFor(name: string, enabled: boolean): void {
     const group = groups.value.find((item) => item.name === name)
     if (!group) return
     const action = enabled ? 'enable' : 'disable'
-    await toggleGroupInstallations(
+    requestGroupToggle(
       group,
       enabled,
       { platformId: null, projectFilter: null, ownershipFilter: null },
@@ -539,11 +573,17 @@ export function useGroups() {
     groupApplyNote,
     activeGroupState,
     groupToggleBusy,
+    pendingGroupDelete,
+    updateGroupDeleteDialog,
+    confirmGroupDelete,
+    pendingGroupToggle,
+    updateGroupToggleDialog,
+    confirmGroupToggle,
     activeTemp,
     filterGroup,
     openGroupFilter,
     createGroup,
-    renameGroup,
+    updateGroup,
     deleteGroup,
     exportGroup,
     groupCount,

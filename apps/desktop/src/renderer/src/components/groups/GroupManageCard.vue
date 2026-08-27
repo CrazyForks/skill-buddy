@@ -18,6 +18,8 @@ import type { GroupRuntimeState } from '@/lib/group-runtime'
 
 const props = defineProps<{
   state: GroupRuntimeState
+  /** 技能包的静态描述，与运行态推导结果分开传入。 */
+  description?: string
   temp?: TempApplication
   busy?: boolean
 }>()
@@ -105,6 +107,13 @@ const shouldEnable = computed(() => props.state.status !== 'enabled')
           </DropdownMenuRoot>
         </span>
       </div>
+      <p
+        v-if="props.description"
+        class="line-clamp-2 text-sm text-muted-foreground"
+        :title="props.description"
+      >
+        {{ props.description }}
+      </p>
       <CardDescription class="min-h-5 text-sm">
         {{
           t('groups.runtimeProgress', {

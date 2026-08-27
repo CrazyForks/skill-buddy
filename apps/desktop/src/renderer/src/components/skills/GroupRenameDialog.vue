@@ -3,17 +3,20 @@ import { useI18n } from 'vue-i18n'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { GROUP_DESCRIPTION_MAX_LENGTH } from '@/lib/preset-format'
 
-/** 技能包重命名弹窗只维护输入契约，名称校验和持久化由页面编排层处理。 */
+/** 技能包编辑弹窗只维护输入契约，名称校验和持久化由页面编排层处理。 */
 const props = defineProps<{
   open: boolean
   value: string
+  description: string
   duplicate: boolean
 }>()
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
   'update:value': [value: string]
+  'update:description': [value: string]
   submit: []
 }>()
 
@@ -28,9 +31,10 @@ const { t } = useI18n()
         class="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-background p-5 shadow-xl outline-none"
         @open-auto-focus.prevent
       >
-        <DialogTitle class="text-base font-semibold">{{ t('groups.renameTitle') }}</DialogTitle>
+        <DialogTitle class="text-base font-semibold">{{ t('groups.editTitle') }}</DialogTitle>
         <Input
           :model-value="props.value"
+          :placeholder="t('groups.createPh')"
           class="mt-4"
           autofocus
           @update:model-value="emit('update:value', $event)"
@@ -38,6 +42,17 @@ const { t } = useI18n()
         />
         <p v-if="props.duplicate" class="mt-2 text-sm text-destructive">
           {{ t('groups.renameDuplicate') }}
+        </p>
+        <Input
+          :model-value="props.description"
+          :placeholder="t('groups.descriptionPh')"
+          :maxlength="GROUP_DESCRIPTION_MAX_LENGTH"
+          class="mt-3"
+          @update:model-value="emit('update:description', $event)"
+          @keydown.enter.prevent="emit('submit')"
+        />
+        <p class="mt-1 text-right text-xs text-muted-foreground">
+          {{ props.description.length }}/{{ GROUP_DESCRIPTION_MAX_LENGTH }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
           <Button
@@ -54,7 +69,7 @@ const { t } = useI18n()
             :disabled="!props.value.trim() || props.duplicate"
             @click="emit('submit')"
           >
-            {{ t('groups.renameAction') }}
+            {{ t('groups.editAction') }}
           </Button>
         </div>
       </DialogContent>

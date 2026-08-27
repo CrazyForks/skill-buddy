@@ -106,8 +106,10 @@ const {
   applyGroupTemp,
   endTemp,
   activeGroupEmpty,
+  activeGroupDescription,
   renameOpen,
   renameValue,
+  renameDescription,
   memberEditorOpen,
   memberSearch,
   draftMemberNames,
@@ -192,6 +194,7 @@ function clearFilters(): void {
     <SkillsToolbar
       :inset="props.inset"
       :group-filter="groupFilter"
+      :group-description="activeGroupDescription"
       :active-group-state="activeGroupState"
       :active-group-empty="activeGroupEmpty"
       :group-status-variant="groupStatusVariant"
@@ -396,9 +399,11 @@ function clearFilters(): void {
     <GroupRenameDialog
       :open="renameOpen"
       :value="renameValue"
+      :description="renameDescription"
       :duplicate="renameDuplicate"
       @update:open="renameOpen = $event"
       @update:value="renameValue = $event"
+      @update:description="renameDescription = $event"
       @submit="submitRenameGroup"
     />
 

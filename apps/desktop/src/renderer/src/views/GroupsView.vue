@@ -2,17 +2,11 @@
 import { computed, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, Layers, Plus, Search } from '@lucide/vue'
-import {
-  DialogContent,
-  DialogOverlay,
-  DialogPortal,
-  DialogRoot,
-  DialogTitle,
-} from 'reka-ui'
 import GroupCreateDialog from '@/components/groups/GroupCreateDialog.vue'
 import GroupImportDialog from '@/components/groups/GroupImportDialog.vue'
 import GroupManageCard from '@/components/groups/GroupManageCard.vue'
 import SidebarToggle from '@/components/SidebarToggle.vue'
+import GroupRenameDialog from '@/components/skills/GroupRenameDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -33,7 +27,7 @@ const {
   groupToggleBusy,
   groupApplyBusy,
   openGroupFilter,
-  renameGroup,
+  updateGroup,
   deleteGroup,
   exportGroup,
   setGroupEnabledFor,
@@ -45,6 +39,7 @@ const createOpen = shallowRef(false)
 const importOpen = shallowRef(false)
 const renameTarget = shallowRef<string | null>(null)
 const renameValue = ref('')
+const renameDescription = ref('')
 
 /** 管理页始终以全局视角推导状态，不跟随 Skills 页的筛选。 */
 const globalFilter: SkillInstallationFilter = {
@@ -81,11 +76,13 @@ function openGroup(name: string): void {
 function startRename(name: string): void {
   renameTarget.value = name
   renameValue.value = name
+  renameDescription.value = groups.value.find((group) => group.name === name)?.description ?? ''
 }
 
 function closeRename(): void {
   renameTarget.value = null
   renameValue.value = ''
+  renameDescription.value = ''
 }
 
 const renameDuplicate = computed(() => {
@@ -99,7 +96,7 @@ const renameDuplicate = computed(() => {
 
 function submitRename(): void {
   if (!renameTarget.value) return
-  if (renameGroup(renameTarget.value, renameValue.value)) closeRename()
+  if (updateGroup(renameTarget.value, renameValue.value, renameDescription.value)) closeRename()
 }
 </script>
 
@@ -175,6 +172,7 @@ function submitRename(): void {
           v-for="group in filteredGroups"
           :key="group.name"
           :state="stateByName.get(group.name)!"
+          :description="group.description"
           :temp="tempByName.get(group.name)"
           :busy="busy"
           @open="openGroup(group.name)"
@@ -191,41 +189,15 @@ function submitRename(): void {
     <GroupCreateDialog v-model:open="createOpen" />
     <GroupImportDialog v-model:open="importOpen" />
 
-    <DialogRoot :open="renameTarget !== null" @update:open="(open) => !open && closeRename()">
-      <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-40 bg-black/40" />
-        <DialogContent
-          class="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-background p-6 outline-none"
-          @open-auto-focus.prevent
-        >
-          <DialogTitle class="mb-4 text-base font-semibold tracking-tight">
-            {{ t('groups.renameTitle') }}
-          </DialogTitle>
-          <Input
-            v-model="renameValue"
-            :placeholder="t('groups.createPh')"
-            class="text-sm"
-            autofocus
-            @keydown.enter.prevent="submitRename"
-          />
-          <p v-if="renameDuplicate" class="mt-2 text-sm text-destructive">
-            {{ t('groups.renameDuplicate') }}
-          </p>
-          <div class="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" size="sm" class="cursor-pointer" @click="closeRename">
-              {{ t('common.cancel') }}
-            </Button>
-            <Button
-              size="sm"
-              class="cursor-pointer"
-              :disabled="!renameValue.trim() || renameDuplicate"
-              @click="submitRename"
-            >
-              {{ t('groups.renameAction') }}
-            </Button>
-          </div>
-        </DialogContent>
-      </DialogPortal>
-    </DialogRoot>
+    <GroupRenameDialog
+      :open="renameTarget !== null"
+      :value="renameValue"
+      :description="renameDescription"
+      :duplicate="renameDuplicate"
+      @update:open="(open) => !open && closeRename()"
+      @update:value="renameValue = $event"
+      @update:description="renameDescription = $event"
+      @submit="submitRename"
+    />
   </div>
 </template>

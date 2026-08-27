@@ -36,6 +36,8 @@ type SkillSortBy = 'name' | 'recent'
 /** 技能包上下文头部集中展示运行状态与包级操作，不直接修改技能包数据源。 */
 const props = defineProps<{
   groupFilter: string
+  /** 技能包描述，可为空；接在运行态信息之后单行展示。 */
+  description: string
   activeGroupState: GroupRuntimeState
   activeGroupEmpty: boolean
   groupStatusVariant: 'success' | 'default' | 'secondary'
@@ -99,7 +101,7 @@ const viewModel = computed({
           {{ t(`groups.status.${props.activeGroupState.status}`) }}
         </Badge>
       </div>
-      <p class="truncate text-xs text-muted-foreground">
+      <p class="truncate text-xs text-muted-foreground" :title="props.description || undefined">
         {{
           t('groups.runtimeProgress', {
             installed: props.activeGroupState.installedSkills,
@@ -108,6 +110,7 @@ const viewModel = computed({
             disabled: props.activeGroupState.disabledInstallations,
           })
         }}
+        <template v-if="props.description"> · {{ props.description }}</template>
       </p>
     </div>
   </div>

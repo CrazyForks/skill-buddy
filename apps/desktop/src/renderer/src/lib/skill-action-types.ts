@@ -24,6 +24,21 @@ export interface UninstallRequest {
   installations: SkillInstallation[]
 }
 
+/** 技能包删除确认时冻结的名称与成员数量。 */
+export interface GroupDeleteRequest {
+  groupName: string
+  skillCount: number
+}
+
+/** 技能包启停确认时冻结的目标快照，避免确认后筛选变化影响执行范围。 */
+export interface GroupToggleRequest {
+  groupName: string
+  enabled: boolean
+  /** 文案 key，区分「当前筛选范围」与「全部安装」两种入口。 */
+  confirmMessageKey: string
+  items: { name: string; targets: InstallTarget[] }[]
+}
+
 export interface ToggleRequest {
   skill: AggregatedSkill
   platformId: string | null
