@@ -27,3 +27,4 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 docs/article/*
+docs/plan/*

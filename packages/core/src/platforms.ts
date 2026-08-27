@@ -10,6 +10,7 @@ import type { AgentId } from './types.js'
  * use the same shape at runtime. Sources and confidence levels are documented
  * in docs/platform-conventions.md.
  */
+
 export interface PlatformDef {
   id: AgentId
   displayName: string
