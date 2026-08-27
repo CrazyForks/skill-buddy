@@ -1,12 +1,12 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import type { PlatformDef } from '../platforms.js'
+import { resolvePlatformOsPath, type PlatformDef } from '../platforms.js'
 import type { AgentId, InstallScope } from '../types.js'
 import { exists } from './shared.js'
 import { SkillDirAdapter } from './skill-dir-adapter.js'
 
 /** Resolve a `~/`-prefixed path against a home directory. */
-function expand(path: string, homeDir: string): string {
+export function expandPlatformPath(path: string, homeDir: string): string {
   return path.startsWith('~/') ? join(homeDir, path.slice(2)) : path
 }
 
@@ -22,6 +22,7 @@ export class PlatformAdapter extends SkillDirAdapter {
   constructor(
     readonly def: PlatformDef,
     private readonly homeDir: string = homedir(),
+    private readonly os: NodeJS.Platform = process.platform,
   ) {
     super()
     this.agent = def.id
@@ -30,7 +31,12 @@ export class PlatformAdapter extends SkillDirAdapter {
 
   skillsDir(scope: InstallScope, projectRoot?: string): string | null {
     if (scope === 'user') {
-      return this.def.userSkillsDir ? expand(this.def.userSkillsDir, this.homeDir) : null
+      const dir = resolvePlatformOsPath(
+        this.def.userSkillsDir,
+        this.def.userSkillsDirByOs,
+        this.os,
+      )
+      return dir ? expandPlatformPath(dir, this.homeDir) : null
     }
     return this.def.projectSkillsDir && projectRoot
       ? join(projectRoot, this.def.projectSkillsDir)
@@ -41,6 +47,11 @@ export class PlatformAdapter extends SkillDirAdapter {
     if (this.agent === 'codex' && process.env.CODEX_HOME) {
       return exists(process.env.CODEX_HOME)
     }
-    return exists(expand(this.def.detectPath, this.homeDir))
+    const detectPath = resolvePlatformOsPath(
+      this.def.detectPath,
+      this.def.detectPathByOs,
+      this.os,
+    )
+    return exists(expandPlatformPath(detectPath, this.homeDir))
   }
 }

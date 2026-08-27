@@ -5,7 +5,10 @@ import { useSkills } from '@/composables/useSkills'
 import { showToast } from '@/composables/useToast'
 import { agentLabel } from '@/lib/agents'
 import type { ToggleRequest, UninstallRequest } from '@/lib/skill-action-types'
-import { manageableSkillInstallations } from '@/lib/skill-installations'
+import {
+  manageableSkillInstallations,
+  toggleableSkillInstallations,
+} from '@/lib/skill-installations'
 
 export function useSkillItemActions() {
   const { t } = useI18n()
@@ -141,11 +144,11 @@ export function useSkillItemActions() {
     requestedPlatformId: string | null = platformFilter.value,
     requestedProjectFilter: string | null = projectFilter.value,
   ): void {
-    const installations = manageableSkillInstallations(skill, {
+    const installations = toggleableSkillInstallations(skill, {
       platformId: requestedPlatformId,
       projectFilter: requestedProjectFilter,
       ownershipFilter: ownershipFilter.value,
-    })
+    }).filter((installation) => installation.canToggle !== false)
     if (installations.length === 0) return
     pendingToggle.value = {
       skill,

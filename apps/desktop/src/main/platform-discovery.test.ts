@@ -134,6 +134,14 @@ describe('discoverPlatformCandidates', () => {
     expect(paths).not.toContain('~/.config/opencode')
   })
 
+  it('跳过内置平台的 Skills 目录及其父级，Codex 的 ~/.agents 不再重复推荐', async () => {
+    await makeDir('.agents', ['skills'])
+
+    const paths = (await discoverPlatformCandidates()).map((candidate) => candidate.detectPath)
+
+    expect(paths).not.toContain('~/.agents')
+  })
+
   it('扫描 ~/.config 一级目录，覆盖 OpenCode 这类嵌套约定', async () => {
     await makeDir(join('.config', 'goose'), ['skills'])
 

@@ -1,8 +1,8 @@
 /*
  * @Author: wjc
  * @Date: 2026-08-10 10:14:11
- * @LastEditors: wjc-home
- * @LastEditTime: 2026-08-25 23:19:17
+ * @LastEditors: wjc
+ * @LastEditTime: 2026-08-26 20:46:54
  * @Description:
  */
 import claudeIcon from '@lobehub/icons-static-svg/icons/claude-color.svg'
@@ -14,8 +14,10 @@ import geminiIcon from '@lobehub/icons-static-svg/icons/gemini-color.svg'
 import githubcopilotSvg from '@lobehub/icons-static-svg/icons/githubcopilot.svg?raw'
 import kimiSvg from '@lobehub/icons-static-svg/icons/kimi.svg?raw'
 import opencodeSvg from '@lobehub/icons-static-svg/icons/opencode.svg?raw'
+import qwenIcon from '@lobehub/icons-static-svg/icons/qwen-color.svg'
 import traeIcon from '@lobehub/icons-static-svg/icons/trae-color.svg'
 import workbuddyIcon from '@/assets/platform-icons/workbuddy.svg'
+import wpsLingxiIcon from '@/assets/platform-icons/wps-lingxi.png'
 import zcodeSvg from '@/assets/platform-icons/zcode.svg?raw'
 
 interface PlatformIconDef {
@@ -40,12 +42,14 @@ const ICONS: Record<string, PlatformIconDef> = {
   copilot: { maskSrc: svgMask(githubcopilotSvg) },
   cursor: { maskSrc: svgMask(cursorSvg) },
   'gemini-cli': { src: geminiIcon },
+  'qwen-code': { src: qwenIcon },
   opencode: { maskSrc: svgMask(opencodeSvg) },
   codebuddy: { src: codebuddyIcon },
   trae: { src: traeIcon },
   'trae-cn': { src: traeIcon },
   workbuddy: { src: workbuddyIcon },
   doubao: { src: doubaoIcon },
+  'wps-lingxi': { src: wpsLingxiIcon },
   kimi: { maskSrc: svgMask(kimiSvg) },
   zcode: { maskSrc: svgMask(zcodeSvg) },
 }

@@ -1,0 +1,40 @@
+{
+  "recommendations": [
+    // vue3 支持
+    "Vue.volar",
+    // iconify 图标插件
+    "antfu.iconify",
+    // Visual Studio Code 的官方 Stylelint 扩展
+    "stylelint.vscode-stylelint",
+    // 使用 Prettier 的代码格式化程序
+    "esbenp.prettier-vscode",
+    // 支持 dotenv 文件语法
+    "mikestead.dotenv",
+    // 源代码的拼写检查器
+    "streetsidesoftware.code-spell-checker",
+    // i18n 插件
+    "Lokalise.i18n-ally",
+    // CSS 变量提示
+    "vunguyentuan.vscode-css-variables",
+    // 在 package.json 中显示 PNPM catalog 的版本
+    "antfu.pnpm-catalog-lens",
+    // Git 插件
+    "eamodio.gitlens",
+    // 中文
+    "ms-ceintl.vscode-language-pack-zh-hans",
+    // GitHub Copilot
+    "github.copilot",
+    // GitHub Copilot Chat
+    "github.copilot-chat",
+    // prettier 插件
+    "esbenp.prettier-vscode",
+    // stylelint 插件
+    "stylelint.vscode-stylelint",
+    // unocss 插件
+    "antfu.unocss",
+    // eslint 插件
+    "dbaeumer.vscode-eslint",
+    // SVG 图标预览插件
+    "jock.svg"
+  ]
+}

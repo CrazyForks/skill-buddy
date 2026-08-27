@@ -121,7 +121,7 @@ function activate(): void {
             {{ t('common.edit') }}
           </DropdownMenuItem>
           <DropdownMenuItem
-            v-if="!props.leaf.readOnly"
+            v-if="!props.leaf.readOnly && props.leaf.canToggle"
             :disabled="props.busy"
             class="flex cursor-pointer select-none items-center gap-2 rounded-[5px] px-2.5 py-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent"
             @select="

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { AggregatedSkill } from '@skillbuddy/core'
 import {
+  deriveSkillInstallationStatus,
   manageableSkillInstallations,
   matchesSkillInstallation,
+  toggleableSkillInstallations,
 } from './skill-installations.js'
 
 function skill(): AggregatedSkill {
@@ -93,5 +95,20 @@ describe('skill installation view', () => {
         (installation) => installation.path,
       ),
     ).toEqual(['/shared/review-code'])
+  })
+
+  it('keeps non-toggleable installations manageable but excludes them from toggles', () => {
+    const current = skill()
+    current.installations[0]!.canToggle = false
+
+    expect(manageableSkillInstallations(current, { projectFilter: 'user' })).toHaveLength(1)
+    expect(toggleableSkillInstallations(current, { projectFilter: 'user' })).toEqual([])
+    expect(deriveSkillInstallationStatus([current.installations[0]!])).toMatchObject({
+      writable: [current.installations[0]!],
+      toggleable: [],
+      allDisabled: false,
+      partiallyDisabled: false,
+      hasEnabled: false,
+    })
   })
 })

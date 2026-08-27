@@ -52,6 +52,7 @@ const platformSurfaces: Record<string, string> = {
   copilot: 'editor',
   cursor: 'editor',
   'gemini-cli': 'cli',
+  'qwen-code': 'cli',
   opencode: 'cli',
   trae: 'editor',
   'trae-cn': 'editor',
@@ -60,6 +61,7 @@ const platformSurfaces: Record<string, string> = {
   doubao: 'desktop',
   kimi: 'cli',
   zcode: 'editor',
+  'wps-lingxi': 'desktop',
 }
 
 function targetKey(target: InstallTarget): string {

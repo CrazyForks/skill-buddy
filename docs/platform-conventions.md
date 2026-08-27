@@ -6,21 +6,23 @@
 `name`/`description` 必填，可选 `scripts/` `references/` `assets/`）已成为
 跨工具事实标准，五个平台全部兼容。差异只剩目录位置。
 
-| 平台           | user 级                        | project 级                 | 检测                         | 置信度                   |
-| -------------- | ------------------------------ | -------------------------- | ---------------------------- | ------------------------ |
-| Claude Code    | `~/.claude/skills/`          | `.claude/skills/`        | `~/.claude`                | 官方                     |
-| Codex          | `~/.agents/skills/`          | `.agents/skills/`        | `~/.codex`（=$CODEX_HOME） | 官方                     |
-| Cursor 2.4+    | `~/.cursor/skills/`          | `.cursor/skills/`        | `~/.cursor`                | 官方                     |
-| OpenCode       | `~/.config/opencode/skills/` | `.opencode/skills/`      | `~/.config/opencode`       | 官方                     |
-| WorkBuddy      | `~/.workbuddy/skills/`       | 无（桌面助手，无项目概念） | `~/.workbuddy`             | 多来源一致（非官方一手） |
-| GitHub Copilot | `~/.copilot/skills/`         | `.github/skills/`        | `~/.copilot`               | 官方                     |
-| Gemini CLI     | `~/.gemini/skills/`          | `.gemini/skills/`        | `~/.gemini`                | 官方                     |
-| CodeBuddy      | `~/.codebuddy/skills/`       | `.codebuddy/skills/`     | `~/.codebuddy`             | 官方                     |
-| Trae（国际版） | `~/.trae/skills/`            | `.trae/skills/`          | `~/.trae`                  | 官方（间接确认）         |
-| Trae CN        | `~/.trae-cn/skills/`         | `.trae/skills/`          | `~/.trae-cn`               | 官方社区帖               |
-| 豆包           | `~/Doubao/skills/`           | 无（桌面助手）             | `~/Doubao`                 | 本机实测                 |
-| Kimi Code      | `~/.kimi/skills/`            | `.kimi/skills/`          | `~/.kimi`                  | 待真机复核               |
-| Z Code         | `~/.zcode/skills/`           | `.zcode/skills/`         | `~/.zcode`                 | 待真机复核               |
+| 平台 | user 级 | project 级 | 检测 | 置信度 |
+|---|---|---|---|---|
+| Claude Code | `~/.claude/skills/` | `.claude/skills/` | `~/.claude` | 官方 |
+| Codex | `~/.agents/skills/` | `.agents/skills/` | `~/.codex`（=$CODEX_HOME） | 官方 |
+| Cursor 2.4+ | `~/.cursor/skills/` | `.cursor/skills/` | `~/.cursor` | 官方 |
+| OpenCode | `~/.config/opencode/skills/` | `.opencode/skills/` | `~/.config/opencode` | 官方 |
+| WorkBuddy | `~/.workbuddy/skills/` | 无（桌面助手，无项目概念） | `~/.workbuddy` | 多来源一致（非官方一手） |
+| GitHub Copilot | `~/.copilot/skills/` | `.github/skills/` | `~/.copilot` | 官方 |
+| Gemini CLI | `~/.gemini/skills/` | `.gemini/skills/` | `~/.gemini` | 官方 |
+| Qwen Code | `~/.qwen/skills/` | `.qwen/skills/` | `~/.qwen` | 官方 |
+| CodeBuddy | `~/.codebuddy/skills/` | `.codebuddy/skills/` | `~/.codebuddy` | 官方 |
+| Trae（国际版） | `~/.trae/skills/` | `.trae/skills/` | `~/.trae` | 官方（间接确认） |
+| Trae CN | `~/.trae-cn/skills/` | `.trae/skills/` | `~/.trae-cn` | 官方社区帖 |
+| 豆包 | `~/Doubao/skills/` | 无（桌面助手） | `~/Doubao` | 本机实测 |
+| Kimi Code | `~/.kimi/skills/` | `.kimi/skills/` | `~/.kimi` | 待真机复核 |
+| Z Code | `~/.zcode/skills/` | `.zcode/skills/` | `~/.zcode` | 待真机复核 |
+| WPS 灵犀 | `<userData>/serverdir/user_skills/` | 无（桌面助手） | `<userData>` | 本机实测（macOS） |
 
 ## 平台备注
 
@@ -135,6 +137,30 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
 - 内置目录暂按 Z Code CLI 的 home/workspace 命名接入：
   `~/.zcode/skills/` 与 `.zcode/skills/`
 - 当前环境未安装 Z Code，需在真机上复核自动检测与安装后可见性
+
+### WPS 灵犀
+- Electron 桌面助手，技能目录挂在 `app.getPath('userData')` 下，
+  因此路径随操作系统变化。`PlatformDef` 的 `userSkillsDirByOs` /
+  `detectPathByOs` 就是为这类平台加的：
+  - macOS `~/Library/Application Support/WPS 灵犀/serverdir/user_skills/`
+  - Windows `~/AppData/Roaming/WPS 灵犀/serverdir/user_skills/`
+  - Linux `~/.config/WPS 灵犀/serverdir/user_skills/`
+- `serverdir` 下共有三个目录，分工由 sandbox 进程的启动参数
+  （`--official-skills-dir` / `--user-skills-dir` / `--target-skills-dir`）确定：
+  - `user_skills/` 可写，用户自装技能，SkillBuddy 的安装目标
+  - `official_skills/` 是指向 app sandbox 内置技能的符号链接，随版本更新，
+    SkillBuddy 作为 system 来源只读展示（见 `discoverLingxiSupplementalRoots`）
+  - `target_skills/` 是 sandbox 自己维护的符号链接农场，表示「已启用」，
+    SkillBuddy 不写入
+- 技能开关走 `disabled_local_skills` 黑名单，因此放进 `user_skills/` 的技能
+  默认即为启用，不需要额外注册
+- SKILL.md 约定与其他平台一致（目录名 = frontmatter `name`，`name`/`description`
+  必填，支持 `scripts/` `references/`）
+- MCP 侧未接入：灵犀的「连接器」在 UI 里粘贴标准 `mcpServers` JSON 后存入应用
+  内部（`config.json` 非明文，`local-db` 只有更新记录库），没有可安全读写的
+  明文配置文件
+- macOS 为本机实测（1.2.36 / sandbox 3.23.0）；Windows 与 Linux 按 Electron
+  userData 惯例推断，待真机复核
 
 ## 跨平台聚合的两个推论
 

@@ -66,6 +66,7 @@ const installationStatus = computed(() =>
 )
 const readOnly = computed(() => installationStatus.value.readOnly)
 const visibleWritableInstallations = computed(() => installationStatus.value.writable)
+const visibleToggleableInstallations = computed(() => installationStatus.value.toggleable)
 const visibleDisabledCount = computed(() => installationStatus.value.disabledCount)
 const visibleAllDisabled = computed(() => installationStatus.value.allDisabled)
 const visibleHasEnabled = computed(() => installationStatus.value.hasEnabled)
@@ -170,7 +171,7 @@ const uninstallCurrentLabel = computed(() =>
                   {{ t('common.edit') }}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  v-if="visibleWritableInstallations.length > 0"
+                  v-if="visibleToggleableInstallations.length > 0"
                   :disabled="busy"
                   class="flex cursor-pointer select-none items-center gap-2 rounded-[5px] px-2.5 py-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
                   @select="emit('toggleEnabled')"

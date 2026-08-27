@@ -3,6 +3,7 @@ import { defineAsyncComponent, shallowRef } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import InAppBrowser from '@/components/InAppBrowser.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import SettingsPageSkeleton from '@/components/SettingsPageSkeleton.vue'
 import WindowTopBar from '@/components/WindowTopBar.vue'
 import { useAppLifecycle } from '@/composables/useAppLifecycle'
 import { useSettings } from '@/composables/useSettings'
@@ -13,7 +14,12 @@ import Workspace from '@/views/WorkspaceView.vue'
 
 const ImportAppsModal = defineAsyncComponent(() => import('@/components/ImportAppsModal.vue'))
 const ImportSheet = defineAsyncComponent(() => import('@/components/ImportSheet.vue'))
-const SettingsPage = defineAsyncComponent(() => import('@/components/SettingsPage.vue'))
+const SettingsPage = defineAsyncComponent({
+  loader: () => import('@/components/SettingsPage.vue'),
+  loadingComponent: SettingsPageSkeleton,
+  delay: 0,
+  suspensible: false,
+})
 
 const { sidebarCollapsed } = useSettings()
 const view = shallowRef<WorkspaceView>('dashboard')

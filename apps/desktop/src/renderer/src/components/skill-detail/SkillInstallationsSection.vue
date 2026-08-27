@@ -103,7 +103,7 @@ function originLabel(installation: Installation): string {
             <FolderOpen class="size-3.5" />
           </Button>
           <Button
-            v-if="!installation.readOnly"
+            v-if="!installation.readOnly && installation.canToggle !== false"
             variant="ghost"
             size="icon"
             class="size-7 cursor-pointer text-muted-foreground hover:text-destructive"
@@ -119,7 +119,7 @@ function originLabel(installation: Installation): string {
             :title="t('detail.readOnly')"
           />
           <button
-            v-if="!installation.readOnly"
+            v-if="!installation.readOnly && installation.canToggle !== false"
             type="button"
             role="switch"
             :aria-checked="installationEnabled(installation)"

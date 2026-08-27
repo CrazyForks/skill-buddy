@@ -988,7 +988,7 @@ export default {
     hasSkillsDir: 'has skills',
     manuallyPicked: 'picked',
     orPickManually: 'or',
-    pickPlatformDir: 'Choose a platform directory…',
+    pickPlatformDir: 'Choose a platform directory',
     addSelected: 'Add selected ({count})',
     formIdPh: 'id (kebab-case)',
     formNamePh: 'Display name',

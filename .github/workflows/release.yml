@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 发布标签，例如 v0.1.7
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -96,6 +102,8 @@ jobs:
     name: 创建 GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
     steps:
       - name: 检出代码
@@ -114,7 +122,7 @@ jobs:
       - name: 生成更新清单
         working-directory: release
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ env.RELEASE_TAG }}
         run: |
           VERSION="${VERSION#v}"
           export VERSION
@@ -166,7 +174,7 @@ jobs:
 
       - name: 提取当前版本变更日志
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ env.RELEASE_TAG }}
         run: |
           VERSION="${VERSION#v}"
           awk -v version="$VERSION" '
@@ -180,8 +188,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" release/* \
+          VERSION="${RELEASE_TAG#v}"
+          gh release create "$RELEASE_TAG" release/* \
             --title "SkillBuddy $VERSION" \
             --notes-file release-notes.md \
             --latest

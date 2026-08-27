@@ -7,6 +7,7 @@ import type { BatchAction } from '@/lib/skill-action-types'
 const props = defineProps<{
   selectedCount: number
   targetCount: number
+  toggleTargetCount: number
   busy: boolean
   hasProjects: boolean
   hasProjectPlatforms: boolean
@@ -57,7 +58,7 @@ const { t } = useI18n()
         variant="outline"
         size="sm"
         class="cursor-pointer"
-        :disabled="props.busy || props.targetCount === 0"
+        :disabled="props.busy || props.toggleTargetCount === 0"
         @click="emit('request', 'enable')"
       >
         <Power class="size-3.5" />
@@ -67,7 +68,7 @@ const { t } = useI18n()
         variant="outline"
         size="sm"
         class="cursor-pointer"
-        :disabled="props.busy || props.targetCount === 0"
+        :disabled="props.busy || props.toggleTargetCount === 0"
         @click="emit('request', 'disable')"
       >
         <PowerOff class="size-3.5" />

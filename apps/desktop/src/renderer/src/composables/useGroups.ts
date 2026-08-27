@@ -14,7 +14,7 @@ import {
 } from '@/lib/market'
 import { serializePreset } from '@/lib/preset-format'
 import {
-  manageableSkillInstallations,
+  toggleableSkillInstallations,
   type SkillInstallationFilter,
 } from '@/lib/skill-installations'
 
@@ -448,7 +448,9 @@ export function useGroups() {
     const targets = group.skills.flatMap((name) => {
       const skill = skills.value.find((item) => item.name === name)
       if (!skill) return []
-      const installations = manageableSkillInstallations(skill, filter)
+      const installations = manageableSkillInstallations(skill, filter).filter(
+        (installation) => installation.canToggle !== false,
+      )
       return installations.length > 0
         ? [{
             name,
