@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-2563eb" />
+  <img alt="Version" src="https://img.shields.io/github/v/release/konnga/skill-buddy?label=version&color=2563eb" />
   <img alt="Status" src="https://img.shields.io/badge/status-public%20preview-f59e0b" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-Vue%203-47848f" />
 </p>
