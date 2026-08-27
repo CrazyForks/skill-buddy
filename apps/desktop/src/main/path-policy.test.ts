@@ -81,6 +81,42 @@ describe('PathAccessPolicy', () => {
     )
   })
 
+  it.runIf(process.platform !== 'win32')(
+    'allows deleting a Skill symlink while keeping the target outside the allowed root',
+    async () => {
+      const externalSkill = join(outsideRoot, 'linked-skill')
+      const linkedSkill = join(managedRoot, 'linked-skill')
+      await fs.mkdir(externalSkill)
+      await fs.writeFile(join(externalSkill, 'SKILL.md'), 'linked', 'utf8')
+      await fs.symlink(externalSkill, linkedSkill)
+
+      await expect(policy.assertWritableSkillDirectory(linkedSkill)).resolves.toBeUndefined()
+      await expect(policy.assertReadable(join(linkedSkill, 'SKILL.md'))).rejects.toThrow(
+        'outside the allowed Skill directories',
+      )
+    },
+  )
+
+  it.runIf(process.platform !== 'win32')(
+    'matches a Skill root whose own path contains a symlinked ancestor',
+    async () => {
+      // root 登记为经过 symlink 的路径，调用方传入的却是已解析的真实路径。
+      const linkedRoot = join(root, 'linked-root')
+      await fs.symlink(managedRoot, linkedRoot)
+      policy.setSkillRoots([
+        {
+          agent: 'codex',
+          scope: 'user',
+          path: linkedRoot,
+          origin: 'user',
+          readOnly: false,
+        } satisfies SkillRoot,
+      ])
+
+      await expect(policy.assertWritableSkillDirectory(skillRoot)).resolves.toBeUndefined()
+    },
+  )
+
   it('tracks app-owned temporary roots explicitly', async () => {
     policy.grantTemporaryRoot(outsideRoot, true)
     await expect(policy.assertReadable(join(outsideRoot, 'secret.txt'))).resolves.toBeUndefined()

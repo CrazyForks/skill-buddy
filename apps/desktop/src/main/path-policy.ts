@@ -73,23 +73,30 @@ export class PathAccessPolicy {
 
   /** 确认路径是某个可写 Skills 根目录下的一个完整 Skill 目录。 */
   async assertWritableSkillDirectory(path: string): Promise<void> {
-    const target = await realpath(path)
+    const denied = `path is not a managed Skill directory: ${path}`
+    // 删除时校验目录项本身，而不是对最后一级路径执行 realpath。
+    // 这样根目录下指向外部仓库的 Skill symlink 也能安全地移入废纸篓，
+    // 不会把链接目标误认为是待删除目录。
+    const target = resolve(path)
+    if (basename(target) === '') throw new Error(denied)
+    const entry = await fs.lstat(target).catch(() => null)
+    if (!entry?.isDirectory() && !entry?.isSymbolicLink()) throw new Error(denied)
+
+    // 父目录按 realpath 比较，兼容根目录自身路径中间存在 symlink 的情况。
+    const parentRealPath = await fs.realpath(dirname(target)).catch(() => null)
+    if (parentRealPath === null) throw new Error(denied)
+
     for (const root of this.managedRoots) {
       if (root.readOnly) continue
-      let canonicalRoot: string
-      try {
-        canonicalRoot = await fs.realpath(root.path)
-      } catch {
-        continue
-      }
-      if (dirname(target) !== canonicalRoot || basename(target) === '') continue
+      const rootRealPath = await fs.realpath(resolve(root.path)).catch(() => null)
+      if (rootRealPath !== parentRealPath) continue
       const hasSkillFile = await Promise.all([
         fs.access(resolve(target, 'SKILL.md')).then(() => true, () => false),
         fs.access(resolve(target, 'SKILL.md.disabled')).then(() => true, () => false),
       ])
       if (hasSkillFile.some(Boolean)) return
     }
-    throw new Error(`path is not a managed Skill directory: ${path}`)
+    throw new Error(denied)
   }
 
   /** 确认安装目标是当前扫描结果中的可写平台根目录。 */
