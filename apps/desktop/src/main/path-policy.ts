@@ -68,7 +68,38 @@ export class PathAccessPolicy {
       }
       if (target === canonicalRoot || isWithin(canonicalRoot, target)) return
     }
+    if (await this.reachableThroughLinkedSkill(path, target)) return
     throw new Error(`path is outside the allowed Skill directories: ${path}`)
+  }
+
+  /**
+   * 判断路径是否经由受管根目录下的链接型 Skill 抵达。
+   *
+   * 链接型 Skill 的本体位于上游目录，查看其内容是正当需求，因此放行；
+   * 但只认指向合法 Skill 目录（含 SKILL.md）的链接，避免借由指向任意
+   * 位置的链接把读取权限扩大到 Skills 目录之外。
+   */
+  private async reachableThroughLinkedSkill(path: string, target: string): Promise<boolean> {
+    const requested = resolve(path)
+    for (const root of this.managedRoots) {
+      const rootPath = resolve(root.path)
+      if (!isWithin(rootPath, requested)) continue
+      const skillName = relative(rootPath, requested).split(sep)[0]
+      if (!skillName) continue
+      const skillPath = resolve(rootPath, skillName)
+      const entry = await fs.lstat(skillPath).catch(() => null)
+      if (!entry?.isSymbolicLink()) continue
+      const hasSkillFile = await Promise.all([
+        fs.access(resolve(skillPath, 'SKILL.md')).then(() => true, () => false),
+        fs.access(resolve(skillPath, 'SKILL.md.disabled')).then(() => true, () => false),
+      ])
+      if (!hasSkillFile.some(Boolean)) continue
+      // 链接目标内部可能还有二级链接，仍需确认最终路径没有逃出目标目录。
+      const skillRealPath = await fs.realpath(skillPath).catch(() => null)
+      if (skillRealPath === null) continue
+      if (target === skillRealPath || isWithin(skillRealPath, target)) return true
+    }
+    return false
   }
 
   /** 确认路径是某个可写 Skills 根目录下的一个完整 Skill 目录。 */

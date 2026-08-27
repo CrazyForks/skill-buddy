@@ -82,7 +82,7 @@ describe('PathAccessPolicy', () => {
   })
 
   it.runIf(process.platform !== 'win32')(
-    'allows deleting a Skill symlink while keeping the target outside the allowed root',
+    'allows deleting and reading a Skill symlink without exposing the rest of its target tree',
     async () => {
       const externalSkill = join(outsideRoot, 'linked-skill')
       const linkedSkill = join(managedRoot, 'linked-skill')
@@ -90,9 +90,27 @@ describe('PathAccessPolicy', () => {
       await fs.writeFile(join(externalSkill, 'SKILL.md'), 'linked', 'utf8')
       await fs.symlink(externalSkill, linkedSkill)
 
+      // 删除只作用于链接本身，查看内容是正当需求，两者都放行。
       await expect(policy.assertWritableSkillDirectory(linkedSkill)).resolves.toBeUndefined()
-      await expect(policy.assertReadable(join(linkedSkill, 'SKILL.md'))).rejects.toThrow(
+      await expect(policy.assertReadable(join(linkedSkill, 'SKILL.md'))).resolves.toBeUndefined()
+      // 放行范围仅限该 Skill 目录，链接目标的兄弟文件依旧不可读。
+      await expect(policy.assertReadable(join(outsideRoot, 'secret.txt'))).rejects.toThrow(
         'outside the allowed Skill directories',
+      )
+    },
+  )
+
+  it.runIf(process.platform !== 'win32')(
+    'refuses to read through a symlink that does not point at a Skill directory',
+    async () => {
+      const escape = join(managedRoot, 'escape')
+      await fs.symlink(outsideRoot, escape)
+
+      await expect(policy.assertReadable(join(escape, 'secret.txt'))).rejects.toThrow(
+        'outside the allowed Skill directories',
+      )
+      await expect(policy.assertWritableSkillDirectory(escape)).rejects.toThrow(
+        'not a managed Skill directory',
       )
     },
   )
