@@ -10,6 +10,7 @@ const downloadPercent = shallowRef(0)
 const downloadError = shallowRef('')
 let initialized = false
 let listenerRegistered = false
+let checkPromise: Promise<UpdateCheckResult> | null = null
 
 function handleProgress(progress: UpdateDownloadProgress): void {
   if (progress.status === 'downloading') {
@@ -29,14 +30,23 @@ function handleProgress(progress: UpdateDownloadProgress): void {
 }
 
 async function checkUpdate(): Promise<UpdateCheckResult> {
+  if (checkPromise) return checkPromise
   checking.value = true
   downloadError.value = ''
-  try {
-    updateResult.value = await window.skillsManager.checkUpdate()
-    return updateResult.value
-  } finally {
-    checking.value = false
-  }
+  checkPromise = window.skillsManager.checkUpdate()
+    .then((result) => {
+      updateResult.value = result
+      return result
+    })
+    .finally(() => {
+      checking.value = false
+      checkPromise = null
+    })
+  return checkPromise
+}
+
+function handleOnline(): void {
+  if (updateResult.value?.status === 'offline') void checkUpdate()
 }
 
 async function downloadUpdate(): Promise<void> {
@@ -62,6 +72,7 @@ function initialize(): void {
   if (!listenerRegistered) {
     listenerRegistered = true
     window.skillsManager.onUpdateDownloadProgress(handleProgress)
+    window.addEventListener('online', handleOnline)
   }
   void checkUpdate().catch(() => undefined)
 }

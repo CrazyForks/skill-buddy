@@ -1,4 +1,4 @@
-import { onMounted, shallowRef, watch } from 'vue'
+import { onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { MarketItem, MarketSourceId } from '@/lib/market'
 import {
   cachedSkillMarketRequest,
@@ -87,6 +87,7 @@ export function useSkillMarketDiscovery() {
   let githubTotal = cachedCatalog?.githubTotal ?? 0
   let activeQuery = cachedCatalog?.query.trim() ?? ''
   let searchRequestId = 0
+  let retryAfterOnline = false
 
   function cacheCatalog(): void {
     writeSkillMarketCatalogCache({
@@ -179,7 +180,14 @@ export function useSkillMarketDiscovery() {
     } catch {
       /** 市场搜索失败时静默保留空状态，不向界面暴露 IPC 或网络错误原文。 */
     } finally {
-      if (requestId === searchRequestId) loading.value = false
+      if (requestId === searchRequestId) {
+        loading.value = false
+        const shouldRetry = retryAfterOnline && items.value.length === 0
+        retryAfterOnline = false
+        if (shouldRetry) {
+          void search()
+        }
+      }
     }
   }
 
@@ -251,9 +259,20 @@ export function useSkillMarketDiscovery() {
 
   watch(source, () => void search())
 
+  function handleOnline(): void {
+    if (items.value.length > 0) return
+    if (loading.value) {
+      retryAfterOnline = true
+      return
+    }
+    void search()
+  }
+
   onMounted(() => {
+    window.addEventListener('online', handleOnline)
     if (!cachedCatalog) void search()
   })
+  onUnmounted(() => window.removeEventListener('online', handleOnline))
 
   return {
     source,

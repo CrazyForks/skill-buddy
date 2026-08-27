@@ -446,7 +446,7 @@ export interface UpdateManifest {
   assets: Record<string, UpdateReleaseAsset>
 }
 
-/** 检查更新的结果：有新版本 / 已是最新 / 尚无发布 / 出错。 */
+/** 检查更新的结果：有新版本 / 已是最新 / 尚无发布 / 离线跳过 / 出错。 */
 export type UpdateCheckResult =
   | {
       status: 'update'
@@ -457,6 +457,7 @@ export type UpdateCheckResult =
     }
   | { status: 'latest'; latest: string; url: string }
   | { status: 'none' }
+  | { status: 'offline' }
   | { status: 'error'; message: string }
 
 /** 安装包下载进度，由主进程推送给发起下载的渲染进程。 */

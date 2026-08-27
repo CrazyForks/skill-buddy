@@ -966,6 +966,7 @@ export default {
     aboutDownloaded: '安装包已下载',
     aboutDownloadFailed: '下载更新失败：{msg}',
     aboutNoRelease: '尚未发布正式版本',
+    aboutOffline: '当前处于离线状态，恢复联网后将自动检查更新',
     aboutCheckFailed: '检查失败：{msg}',
     aboutRuntimeTitle: '运行环境',
     aboutCopyDiagnostics: '复制诊断信息',

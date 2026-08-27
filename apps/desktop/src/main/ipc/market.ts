@@ -1,4 +1,4 @@
-import { ipcMain, session } from 'electron'
+import { ipcMain, net, session } from 'electron'
 import { promises as fs } from 'node:fs'
 import { isIP } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -23,6 +23,7 @@ interface MarketFetchInit {
  * 一次。两次尝试各自使用独立的超时信号。
  */
 export async function marketFetch(url: string, init: MarketFetchInit = {}): Promise<Response> {
+  if (!net.isOnline()) throw new Error('当前处于离线状态')
   const { timeoutMs = 10_000, ...rest } = init
   try {
     return await session.defaultSession.fetch(url, {

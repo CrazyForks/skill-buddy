@@ -60,13 +60,13 @@ const selected = computed(() => props.selectedName ?? '')
       </span>
       <span class="flex w-full items-center justify-between gap-3">
         <span class="flex items-center -space-x-1">
-          <PlatformIcon
+          <span
             v-for="agent in agents(server).slice(0, 5)"
             :key="agent"
-            :id="agent"
-            :size="18"
-            class="rounded border-2 border-background bg-background"
-          />
+            class="flex size-[22px] shrink-0 items-center justify-center rounded border-2 border-background bg-background"
+          >
+            <PlatformIcon :id="agent" :size="18" />
+          </span>
           <span
             v-if="agents(server).length > 5"
             class="ml-2 text-xs text-muted-foreground"
