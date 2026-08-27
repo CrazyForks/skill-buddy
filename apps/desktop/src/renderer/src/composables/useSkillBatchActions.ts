@@ -263,8 +263,10 @@ export function useSkillBatchActions() {
         showToast.success(t(`batch.${request.action}Done`, { n: completed }))
       }
       if (failures.length > 0) showToast.error(failures.filter(Boolean).join('；'))
-    } catch {
-      showToast.error(t('batch.failed'))
+    } catch (error) {
+      // 空 catch 会吞掉 IPC 序列化这类真实故障，把原因带进提示才定位得了。
+      const detail = error instanceof Error ? error.message : String(error)
+      showToast.error(detail ? `${t('batch.failed')}｜${detail}` : t('batch.failed'))
     } finally {
       batchBusy.value = false
     }

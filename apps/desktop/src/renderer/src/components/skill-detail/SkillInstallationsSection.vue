@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, LockKeyhole, Trash2 } from '@lucide/vue'
+import { FolderOpen, Link2, LockKeyhole, Trash2, Unlink } from '@lucide/vue'
 import type { Installation } from '@skillbuddy/core'
 import CopyButton from '@/components/CopyButton.vue'
 import PlatformIcon from '@/components/PlatformIcon.vue'
@@ -24,6 +24,24 @@ const { t } = useI18n()
 
 function installationEnabled(installation: Installation): boolean {
   return installation.enabled !== false
+}
+
+/**
+ * 是否给出移除入口。断链条目无法启停（`canToggle` 为 false），但上游本体消失后
+ * 这条引用必须还能摘掉，否则它会永远留在列表里。
+ */
+function canRemove(installation: Installation): boolean {
+  if (installation.readOnly) return false
+  return installation.canToggle !== false || installation.linkBroken === true
+}
+
+/** 链接型 Skill 的角标提示：说明启停只搬动引用，上游本体不受影响。 */
+function linkTitle(installation: Installation): string {
+  const target = installation.linkTarget ?? ''
+  if (installation.linkBroken) {
+    return target ? t('detail.linkBrokenHint', { target }) : t('detail.linkBroken')
+  }
+  return target ? t('detail.linkedHint', { target }) : t('detail.linked')
 }
 
 function pathBaseName(path: string): string {
@@ -90,6 +108,23 @@ function originLabel(installation: Installation): string {
           >
             {{ installationEnabled(installation) ? t('detail.enabled') : t('detail.disabled') }}
           </Badge>
+          <Badge
+            v-if="installation.linked"
+            variant="outline"
+            :class="[
+              'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 font-normal',
+              installation.linkBroken
+                ? 'border-destructive/40 text-destructive'
+                : 'text-muted-foreground',
+            ]"
+            :title="linkTitle(installation)"
+          >
+            <Unlink v-if="installation.linkBroken" class="size-3 shrink-0" />
+            <Link2 v-else class="size-3 shrink-0" />
+            <span class="truncate">
+              {{ installation.linkBroken ? t('detail.linkBroken') : t('detail.linked') }}
+            </span>
+          </Badge>
         </div>
         <span class="flex shrink-0 items-center gap-0.5">
           <CopyButton :text="installation.path" class="size-7" />
@@ -103,7 +138,7 @@ function originLabel(installation: Installation): string {
             <FolderOpen class="size-3.5" />
           </Button>
           <Button
-            v-if="!installation.readOnly && installation.canToggle !== false"
+            v-if="canRemove(installation)"
             variant="ghost"
             size="icon"
             class="size-7 cursor-pointer text-muted-foreground hover:text-destructive"

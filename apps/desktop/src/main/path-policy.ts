@@ -1,7 +1,13 @@
 import { promises as fs } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path'
-import type { Skill, SkillRoot } from '@skillbuddy/core'
+import {
+  disabledLinksDir,
+  DISABLED_LINKS_DIR_NAME,
+  SKILLBUDDY_DIR_NAME,
+  type Skill,
+  type SkillRoot,
+} from '@skillbuddy/core'
 import type { CustomPlatformInput } from '#shared/ipc'
 
 interface ManagedRoot {
@@ -13,6 +19,20 @@ interface ManagedRoot {
 export function isWithin(root: string, target: string): boolean {
   const rel = relative(root, target)
   return rel !== '' && rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)
+}
+
+/**
+ * 解析请求路径命中的 Skill 目录项：既可能是根目录下的 Skill，也可能是停放在
+ * `.skillbuddy/disabled/` 里的已禁用链接。返回 null 表示不指向任何条目。
+ */
+function skillEntryWithin(rootPath: string, requested: string): string | null {
+  const [first, second, third] = relative(rootPath, requested).split(sep)
+  if (!first) return null
+  if (first !== SKILLBUDDY_DIR_NAME) return resolve(rootPath, first)
+  // 停放区是 SkillBuddy 的二级私有目录，真正的链接条目在第三段；
+  // `.skillbuddy` 下的其他路径一律不放行，避免把私有目录变成逃逸通道。
+  if (second !== DISABLED_LINKS_DIR_NAME || !third) return null
+  return resolve(rootPath, first, second, third)
 }
 
 async function realpath(path: string): Promise<string> {
@@ -84,9 +104,8 @@ export class PathAccessPolicy {
     for (const root of this.managedRoots) {
       const rootPath = resolve(root.path)
       if (!isWithin(rootPath, requested)) continue
-      const skillName = relative(rootPath, requested).split(sep)[0]
-      if (!skillName) continue
-      const skillPath = resolve(rootPath, skillName)
+      const skillPath = skillEntryWithin(rootPath, requested)
+      if (skillPath === null) continue
       const entry = await fs.lstat(skillPath).catch(() => null)
       if (!entry?.isSymbolicLink()) continue
       const hasSkillFile = await Promise.all([
@@ -119,8 +138,16 @@ export class PathAccessPolicy {
 
     for (const root of this.managedRoots) {
       if (root.readOnly) continue
-      const rootRealPath = await fs.realpath(resolve(root.path)).catch(() => null)
-      if (rootRealPath !== parentRealPath) continue
+      const rootPath = resolve(root.path)
+      const rootRealPath = await fs.realpath(rootPath).catch(() => null)
+      // 停放区里的链接同样归本根目录管理，摘掉它只动引用，不碰上游本体。
+      const parkedRealPath = await fs.realpath(disabledLinksDir(rootPath)).catch(() => null)
+      const inRoot = rootRealPath !== null && rootRealPath === parentRealPath
+      const inParkingArea = parkedRealPath !== null && parkedRealPath === parentRealPath
+      if (!inRoot && !inParkingArea) continue
+      // 断链读不到 SKILL.md，但必须留出清理入口，否则上游消失后这条已禁用的
+      // 引用就再也删不掉了。停放区里只可能是链接条目，放行范围仍然收敛。
+      if (inParkingArea && entry.isSymbolicLink()) return
       const hasSkillFile = await Promise.all([
         fs.access(resolve(target, 'SKILL.md')).then(() => true, () => false),
         fs.access(resolve(target, 'SKILL.md.disabled')).then(() => true, () => false),

@@ -2,7 +2,12 @@ import { promises as fs } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { SkillRoot } from '@skillbuddy/core'
+import {
+  disabledLinksDir,
+  parkLink,
+  SKILLBUDDY_DIR_NAME,
+  type SkillRoot,
+} from '@skillbuddy/core'
 import { PathAccessPolicy, validateCustomPlatform } from './path-policy.js'
 
 let root: string
@@ -157,6 +162,60 @@ describe('PathAccessPolicy', () => {
         resources: { 'secret.txt': join(outsideRoot, 'secret.txt') },
       }),
     ).rejects.toThrow('outside the allowed Skill directories')
+  })
+})
+
+describe.runIf(process.platform !== 'win32')('PathAccessPolicy (parked links)', () => {
+  let upstream: string
+  let parkedPath: string
+
+  beforeEach(async () => {
+    upstream = join(outsideRoot, 'linked-skill')
+    await fs.mkdir(upstream, { recursive: true })
+    await fs.writeFile(join(upstream, 'SKILL.md'), 'linked', 'utf8')
+    await fs.symlink(upstream, join(managedRoot, 'linked-skill'))
+    await parkLink(managedRoot, 'linked-skill')
+    parkedPath = join(disabledLinksDir(managedRoot), 'linked-skill')
+  })
+
+  it('reads a disabled Skill through its parked link', async () => {
+    await expect(policy.assertReadable(join(parkedPath, 'SKILL.md'))).resolves.toBeUndefined()
+    // 放行范围仍限于该 Skill 目录，链接目标的兄弟文件依旧不可读。
+    await expect(policy.assertReadable(join(outsideRoot, 'secret.txt'))).rejects.toThrow(
+      'outside the allowed Skill directories',
+    )
+  })
+
+  it('removes a parked link but never the parking area itself', async () => {
+    await expect(policy.assertWritableSkillDirectory(parkedPath)).resolves.toBeUndefined()
+    await expect(policy.assertWritableSkillDirectory(disabledLinksDir(managedRoot))).rejects.toThrow(
+      'not a managed Skill directory',
+    )
+  })
+
+  it('still allows removing a parked link whose upstream disappeared', async () => {
+    await fs.rm(upstream, { recursive: true, force: true })
+
+    // 断链读不到 SKILL.md，但清理入口必须留着，否则这条引用永远删不掉。
+    await expect(policy.assertWritableSkillDirectory(parkedPath)).resolves.toBeUndefined()
+  })
+
+  it('refuses to read through a parked link that is not a Skill directory', async () => {
+    const rogue = join(disabledLinksDir(managedRoot), 'rogue')
+    await fs.symlink(outsideRoot, rogue)
+
+    await expect(policy.assertReadable(join(rogue, 'secret.txt'))).rejects.toThrow(
+      'outside the allowed Skill directories',
+    )
+  })
+
+  it('never treats the private directory as an escape hatch', async () => {
+    const stray = join(managedRoot, SKILLBUDDY_DIR_NAME, 'stray')
+    await fs.symlink(outsideRoot, stray)
+
+    await expect(policy.assertReadable(join(stray, 'secret.txt'))).rejects.toThrow(
+      'outside the allowed Skill directories',
+    )
   })
 })
 

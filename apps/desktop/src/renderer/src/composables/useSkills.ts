@@ -296,7 +296,7 @@ async function uninstall(name: string, targets: InstallTarget[]): Promise<Target
     })
     if (!confirmed) return []
   }
-  const results = await window.skillsManager.uninstallSkill(name, targets)
+  const results = await window.skillsManager.uninstallSkill(name, cloneForIpc(targets))
   await refresh()
   return results
 }
@@ -307,7 +307,11 @@ async function setEnabled(
   enabled: boolean,
   options: { refresh?: boolean } = {},
 ): Promise<TargetResult[]> {
-  const results = await window.skillsManager.setSkillEnabled(name, targets, enabled)
+  const results = await window.skillsManager.setSkillEnabled(
+    name,
+    cloneForIpc(targets),
+    enabled,
+  )
   if (options.refresh !== false) await refresh()
   return results
 }
