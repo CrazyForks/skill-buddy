@@ -19,7 +19,12 @@ const mocks = vi.hoisted(() => ({
   installSkill: vi.fn(),
   marketSkillSource: vi.fn(),
   matchMarketSkill: vi.fn(),
-  showToast: vi.fn(),
+  showToast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  }),
 }))
 
 vi.mock('@/composables/useSkills', () => ({
@@ -86,6 +91,7 @@ describe('useMarketSkillDetail', () => {
     mocks.matchMarketSkill.mockReset()
     mocks.matchMarketSkill.mockReturnValue(found)
     mocks.showToast.mockClear()
+    mocks.showToast.success.mockClear()
     globalThis.window = {
       skillsManager: {
         cleanupImport: mocks.cleanupImport,
@@ -101,7 +107,7 @@ describe('useMarketSkillDetail', () => {
     await detail.install()
 
     expect(mocks.installSkill).toHaveBeenCalledWith(sourceSkill, [target])
-    expect(mocks.showToast).toHaveBeenCalledWith({ message: 'market.installSuccess' })
+    expect(mocks.showToast.success).toHaveBeenCalledWith('market.installSuccess')
     expect(onInstalled).toHaveBeenCalledOnce()
   })
 })

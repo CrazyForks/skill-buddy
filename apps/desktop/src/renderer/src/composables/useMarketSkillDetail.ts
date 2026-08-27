@@ -148,7 +148,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
     }
     marketSkillSources.value = sources
     selectedGroups.value = new Set()
-    if (added > 0) showToast({ message: t('market.addedToGroups', { n: added }) })
+    if (added > 0) showToast.success(t('market.addedToGroups', { n: added }))
   }
 
   /** 优先复用概览源码；概览失败时只为本次安装重新下载并清理。 */
@@ -197,7 +197,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
         requestId === installRequestId &&
         requestedItem.key === item.value.key
       ) {
-        showToast({ message: t('market.installSuccess', { name: requestedItem.name }) })
+        showToast.success(t('market.installSuccess', { name: requestedItem.name }))
         options.onInstalled()
       }
     } catch (cause) {

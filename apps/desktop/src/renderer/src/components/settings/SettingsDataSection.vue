@@ -43,7 +43,7 @@ async function exportConfig(): Promise<void> {
     const saved = await window.skillsManager.exportConfig(
       JSON.stringify(collectLocalConfig(), null, 2),
     )
-    if (saved) showToast({ message: t('settings.dataExported') })
+    if (saved) showToast.success(t('settings.dataExported'))
   } finally {
     exporting.value = false
   }
@@ -73,7 +73,7 @@ async function importConfig(): Promise<void> {
       for (const key of keys) localStorage.setItem(key, JSON.stringify(parsed[key]))
       location.reload()
     } catch {
-      showToast({ message: t('settings.dataImportInvalid') })
+      showToast.error(t('settings.dataImportInvalid'))
     }
   } finally {
     importing.value = false

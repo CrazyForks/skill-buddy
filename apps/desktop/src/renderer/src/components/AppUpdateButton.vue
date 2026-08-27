@@ -26,7 +26,7 @@ const actionLabel = computed(() => {
 })
 
 watch(downloadError, (message) => {
-  if (message) showToast({ message: t('settings.aboutDownloadFailed', { msg: message }) })
+  if (message) showToast.error(t('settings.aboutDownloadFailed', { msg: message }))
 })
 </script>
 

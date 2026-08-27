@@ -34,19 +34,20 @@ export function useSkillItemActions() {
             failed > 0
               ? t('card.uninstallPartial', { completed, failed })
               : t('common.trashedN', { n: completed }),
+          type: failed > 0 ? 'warning' : 'info',
           actionLabel: t('common.undo'),
           onAction: async () => {
             if (await window.skillsManager.undoTrash(token)) {
               await refresh({ silent: true })
-              showToast({ message: t('common.restored') })
+              showToast.success(t('common.restored'))
             }
           },
         })
       } else {
-        showToast({ message: t('card.uninstallFailed') })
+        showToast.error(t('card.uninstallFailed'))
       }
     } catch {
-      showToast({ message: t('card.uninstallFailed') })
+      showToast.error(t('card.uninstallFailed'))
     } finally {
       const next = new Set(removing.value)
       next.delete(request.skill.name)
@@ -127,10 +128,10 @@ export function useSkillItemActions() {
                     n: completed,
                   })
                 : t(request.enabled ? 'card.enabledN' : 'card.disabledN', { n: completed })
-        showToast({ message })
+        showToast.success(message)
       }
       if (failed.length > 0) {
-        showToast({ message: failed.map((result) => result.error).join('；') })
+        showToast.error(failed.map((result) => result.error).join('；'))
       }
     } finally {
       const next = new Set(toggling.value)

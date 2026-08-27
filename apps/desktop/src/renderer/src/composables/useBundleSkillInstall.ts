@@ -175,11 +175,11 @@ export function useBundleSkillInstall(options: UseBundleSkillInstallOptions) {
     try {
       const success = await installSelectedSkills(chosen, requestedTargets)
       if (!success) return
-      showToast({
-        message: t('bundles.installSuccess', {
+      showToast.success(
+        t('bundles.installSuccess', {
           name: bundleText(bundle.value.name, locale.value),
         }),
-      })
+      )
       options.onInstalled()
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause)

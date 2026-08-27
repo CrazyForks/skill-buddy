@@ -140,13 +140,12 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
       }
       return false
     }
-    showToast({
-      message: t('common.trashedN', { n: paths.length }),
+    showToast.info(t('common.trashedN', { n: paths.length }), {
       actionLabel: t('common.undo'),
       onAction: async () => {
         if (await window.skillsManager.undoTrash(token)) {
           await refresh()
-          showToast({ message: t('common.restored') })
+          showToast.success(t('common.restored'))
         }
       },
     })

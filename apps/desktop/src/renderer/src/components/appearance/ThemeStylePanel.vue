@@ -53,7 +53,7 @@ const preset = computed({
 
 async function copyTheme(): Promise<void> {
   await navigator.clipboard.writeText(exportAppearance())
-  showToast({ message: t('settings.appearanceCopied') })
+  showToast.success(t('settings.appearanceCopied'))
 }
 
 /* 导入主题 */
@@ -70,7 +70,7 @@ function openImport(): void {
 function confirmImport(): void {
   if (importAppearance(importText.value)) {
     importOpen.value = false
-    showToast({ message: t('settings.appearanceImported') })
+    showToast.success(t('settings.appearanceImported'))
   } else {
     importError.value = true
   }

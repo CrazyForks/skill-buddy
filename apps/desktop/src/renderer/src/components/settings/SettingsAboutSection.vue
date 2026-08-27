@@ -62,7 +62,7 @@ async function copyDiagnostics(): Promise<void> {
     `Project roots: ${projectRoots.value.length}`,
   ]
   await navigator.clipboard.writeText(lines.join('\n'))
-  showToast({ message: t('settings.aboutDiagCopied') })
+  showToast.success(t('settings.aboutDiagCopied'))
 }
 </script>
 

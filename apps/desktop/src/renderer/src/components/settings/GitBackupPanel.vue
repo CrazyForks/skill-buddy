@@ -48,6 +48,7 @@ async function backup(): Promise<void> {
       message: result.committed
         ? t('settings.backupPushed', { skills: result.skills, presets: result.presets })
         : t('settings.backupUnchanged'),
+      type: result.committed ? 'success' : 'info',
     })
   } catch (cause) {
     error.value = message(cause)
@@ -116,8 +117,8 @@ async function restore(): Promise<void> {
     for (const preset of snapshot.presets) merged = mergePreset(merged, preset).groups
     groups.value = merged
     await refresh({ silent: true })
-    showToast({ message: t('settings.restoreDone', { n: completed }) })
-    if (failures.length > 0) showToast({ message: failures.join('；') })
+    showToast.success(t('settings.restoreDone', { n: completed }))
+    if (failures.length > 0) showToast.error(failures.join('；'))
     preview.value = null
   } catch (cause) {
     error.value = message(cause)

@@ -143,9 +143,9 @@ export function useGroups() {
   async function exportGroup(group: SkillGroup): Promise<void> {
     try {
       await navigator.clipboard.writeText(serializePreset(group))
-      showToast({ message: t('groups.exported', { name: group.name }) })
+      showToast.success(t('groups.exported', { name: group.name }))
     } catch {
-      showToast({ message: t('groups.exportFailed') })
+      showToast.error(t('groups.exportFailed'))
     }
   }
 
@@ -312,7 +312,7 @@ export function useGroups() {
       groupApplyNote.value = applyOutcomeNote(outcome)
       if (!groupApplyNote.value) {
         groupApplyOpen.value = false
-        showToast({ message: t('groups.installSuccess', { name: group.name }) })
+        showToast.success(t('groups.installSuccess', { name: group.name }))
       }
     } finally {
       groupApplyBusy.value = false
@@ -414,8 +414,7 @@ export function useGroups() {
           return
         }
 
-        showToast({
-          message: t('common.trashedN', { n: paths.length }),
+        showToast.info(t('common.trashedN', { n: paths.length }), {
           actionLabel: t('common.undo'),
           onAction: async () => {
             if (await window.skillsManager.undoTrash(token)) {
@@ -424,7 +423,7 @@ export function useGroups() {
                 record,
               ]
               await refresh()
-              showToast({ message: t('common.restored') })
+              showToast.success(t('common.restored'))
             }
           },
         })
@@ -494,11 +493,11 @@ export function useGroups() {
         )
       }
       if (completed > 0) {
-        showToast({ message: t(`groups.${action}Done`, { n: completed }) })
+        showToast.success(t(`groups.${action}Done`, { n: completed }))
       }
-      if (failures.length > 0) showToast({ message: failures.join('；') })
+      if (failures.length > 0) showToast.error(failures.join('；'))
     } catch {
-      showToast({ message: t('groups.toggleFailed') })
+      showToast.error(t('groups.toggleFailed'))
     } finally {
       await refresh({ silent: true })
       groupToggleBusy.value = false

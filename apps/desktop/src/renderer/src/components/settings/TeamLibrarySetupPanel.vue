@@ -79,9 +79,9 @@ async function inspectRemote(): Promise<void> {
     })
     if (result.status === 'ready') {
       emit('connected', { remoteUrl: result.remoteUrl, branch: result.branch })
-      showToast({
-        message: t('settings.teamLibraryConnected', { name: result.manifest?.name ?? result.branch }),
-      })
+      showToast.success(
+        t('settings.teamLibraryConnected', { name: result.manifest?.name ?? result.branch }),
+      )
       reset()
       return
     }
@@ -121,9 +121,7 @@ async function initialize(): Promise<void> {
       name: libraryName.value.trim(),
     })
     emit('connected', result.config)
-    showToast({
-      message: t('settings.teamLibraryInitialized', { name: result.manifest.name }),
-    })
+    showToast.success(t('settings.teamLibraryInitialized', { name: result.manifest.name }))
     reset()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)

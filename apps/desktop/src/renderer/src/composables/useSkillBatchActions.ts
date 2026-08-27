@@ -155,10 +155,10 @@ export function useSkillBatchActions() {
       await refresh({ silent: true })
       batchProjectOpen.value = false
       clearSelection()
-      showToast({ message: t('batch.addProjectDone', { n: completed }) })
-      if (failures.length > 0) showToast({ message: failures.filter(Boolean).join('；') })
+      showToast.success(t('batch.addProjectDone', { n: completed }))
+      if (failures.length > 0) showToast.error(failures.filter(Boolean).join('；'))
     } catch {
-      showToast({ message: t('batch.failed') })
+      showToast.error(t('batch.failed'))
     } finally {
       batchBusy.value = false
     }
@@ -188,7 +188,7 @@ export function useSkillBatchActions() {
     })
     batchGroupOpen.value = false
     clearSelection()
-    showToast({ message: t('batch.addGroupsDone', { n: added }) })
+    showToast.success(t('batch.addGroupsDone', { n: added }))
   }
 
   function requestBatch(action: BatchAction): void {
@@ -232,16 +232,17 @@ export function useSkillBatchActions() {
               failed > 0
                 ? t('card.uninstallPartial', { completed, failed })
                 : t('common.trashedN', { n: completed }),
+            type: failed > 0 ? 'warning' : 'info',
             actionLabel: t('common.undo'),
             onAction: async () => {
               if (await window.skillsManager.undoTrash(token)) {
                 await refresh({ silent: true })
-                showToast({ message: t('common.restored') })
+                showToast.success(t('common.restored'))
               }
             },
           })
         } else {
-          showToast({ message: t('card.uninstallFailed') })
+          showToast.error(t('card.uninstallFailed'))
         }
         return
       }
@@ -259,11 +260,11 @@ export function useSkillBatchActions() {
       await refresh({ silent: true })
       clearSelection()
       if (completed > 0) {
-        showToast({ message: t(`batch.${request.action}Done`, { n: completed }) })
+        showToast.success(t(`batch.${request.action}Done`, { n: completed }))
       }
-      if (failures.length > 0) showToast({ message: failures.filter(Boolean).join('；') })
+      if (failures.length > 0) showToast.error(failures.filter(Boolean).join('；'))
     } catch {
-      showToast({ message: t('batch.failed') })
+      showToast.error(t('batch.failed'))
     } finally {
       batchBusy.value = false
     }

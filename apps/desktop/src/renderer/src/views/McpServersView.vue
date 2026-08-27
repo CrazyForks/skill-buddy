@@ -114,17 +114,20 @@ async function executePlan(): Promise<void> {
   const succeeded = result.results.filter((item) => item.ok)
   const failed = result.results.filter((item) => !item.ok)
   if (succeeded.length > 0) {
-    showToast({
-      message: t('mcp.applied', { n: succeeded.length }),
+    showToast.success(t('mcp.applied', { n: succeeded.length }), {
       actionLabel: t('common.undo'),
       onAction: async () => {
         const restored = await restore(result.operationId)
-        showToast({ message: restored ? t('common.restored') : t('mcp.restoreFailed') })
+        showToast({
+          message: restored ? t('common.restored') : t('mcp.restoreFailed'),
+          type: restored ? 'success' : 'error',
+        })
       },
-    }, 6_000)
+      duration: 6_000,
+    })
   }
   if (failed.length > 0) {
-    showToast({ message: failed.map((item) => item.error).filter(Boolean).join('; ') })
+    showToast.error(failed.map((item) => item.error).filter(Boolean).join('; '))
   }
 }
 </script>

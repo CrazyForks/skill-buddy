@@ -47,6 +47,7 @@ function submit(): void {
         name: imported.name,
         n: outcome.addedSkills,
       }),
+      type: outcome.result === 'unchanged' ? 'info' : 'success',
     })
     emit('update:open', false)
   } catch {
