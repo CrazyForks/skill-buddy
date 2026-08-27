@@ -19,6 +19,17 @@ export {
   DISABLED_SKILL_FILE_NAME,
 } from './skill-io.js'
 export {
+  disabledLinksDir,
+  isLinkParked,
+  listParkedLinks,
+  parkLink,
+  removeParkedLink,
+  restoreLink,
+  DISABLED_LINKS_DIR_NAME,
+  SKILLBUDDY_DIR_NAME,
+  type ParkedLink,
+} from './skill-link.js'
+export {
   RegistryClient,
   RegistryError,
   toSkill,

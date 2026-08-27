@@ -1,8 +1,9 @@
 import { promises as fs } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { allAdapters } from './adapters/index.js'
-import { readSkillDirState } from './skill-io.js'
-import type { AgentId, InstalledSkill, SkillRoot } from './types.js'
+import { DISABLED_SKILL_FILE_NAME, readSkillDirState, SKILL_FILE_NAME } from './skill-io.js'
+import { listParkedLinks, SKILLBUDDY_DIR_NAME } from './skill-link.js'
+import type { AgentId, InstalledSkill, SkillLinkKind, SkillRoot } from './types.js'
 
 export interface PlatformStatus {
   id: AgentId
@@ -39,6 +40,8 @@ async function listDirectories(path: string): Promise<string[]> {
     const entries = await fs.readdir(path, { withFileTypes: true })
     const directories: string[] = []
     for (const entry of entries) {
+      // SkillBuddy 的私有目录存放已禁用的链接，不是平台可见的 Skill。
+      if (entry.name === SKILLBUDDY_DIR_NAME) continue
       if (entry.isDirectory()) {
         directories.push(entry.name)
         continue
@@ -117,22 +120,78 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
   return dedupeRoots(roots)
 }
 
+interface LinkMeta {
+  linked: boolean
+  linkKind?: SkillLinkKind
+  linkTarget?: string
+}
+
+/** 判定目录项是否为链接，并区分其归属；不跟随链接，避免误读上游。 */
+async function readLinkMeta(skillPath: string, root: SkillRoot): Promise<LinkMeta> {
+  const entry = await fs.lstat(skillPath).catch(() => null)
+  if (!entry?.isSymbolicLink()) return { linked: false }
+  return {
+    linked: true,
+    linkKind: root.runtimeProjection ? 'runtime' : 'reference',
+    linkTarget: (await fs.readlink(skillPath).catch(() => null)) ?? undefined,
+  }
+}
+
+/**
+ * Read the links parked in this root's disabled area back as disabled installations.
+ *
+ * 停放区的启停语义由链接所在位置决定：链接指向的上游本体始终带着启用态的
+ * SKILL.md，因此这里必须强制 `enabled: false`，绝不能取 `readSkillDirState`
+ * 的判断，否则界面会显示成已启用，而平台其实根本扫不到它。
+ */
+async function scanParkedLinks(root: SkillRoot): Promise<InstalledSkill[]> {
+  const skills: InstalledSkill[] = []
+  for (const parked of await listParkedLinks(root.path)) {
+    const base = {
+      agent: root.agent,
+      scope: root.scope,
+      path: parked.path,
+      projectRoot: root.projectRoot,
+      origin: root.origin,
+      readOnly: root.readOnly,
+      linked: true,
+      linkKind: 'reference' as const,
+      linkTarget: parked.target ?? undefined,
+      enabled: false,
+    }
+    // 上游本体已消失时保留条目并标记，否则已禁用的 Skill 会静默从列表消失。
+    if (parked.broken) {
+      skills.push({
+        ...base,
+        linkBroken: true,
+        canToggle: false,
+        skill: { name: parked.name, description: '', content: '' },
+      })
+      continue
+    }
+    const state = await readSkillDirState(parked.path, parked.name)
+    if (!state) continue
+    const modifiedAt = await fs
+      .stat(join(parked.path, SKILL_FILE_NAME))
+      .then((entry) => entry.mtimeMs)
+      .catch(() => undefined)
+    skills.push({ ...base, canToggle: root.canToggle, modifiedAt, skill: state.skill })
+  }
+  return skills
+}
+
 async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
   const skills: InstalledSkill[] = []
   for (const name of await listDirectories(root.path)) {
     const skillPath = join(root.path, name)
     const state = await readSkillDirState(skillPath, name)
     if (!state) continue
-    // 链接型 Skill 的本体归上游所有：启停靠重命名 SKILL.md 实现，会顺着链接
-    // 改写目标目录，连带影响其他引用同一本体的平台，因此禁用启停。
-    const linked = await fs.lstat(skillPath).then(
-      (entry) => entry.isSymbolicLink(),
-      () => false,
-    )
+    const link = await readLinkMeta(skillPath, root)
     let modifiedAt: number | undefined
     try {
-      modifiedAt = (await fs.stat(join(skillPath, state.enabled ? 'SKILL.md' : 'SKILL.md.disabled')))
-        .mtimeMs
+      modifiedAt = (
+        await fs.stat(join(skillPath, state.enabled ? SKILL_FILE_NAME : DISABLED_SKILL_FILE_NAME))
+      ).mtimeMs
     } catch {
       modifiedAt = undefined
     }
@@ -143,13 +202,15 @@ async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
       projectRoot: root.projectRoot,
       origin: root.origin,
       readOnly: root.readOnly,
-      canToggle: linked ? false : root.canToggle,
-      linked,
+      ...link,
+      // 运行态投影目录由平台自行全量重建，搬动其中的链接会被下次刷新冲掉。
+      canToggle: link.linkKind === 'runtime' ? false : root.canToggle,
       enabled: state.enabled,
       modifiedAt,
       skill: state.skill,
     })
   }
+  skills.push(...(await scanParkedLinks(root)))
   return skills
 }
 

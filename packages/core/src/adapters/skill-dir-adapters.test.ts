@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { BUILTIN_PLATFORMS, resolvePlatformOsPath, type PlatformDef } from '../platforms.js'
 import { PlatformAdapter } from './platform-adapter.js'
+import { disabledLinksDir } from '../skill-link.js'
 import type { Skill } from '../types.js'
 
 const sample: Skill = {
@@ -192,19 +193,29 @@ describe.each(cases)('PlatformAdapter($id)', (def) => {
   )
 
   it.runIf(process.platform !== 'win32')(
-    'refuses to toggle a linked Skill so the upstream target stays untouched',
+    'toggles a linked Skill by moving the link itself, never the upstream target',
     async () => {
       const upstream = join(home, 'upstream', 'commit-style')
       await fs.mkdir(upstream, { recursive: true })
       await fs.writeFile(join(upstream, 'SKILL.md'), 'upstream body', 'utf8')
       const skillsDir = at(home, userSkillsDir!)
       await fs.mkdir(skillsDir, { recursive: true })
-      await fs.symlink(upstream, join(skillsDir, 'commit-style'))
+      const linkPath = join(skillsDir, 'commit-style')
+      await fs.symlink(upstream, linkPath)
 
-      await expect(adapter.setEnabled('commit-style', false, 'user')).rejects.toThrow(
-        /linked Skill/,
-      )
-      await expect(fs.access(join(upstream, 'SKILL.md'))).resolves.toBeUndefined()
+      await adapter.setEnabled('commit-style', false, 'user')
+
+      // 链接被搬出平台扫描路径，上游本体分毫未动。
+      const parkedPath = join(disabledLinksDir(skillsDir), 'commit-style')
+      await expect(fs.lstat(linkPath)).rejects.toThrow()
+      expect((await fs.lstat(parkedPath)).isSymbolicLink()).toBe(true)
+      expect(await fs.readFile(join(upstream, 'SKILL.md'), 'utf8')).toBe('upstream body')
+
+      await adapter.setEnabled('commit-style', true, 'user')
+
+      expect((await fs.lstat(linkPath)).isSymbolicLink()).toBe(true)
+      await expect(fs.lstat(parkedPath)).rejects.toThrow()
+      expect(await fs.readFile(join(upstream, 'SKILL.md'), 'utf8')).toBe('upstream body')
     },
   )
 })

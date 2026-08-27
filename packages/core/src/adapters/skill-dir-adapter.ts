@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs'
 import { dirname, join } from 'node:path'
 import matter from 'gray-matter'
 import { resolveResourcePath } from '../resource-path.js'
+import { isLinkParked, parkLink, removeParkedLink, restoreLink } from '../skill-link.js'
 import type { AgentAdapter, AgentId, InstallScope, InstalledSkill, Skill } from '../types.js'
 import {
   DISABLED_SKILL_FILE_NAME,
@@ -29,7 +30,8 @@ export abstract class SkillDirAdapter implements AgentAdapter {
     const entries = await fs.readdir(dir, { withFileTypes: true })
     const skills: InstalledSkill[] = []
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
+      // Dirent 是 lstat 语义：链接型 Skill 的 isDirectory() 为 false，需单独放行。
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
       const skillPath = join(dir, entry.name)
       const state = await readSkillDirState(skillPath, entry.name)
       if (!state) continue
@@ -103,6 +105,8 @@ export abstract class SkillDirAdapter implements AgentAdapter {
     const dir = this.skillsDir(scope, projectRoot)
     if (!dir) return
     await fs.rm(join(dir, name), { recursive: true, force: true })
+    // 同名链接可能正停放在禁用区，一并摘掉，否则卸载后它会重新出现在列表里。
+    await removeParkedLink(dir, name)
   }
 
   async setEnabled(
@@ -118,11 +122,17 @@ export abstract class SkillDirAdapter implements AgentAdapter {
     const dir = this.skillsDir(scope, projectRoot)
     if (!dir) throw new Error(`${this.agent}: no skills directory for scope "${scope}"`)
     const skillPath = join(dir, name)
-    // 链接型 Skill 的本体归上游所有：下面的重命名会顺着链接改写目标目录，
-    // 连带影响其他引用同一本体的平台，也会弄脏上游仓库，因此直接拒绝。
     const entry = await fs.lstat(skillPath).catch(() => null)
+    // 链接型 Skill 的本体归上游所有，重命名它的 SKILL.md 会顺着链接改写目标目录，
+    // 连带影响其他引用同一本体的平台，也会弄脏上游仓库。改为搬动链接条目本身：
+    // fs.rename 对符号链接是 lstat 语义，只动引用，上游分毫不碰。
     if (entry?.isSymbolicLink()) {
-      throw new Error(`${this.agent}: "${name}" is a linked Skill and cannot be toggled here`)
+      if (!enabled) await parkLink(dir, name)
+      return
+    }
+    if (!entry && (await isLinkParked(dir, name))) {
+      if (enabled) await restoreLink(dir, name)
+      return
     }
     const activePath = join(skillPath, SKILL_FILE_NAME)
     const disabledPath = join(skillPath, DISABLED_SKILL_FILE_NAME)

@@ -40,6 +40,13 @@ export type InstallScope = 'user' | 'project'
 /** How a discovered skill is managed on disk. */
 export type SkillOrigin = InstallScope | 'legacy' | 'admin' | 'system' | 'plugin'
 
+/** How a linked Skill's directory entry is owned, deciding whether it may be moved. */
+export type SkillLinkKind =
+  /** 用户或上游建立的引用，链接条目归本平台目录所有，可停放启停。 */
+  | 'reference'
+  /** 平台运行态投影（如灵犀 target_skills），平台会全量重建，绝不可触碰。 */
+  | 'runtime'
+
 /** Additional, non-managed skill root exposed by an agent runtime. */
 export interface SupplementalSkillRoot {
   scope: InstallScope
@@ -47,6 +54,8 @@ export interface SupplementalSkillRoot {
   projectRoot?: string
   origin: SkillOrigin
   readOnly: boolean
+  /** Whether the platform rebuilds this root's links itself, so they must not be moved. */
+  runtimeProjection?: boolean
 }
 
 /** A discovered Skill root, including read-only supplemental platform roots. */
@@ -75,6 +84,12 @@ export interface InstalledSkill {
   canToggle?: boolean
   /** Whether the directory entry is a symlink pointing at an upstream-owned Skill. */
   linked?: boolean
+  /** How the link is owned, deciding whether SkillBuddy may park it to disable it. */
+  linkKind?: SkillLinkKind
+  /** Absolute path the link points at, for display and diagnostics. */
+  linkTarget?: string
+  /** Whether the link target is missing, so the Skill can neither be read nor enabled. */
+  linkBroken?: boolean
   /** SKILL.md mtime, ms since epoch. */
   modifiedAt?: number
 }

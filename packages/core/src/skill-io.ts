@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import matter from 'gray-matter'
+import { SKILLBUDDY_DIR_NAME } from './skill-link.js'
 import type { Skill } from './types.js'
 import { exists } from './adapters/shared.js'
 
@@ -92,7 +93,8 @@ export interface FoundSkill {
   skill: Skill
 }
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'out', 'build'])
+// 停放区里是别人禁用掉的链接，导入时不该把它们当作仓库自带的 Skill 收进来。
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'out', 'build', SKILLBUDDY_DIR_NAME])
 
 /**
  * Recursively find SKILL.md folders under a root (for importing from a
