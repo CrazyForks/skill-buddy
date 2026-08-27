@@ -171,6 +171,42 @@ describe.each(cases)('PlatformAdapter($id)', (def) => {
     await fs.writeFile(join(dir, 'notes.txt'), 'x', 'utf8')
     expect(await adapter.list('user')).toHaveLength(0)
   })
+
+  it.runIf(process.platform !== 'win32')(
+    'replaces a linked Skill with a local copy instead of writing through to the target',
+    async () => {
+      const upstream = join(home, 'upstream', 'commit-style')
+      await fs.mkdir(upstream, { recursive: true })
+      await fs.writeFile(join(upstream, 'SKILL.md'), 'upstream body', 'utf8')
+      const skillsDir = at(home, userSkillsDir!)
+      await fs.mkdir(skillsDir, { recursive: true })
+      const linkPath = join(skillsDir, 'commit-style')
+      await fs.symlink(upstream, linkPath)
+
+      await adapter.install(sample, 'user')
+
+      // 链接被换成本地副本，上游本体必须原封不动。
+      expect((await fs.lstat(linkPath)).isSymbolicLink()).toBe(false)
+      expect(await fs.readFile(join(upstream, 'SKILL.md'), 'utf8')).toBe('upstream body')
+    },
+  )
+
+  it.runIf(process.platform !== 'win32')(
+    'refuses to toggle a linked Skill so the upstream target stays untouched',
+    async () => {
+      const upstream = join(home, 'upstream', 'commit-style')
+      await fs.mkdir(upstream, { recursive: true })
+      await fs.writeFile(join(upstream, 'SKILL.md'), 'upstream body', 'utf8')
+      const skillsDir = at(home, userSkillsDir!)
+      await fs.mkdir(skillsDir, { recursive: true })
+      await fs.symlink(upstream, join(skillsDir, 'commit-style'))
+
+      await expect(adapter.setEnabled('commit-style', false, 'user')).rejects.toThrow(
+        /linked Skill/,
+      )
+      await expect(fs.access(join(upstream, 'SKILL.md'))).resolves.toBeUndefined()
+    },
+  )
 })
 
 describe('PlatformAdapter (OS-specific paths)', () => {

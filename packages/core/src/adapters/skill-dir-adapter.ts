@@ -118,6 +118,12 @@ export abstract class SkillDirAdapter implements AgentAdapter {
     const dir = this.skillsDir(scope, projectRoot)
     if (!dir) throw new Error(`${this.agent}: no skills directory for scope "${scope}"`)
     const skillPath = join(dir, name)
+    // 链接型 Skill 的本体归上游所有：下面的重命名会顺着链接改写目标目录，
+    // 连带影响其他引用同一本体的平台，也会弄脏上游仓库，因此直接拒绝。
+    const entry = await fs.lstat(skillPath).catch(() => null)
+    if (entry?.isSymbolicLink()) {
+      throw new Error(`${this.agent}: "${name}" is a linked Skill and cannot be toggled here`)
+    }
     const activePath = join(skillPath, SKILL_FILE_NAME)
     const disabledPath = join(skillPath, DISABLED_SKILL_FILE_NAME)
     if (enabled) {

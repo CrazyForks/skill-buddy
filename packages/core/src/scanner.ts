@@ -123,6 +123,12 @@ async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
     const skillPath = join(root.path, name)
     const state = await readSkillDirState(skillPath, name)
     if (!state) continue
+    // 链接型 Skill 的本体归上游所有：启停靠重命名 SKILL.md 实现，会顺着链接
+    // 改写目标目录，连带影响其他引用同一本体的平台，因此禁用启停。
+    const linked = await fs.lstat(skillPath).then(
+      (entry) => entry.isSymbolicLink(),
+      () => false,
+    )
     let modifiedAt: number | undefined
     try {
       modifiedAt = (await fs.stat(join(skillPath, state.enabled ? 'SKILL.md' : 'SKILL.md.disabled')))
@@ -137,7 +143,8 @@ async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
       projectRoot: root.projectRoot,
       origin: root.origin,
       readOnly: root.readOnly,
-      canToggle: root.canToggle,
+      canToggle: linked ? false : root.canToggle,
+      linked,
       enabled: state.enabled,
       modifiedAt,
       skill: state.skill,

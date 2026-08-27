@@ -73,6 +73,8 @@ export interface InstalledSkill {
   enabled?: boolean
   /** Whether SkillBuddy can safely toggle this installation. */
   canToggle?: boolean
+  /** Whether the directory entry is a symlink pointing at an upstream-owned Skill. */
+  linked?: boolean
   /** SKILL.md mtime, ms since epoch. */
   modifiedAt?: number
 }
