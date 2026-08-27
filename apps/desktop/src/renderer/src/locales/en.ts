@@ -968,6 +968,7 @@ export default {
     aboutDownloaded: 'Installer downloaded',
     aboutDownloadFailed: 'Update download failed: {msg}',
     aboutNoRelease: 'No releases published yet',
+    aboutOffline: 'You are offline. Updates will be checked when the connection is restored.',
     aboutCheckFailed: 'Check failed: {msg}',
     aboutRuntimeTitle: 'Runtime',
     aboutCopyDiagnostics: 'Copy diagnostics',

@@ -4,6 +4,7 @@ import {
   dialog,
   globalShortcut,
   ipcMain,
+  net,
   session,
   shell,
 } from 'electron'
@@ -44,6 +45,7 @@ async function updateFetch(
   url: string,
   options: { headers?: Record<string, string>; timeoutMs?: number; cacheBust?: boolean } = {},
 ): Promise<Response> {
+  if (!net.isOnline()) throw new Error('当前处于离线状态')
   const { headers = UPDATE_HEADERS, timeoutMs = 10_000, cacheBust = false } = options
   const requestUrl = cacheBust
     ? `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`
@@ -172,6 +174,7 @@ export function registerSystemIpc(): void {
   )
 
   ipcMain.handle('app:check-update', async (): Promise<UpdateCheckResult> => {
+    if (!net.isOnline()) return { status: 'offline' }
     try {
       const { status, data } = await fetchLatestManifest()
       // 仓库尚未发布任何 Release 时 GitHub 返回 404

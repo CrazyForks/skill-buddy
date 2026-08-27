@@ -150,6 +150,9 @@ async function copyDiagnostics(): Promise<void> {
           <template v-else-if="updateResult.status === 'none'">
             {{ t('settings.aboutNoRelease') }}
           </template>
+          <template v-else-if="updateResult.status === 'offline'">
+            {{ t('settings.aboutOffline') }}
+          </template>
           <template v-else>
             {{ t('settings.aboutCheckFailed', { msg: updateResult.message }) }}
           </template>
