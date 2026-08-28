@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import PlatformIcon from '@/components/PlatformIcon.vue'
 import { agentLabel } from '@/lib/agents'
+import { editableSkillInstallations } from '@/lib/skill-installations'
 import { useSkills } from '@/composables/useSkills'
 
 const props = defineProps<{ skill: AggregatedSkill }>()
@@ -27,21 +28,21 @@ const { installSkill } = useSkills()
 const { t } = useI18n()
 const MarkdownEditor = defineAsyncComponent(() => import('@/components/MarkdownEditor.vue'))
 
-const writableInstallations = props.skill.installations.filter((installation) => !installation.readOnly)
-const source = writableInstallations[0]!
+const editableInstallations = editableSkillInstallations(props.skill, {})
+const source = editableInstallations[0]
 const description = ref(props.skill.description)
 const version = ref(props.skill.version ?? '')
 const tagsInput = ref(props.skill.tags.join(', '))
-const content = ref(source.skill.content)
+const content = ref(source?.skill.content ?? '')
 
-/** Which installations to write to — default: all (keeps ends in sync). */
-const targetPaths = ref<Set<string>>(new Set(writableInstallations.map((i) => i.path)))
+/** 默认写入所有可安全编辑的安装，保持各端内容同步。 */
+const targetPaths = ref<Set<string>>(new Set(editableInstallations.map((i) => i.path)))
 const busy = ref(false)
 const error = ref<string | null>(null)
 const editorExpanded = shallowRef(false)
 const markdownEditor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('markdownEditor')
 
-const multiInstalled = computed(() => writableInstallations.length > 1)
+const multiInstalled = computed(() => editableInstallations.length > 1)
 
 async function toggleEditorExpanded(): Promise<void> {
   editorExpanded.value = !editorExpanded.value
@@ -71,6 +72,10 @@ function toggle(path: string): void {
 }
 
 async function save(): Promise<void> {
+  if (!source) {
+    error.value = t('detail.parseErrorBlocked')
+    return
+  }
   busy.value = true
   error.value = null
   try {
@@ -85,7 +90,7 @@ async function save(): Promise<void> {
       content: content.value,
       resources: source.skill.resources,
     }
-    const targets: InstallTarget[] = writableInstallations
+    const targets: InstallTarget[] = editableInstallations
       .filter((i) => targetPaths.value.has(i.path))
       .map((i) => ({ agent: i.agent, scope: i.scope, projectRoot: i.projectRoot }))
     const results = await installSkill(payload, targets)
@@ -160,7 +165,7 @@ async function save(): Promise<void> {
     <div v-if="multiInstalled" class="flex flex-col gap-2 rounded-md border px-3 py-2.5">
       <span class="text-sm text-muted-foreground">{{ t('editor.saveTo') }}</span>
       <label
-        v-for="inst in writableInstallations"
+        v-for="inst in editableInstallations"
         :key="inst.path"
         class="flex cursor-pointer items-center gap-2 text-sm"
       >

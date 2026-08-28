@@ -38,6 +38,15 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   const readableInstallations = computed(() =>
     skill.value.installations.filter((installation) => !installation.parseError),
   )
+  /** 解析失败的安装诊断，详情页据此列出需要手工修复的文件。 */
+  const parseErrors = computed(() => {
+    const errors = new Map<string, NonNullable<Installation['parseError']>>()
+    for (const installation of skill.value.installations) {
+      const error = installation.parseError
+      if (error && !errors.has(error.path)) errors.set(error.path, error)
+    }
+    return [...errors.values()]
+  })
   const installedTargets = computed<InstallTarget[]>(() =>
     skill.value.installations.map((installation) => ({
       agent: installation.agent,
@@ -95,9 +104,13 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   }
 
   async function runInstall(): Promise<void> {
-    const sourceSkill = skill.value.installations[0]?.skill
+    const sourceSkill = readableInstallations.value[0]?.skill
     const requestedTargets = targets.value.map((target) => ({ ...target }))
-    if (!sourceSkill || requestedTargets.length === 0) return
+    if (requestedTargets.length === 0) return
+    if (!sourceSkill) {
+      actionError.value = t('detail.parseErrorBlocked')
+      return
+    }
     const requestId = startAction()
     if (requestId === null) return
     try {
@@ -116,13 +129,18 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   }
 
   async function syncFromBase(): Promise<void> {
-    const sourceSkill = baseInstallation.value?.skill
+    const base = baseInstallation.value
+    const sourceSkill = base?.skill
     const requestedTargets: InstallTarget[] = writableDriftOthers.value.map((installation) => ({
       agent: installation.agent,
       scope: installation.scope,
       projectRoot: installation.projectRoot,
     }))
     if (!sourceSkill || requestedTargets.length === 0) return
+    if (base?.parseError) {
+      actionError.value = t('detail.parseErrorBlocked')
+      return
+    }
     const requestId = startAction()
     if (requestId === null) return
     try {
@@ -227,6 +245,7 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
     busy: shallowReadonly(busy),
     actionError: shallowReadonly(actionError),
     writableInstallations,
+    parseErrors,
     installedTargets,
     baseInstallation,
     driftOthers,

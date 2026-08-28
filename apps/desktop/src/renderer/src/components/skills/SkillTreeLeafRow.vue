@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Ellipsis, Pencil, Power, PowerOff, Trash2, TriangleAlert } from '@lucide/vue'
 import {
@@ -12,6 +13,7 @@ import {
 import type { AggregatedSkill } from '@skillbuddy/core'
 import { Badge } from '@/components/ui/badge'
 import type { SkillTreeLeaf } from '@/lib/skill-agent-tree'
+import { isEditableSkillInstallation } from '@/lib/skill-installations'
 
 const props = defineProps<{
   leaf: SkillTreeLeaf
@@ -30,6 +32,10 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const canEdit = computed(() => props.leaf.installations.some(isEditableSkillInstallation))
+const hasParseError = computed(() =>
+  props.leaf.installations.some((installation) => Boolean(installation.parseError)),
+)
 
 function activate(): void {
   if (props.batchMode) emit('toggleSelected', props.leaf.skill.name)
@@ -85,6 +91,15 @@ function activate(): void {
           <TriangleAlert class="size-3" />
           {{ t('card.drift') }}
         </Badge>
+        <Badge
+          v-if="hasParseError"
+          variant="outline"
+          class="shrink-0 gap-1 border-destructive/40 text-xs text-destructive"
+          :title="t('card.parseErrorHint')"
+        >
+          <TriangleAlert class="size-3" />
+          {{ t('card.parseError') }}
+        </Badge>
       </div>
       <p class="mt-1 truncate text-sm leading-5 text-muted-foreground">
         {{ props.leaf.skill.description || t('card.noDescription') }}
@@ -113,7 +128,7 @@ function activate(): void {
           @click.stop
         >
           <DropdownMenuItem
-            :disabled="props.leaf.readOnly || props.busy"
+            :disabled="!canEdit || props.busy"
             class="flex cursor-pointer select-none items-center gap-2 rounded-[5px] px-2.5 py-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent"
             @select="emit('edit', props.leaf.skill)"
           >

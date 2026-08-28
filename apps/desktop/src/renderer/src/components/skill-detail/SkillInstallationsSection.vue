@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, Link2, LockKeyhole, Trash2, Unlink } from '@lucide/vue'
+import { FolderOpen, Link2, LockKeyhole, Trash2, TriangleAlert, Unlink } from '@lucide/vue'
 import type { Installation } from '@skillbuddy/core'
 import CopyButton from '@/components/CopyButton.vue'
 import PlatformIcon from '@/components/PlatformIcon.vue'
@@ -42,6 +42,14 @@ function linkTitle(installation: Installation): string {
     return target ? t('detail.linkBrokenHint', { target }) : t('detail.linkBroken')
   }
   return target ? t('detail.linkedHint', { target }) : t('detail.linked')
+}
+
+/** 解析失败角标的悬浮说明：给出文件路径、行号与解析器原文。 */
+function parseErrorTitle(installation: Installation): string {
+  const error = installation.parseError
+  if (!error) return ''
+  const line = error.line ? ` ${t('detail.parseErrorAt', { line: error.line })}` : ''
+  return `${t('detail.parseErrorHint')}\n${error.path}${line}\n${error.message}`
 }
 
 function pathBaseName(path: string): string {
@@ -124,6 +132,15 @@ function originLabel(installation: Installation): string {
             <span class="truncate">
               {{ installation.linkBroken ? t('detail.linkBroken') : t('detail.linked') }}
             </span>
+          </Badge>
+          <Badge
+            v-if="installation.parseError"
+            variant="outline"
+            class="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border-destructive/40 px-2 py-0.5 font-normal text-destructive"
+            :title="parseErrorTitle(installation)"
+          >
+            <TriangleAlert class="size-3 shrink-0" />
+            <span class="truncate">{{ t('detail.parseError') }}</span>
           </Badge>
         </div>
         <span class="flex shrink-0 items-center gap-0.5">

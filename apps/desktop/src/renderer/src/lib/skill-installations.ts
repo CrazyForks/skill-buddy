@@ -73,6 +73,29 @@ export function manageableSkillInstallations(
   })
 }
 
+/** 判断安装是否可作为编辑源和保存目标。 */
+export function isEditableSkillInstallation(installation: SkillInstallation): boolean {
+  return !installation.readOnly && !installation.parseError
+}
+
+/** 返回可安全编辑的安装，并按物理路径去重。 */
+export function editableSkillInstallations(
+  skill: AggregatedSkill,
+  filter: SkillInstallationFilter,
+): SkillInstallation[] {
+  const paths = new Set<string>()
+  return skill.installations.filter((installation) => {
+    if (
+      !isEditableSkillInstallation(installation) ||
+      !matchesSkillInstallation(installation, filter) ||
+      paths.has(installation.path)
+    )
+      return false
+    paths.add(installation.path)
+    return true
+  })
+}
+
 /** Return writable installations that support enable and disable operations. */
 export function toggleableSkillInstallations(
   skill: AggregatedSkill,

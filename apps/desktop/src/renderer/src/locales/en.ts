@@ -689,6 +689,8 @@ export default {
     noDescription: '(no description)',
     scopeProject: 'project',
     drift: 'drift',
+    parseError: 'parse error',
+    parseErrorHint: 'The SKILL.md frontmatter cannot be parsed, so the agent cannot load this skill.',
     readOnly: 'read-only',
     disabled: 'disabled',
     partiallyDisabled: 'partially disabled',
@@ -784,6 +786,13 @@ export default {
     linkBroken: 'Broken link',
     linkBrokenHint:
       'The upstream Skill no longer exists: {target}\nRemoving this link leaves the upstream untouched.',
+    parseError: 'Parse error',
+    parseErrorTitle: 'Frontmatter parse error',
+    parseErrorHint:
+      'The SKILL.md files below cannot be parsed, so the agent cannot load them either. Open the file and fix its frontmatter — a common cause is an unquoted description containing a colon.',
+    parseErrorAt: 'line {line}',
+    parseErrorBlocked:
+      'Every installation of this skill failed to parse. Fix its SKILL.md before running this action.',
     allInstalled: 'Already installed on every detected platform in this scope',
     installing: 'Installing',
     installN: 'Install ({n})',

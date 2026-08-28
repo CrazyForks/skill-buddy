@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AggregatedSkill } from '@skillbuddy/core'
 import {
   deriveSkillInstallationStatus,
+  editableSkillInstallations,
   manageableSkillInstallations,
   matchesSkillInstallation,
   toggleableSkillInstallations,
@@ -111,5 +112,18 @@ describe('skill installation view', () => {
       partiallyDisabled: false,
       hasEnabled: false,
     })
+  })
+
+  it('excludes parse failures from editing and still deduplicates shared paths', () => {
+    const current = skill()
+    current.installations[0]!.parseError = {
+      path: '/shared/review-code/SKILL.md',
+      message: 'bad frontmatter',
+    }
+    current.installations[1]!.parseError = current.installations[0]!.parseError
+
+    expect(
+      editableSkillInstallations(current, {}).map((installation) => installation.path),
+    ).toEqual(['/workspace/one/.agents/skills/review-code'])
   })
 })

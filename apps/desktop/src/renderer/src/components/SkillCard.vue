@@ -18,6 +18,7 @@ import PlatformIcon from '@/components/PlatformIcon.vue'
 import { agentLabel } from '@/lib/agents'
 import {
   deriveSkillInstallationStatus,
+  isEditableSkillInstallation,
   matchesSkillInstallation,
 } from '@/lib/skill-installations'
 
@@ -70,6 +71,12 @@ const visibleToggleableInstallations = computed(() => installationStatus.value.t
 const visibleDisabledCount = computed(() => installationStatus.value.disabledCount)
 const visibleAllDisabled = computed(() => installationStatus.value.allDisabled)
 const visibleHasEnabled = computed(() => installationStatus.value.hasEnabled)
+const visibleCanEdit = computed(() =>
+  visibleInstallations.value.some(isEditableSkillInstallation),
+)
+const visibleHasParseError = computed(() =>
+  visibleInstallations.value.some((installation) => Boolean(installation.parseError)),
+)
 const toggleLabel = computed(() => {
   if (props.scopeFilter && props.currentPlatform) {
     return t(visibleHasEnabled.value ? 'card.disableScopeAgent' : 'card.enableScopeAgent', {
@@ -163,7 +170,7 @@ const uninstallCurrentLabel = computed(() =>
                 @click.stop
               >
                 <DropdownMenuItem
-                  :disabled="readOnly || busy"
+                  :disabled="!visibleCanEdit || busy"
                   class="flex cursor-pointer select-none items-center gap-2 rounded-[5px] px-2.5 py-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
                   @select="emit('edit')"
                 >
@@ -239,6 +246,15 @@ const uninstallCurrentLabel = computed(() =>
           >
             <TriangleAlert class="size-3" />
             {{ t('card.drift') }}
+          </Badge>
+          <Badge
+            v-if="visibleHasParseError"
+            variant="outline"
+            class="gap-1 border-destructive/40 text-destructive"
+            :title="t('card.parseErrorHint')"
+          >
+            <TriangleAlert class="size-3" />
+            {{ t('card.parseError') }}
           </Badge>
         </span>
       </div>
