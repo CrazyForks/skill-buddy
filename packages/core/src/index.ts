@@ -3,10 +3,12 @@ export * from './platforms.js'
 export * from './adapters/index.js'
 export {
   scanInstalledSkills,
+  scanInstalledSkillsWithWarnings,
   listPlatformStatus,
   listSkillRoots,
   type PlatformStatus,
   type SkillRoot,
+  type ScanInstalledSkillsResult,
 } from './scanner.js'
 export { aggregateSkills, type AggregatedSkill, type Installation } from './aggregate.js'
 export {
@@ -15,6 +17,7 @@ export {
   findSkills,
   type FoundSkill,
   type SkillFileState,
+  type SkillParseWarning,
   SKILL_FILE_NAME,
   DISABLED_SKILL_FILE_NAME,
 } from './skill-io.js'

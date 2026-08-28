@@ -152,6 +152,30 @@ describe('scanInstalledSkills', () => {
       expect.objectContaining({ agent: 'custom-agent', path: join(root, 'custom-skill') }),
     ])
   })
+
+  it('单个损坏的 Skill 不阻断同一根目录下的其他 Skill', async () => {
+    const home = await tempHome()
+    const root = join(home, 'custom-skills')
+    await fs.mkdir(join(root, 'broken'), { recursive: true })
+    await fs.mkdir(join(root, 'healthy'), { recursive: true })
+    await fs.writeFile(
+      join(root, 'broken', 'SKILL.md'),
+      '---\nname: broken\ndescription: invalid: yaml\n---\n',
+      'utf8',
+    )
+    await fs.writeFile(
+      join(root, 'healthy', 'SKILL.md'),
+      '---\nname: healthy\ndescription: ok\n---\n',
+      'utf8',
+    )
+    const roots: SkillRoot[] = [
+      { agent: 'custom-agent', scope: 'user', path: root, origin: 'user', readOnly: false },
+    ]
+
+    const skills = await scanInstalledSkills([], roots)
+    expect(skills).toHaveLength(1)
+    expect(skills[0]).toEqual(expect.objectContaining({ path: join(root, 'healthy') }))
+  })
 })
 
 describe('discoverLingxiSupplementalRoots', () => {

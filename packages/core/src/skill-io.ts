@@ -13,11 +13,44 @@ export interface SkillFileState {
   enabled: boolean
 }
 
+export interface SkillParseWarning {
+  path: string
+  message: string
+  line?: number
+}
+
+type ParseWarningHandler = (warning: SkillParseWarning) => void
+
+function parseMatter(
+  raw: string,
+  filePath: string,
+  onWarning?: ParseWarningHandler,
+): matter.GrayMatterFile<string> | null {
+  try {
+    return matter(raw)
+  } catch (error) {
+    const candidate = error as { reason?: unknown; message?: unknown; mark?: { line?: unknown } }
+    const line = typeof candidate.mark?.line === 'number' ? candidate.mark.line + 1 : undefined
+    const message =
+      typeof candidate.reason === 'string'
+        ? candidate.reason
+        : typeof candidate.message === 'string'
+          ? candidate.message
+          : String(error)
+    onWarning?.({ path: filePath, message, line })
+    return null
+  }
+}
+
 /**
  * Read one SKILL.md-convention folder into a canonical Skill.
  * Returns null when the folder has no readable SKILL.md.
  */
-export async function readSkillDir(skillPath: string, fallbackName?: string): Promise<Skill | null> {
+export async function readSkillDir(
+  skillPath: string,
+  fallbackName?: string,
+  onWarning?: ParseWarningHandler,
+): Promise<Skill | null> {
   const skillFile = join(skillPath, SKILL_FILE_NAME)
   if (!(await exists(skillFile))) return null
   let raw: string
@@ -26,7 +59,11 @@ export async function readSkillDir(skillPath: string, fallbackName?: string): Pr
   } catch {
     return null
   }
-  const { data, content } = matter(raw)
+  // 单个 Skill 的 frontmatter 损坏时按“不可读 Skill”处理。
+  // 解析失败不应冒泡到全量扫描，否则一个第三方文件就会让整个 Skills 页面不可用。
+  const parsed = parseMatter(raw, skillFile, onWarning)
+  if (!parsed) return null
+  const { data, content } = parsed
   return {
     name: typeof data.name === 'string' ? data.name : (fallbackName ?? ''),
     description: typeof data.description === 'string' ? data.description : '',
@@ -42,17 +79,21 @@ export async function readSkillDir(skillPath: string, fallbackName?: string): Pr
 export async function readSkillDirState(
   skillPath: string,
   fallbackName?: string,
+  onWarning?: ParseWarningHandler,
 ): Promise<SkillFileState | null> {
   const activePath = join(skillPath, SKILL_FILE_NAME)
   const disabledPath = join(skillPath, DISABLED_SKILL_FILE_NAME)
   if (await exists(activePath)) {
-    const skill = await readSkillDir(skillPath, fallbackName)
+    const skill = await readSkillDir(skillPath, fallbackName, onWarning)
     return skill ? { skill, enabled: true } : null
   }
   if (!(await exists(disabledPath))) return null
   const raw = await fs.readFile(disabledPath, 'utf8').catch(() => null)
   if (raw === null) return null
-  const { data, content } = matter(raw)
+  // disabled 文件与 active 文件使用相同的容错策略，避免禁用 Skill 阻断全量扫描。
+  const parsed = parseMatter(raw, disabledPath, onWarning)
+  if (!parsed) return null
+  const { data, content } = parsed
   return {
     enabled: false,
     skill: {
@@ -101,11 +142,15 @@ const SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'out', 'build', SKILL
  * cloned repo or an arbitrary local directory). A folder that itself
  * contains SKILL.md is returned and not descended further.
  */
-export async function findSkills(root: string, maxDepth = 5): Promise<FoundSkill[]> {
+export async function findSkills(
+  root: string,
+  maxDepth = 5,
+  onWarning?: ParseWarningHandler,
+): Promise<FoundSkill[]> {
   const found: FoundSkill[] = []
   async function walk(dir: string, depth: number): Promise<void> {
     const name = dir.split('/').pop() ?? dir
-    const skill = await readSkillDir(dir, name)
+    const skill = await readSkillDir(dir, name, onWarning)
     if (skill) {
       found.push({ dir, skill })
       return

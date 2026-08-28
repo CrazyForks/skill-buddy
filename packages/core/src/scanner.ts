@@ -1,7 +1,12 @@
 import { promises as fs } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { allAdapters } from './adapters/index.js'
-import { DISABLED_SKILL_FILE_NAME, readSkillDirState, SKILL_FILE_NAME } from './skill-io.js'
+import {
+  DISABLED_SKILL_FILE_NAME,
+  readSkillDirState,
+  SKILL_FILE_NAME,
+  type SkillParseWarning,
+} from './skill-io.js'
 import { listParkedLinks, SKILLBUDDY_DIR_NAME } from './skill-link.js'
 import type { AgentId, InstalledSkill, SkillLinkKind, SkillRoot } from './types.js'
 
@@ -144,7 +149,10 @@ async function readLinkMeta(skillPath: string, root: SkillRoot): Promise<LinkMet
  * SKILL.md，因此这里必须强制 `enabled: false`，绝不能取 `readSkillDirState`
  * 的判断，否则界面会显示成已启用，而平台其实根本扫不到它。
  */
-async function scanParkedLinks(root: SkillRoot): Promise<InstalledSkill[]> {
+async function scanParkedLinks(
+  root: SkillRoot,
+  warnings: SkillParseWarning[] = [],
+): Promise<InstalledSkill[]> {
   const skills: InstalledSkill[] = []
   for (const parked of await listParkedLinks(root.path)) {
     const base = {
@@ -169,7 +177,13 @@ async function scanParkedLinks(root: SkillRoot): Promise<InstalledSkill[]> {
       })
       continue
     }
-    const state = await readSkillDirState(parked.path, parked.name)
+    let state
+    try {
+      state = await readSkillDirState(parked.path, parked.name, (warning) => warnings.push(warning))
+    } catch {
+      // 单个损坏或暂时不可读的链接不能阻断同一根目录下的其他 Skill。
+      continue
+    }
     if (!state) continue
     const modifiedAt = await fs
       .stat(join(parked.path, SKILL_FILE_NAME))
@@ -180,11 +194,25 @@ async function scanParkedLinks(root: SkillRoot): Promise<InstalledSkill[]> {
   return skills
 }
 
-async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
+export interface ScanInstalledSkillsResult {
+  skills: InstalledSkill[]
+  warnings: SkillParseWarning[]
+}
+
+async function scanSkillRoot(
+  root: SkillRoot,
+  warnings: SkillParseWarning[] = [],
+): Promise<InstalledSkill[]> {
   const skills: InstalledSkill[] = []
   for (const name of await listDirectories(root.path)) {
     const skillPath = join(root.path, name)
-    const state = await readSkillDirState(skillPath, name)
+    let state
+    try {
+      state = await readSkillDirState(skillPath, name, (warning) => warnings.push(warning))
+    } catch {
+      // Skill 文件可能来自第三方或外部同步目录；单个异常项应被隔离。
+      continue
+    }
     if (!state) continue
     const link = await readLinkMeta(skillPath, root)
     let modifiedAt: number | undefined
@@ -210,7 +238,7 @@ async function scanSkillRoot(root: SkillRoot): Promise<InstalledSkill[]> {
       skill: state.skill,
     })
   }
-  skills.push(...(await scanParkedLinks(root)))
+  skills.push(...(await scanParkedLinks(root, warnings)))
   return skills
 }
 
@@ -219,8 +247,17 @@ export async function scanInstalledSkills(
   projectRoots: string[] = [],
   resolvedRoots?: readonly SkillRoot[],
 ): Promise<InstalledSkill[]> {
+  return (await scanInstalledSkillsWithWarnings(projectRoots, resolvedRoots)).skills
+}
+
+/** Scan installed Skills while retaining non-blocking frontmatter diagnostics. */
+export async function scanInstalledSkillsWithWarnings(
+  projectRoots: string[] = [],
+  resolvedRoots?: readonly SkillRoot[],
+): Promise<ScanInstalledSkillsResult> {
   const roots = resolvedRoots ?? (await listSkillRoots(projectRoots))
-  const installations = (await Promise.all(roots.map(scanSkillRoot))).flat()
+  const warnings: SkillParseWarning[] = []
+  const installations = (await Promise.all(roots.map((root) => scanSkillRoot(root, warnings)))).flat()
   const reconciled: InstalledSkill[] = []
   const registeredAgents = new Set<AgentId>()
   for (const adapter of allAdapters()) {
@@ -235,5 +272,5 @@ export async function scanInstalledSkills(
   reconciled.push(
     ...installations.filter((installation) => !registeredAgents.has(installation.agent)),
   )
-  return reconciled
+  return { skills: reconciled, warnings }
 }

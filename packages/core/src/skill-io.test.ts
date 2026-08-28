@@ -50,6 +50,18 @@ describe('readSkillDir', () => {
     const skill = await readSkillDir(dir, 'anon')
     expect(skill!.name).toBe('anon')
   })
+
+  it('skips malformed frontmatter without throwing', async () => {
+    const dir = join(root, 'broken')
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(
+      join(dir, 'SKILL.md'),
+      '---\nname: broken\ndescription: invalid: yaml\n---\n',
+      'utf8',
+    )
+
+    await expect(readSkillDir(dir, 'broken')).resolves.toBeNull()
+  })
 })
 
 describe('findSkills', () => {
