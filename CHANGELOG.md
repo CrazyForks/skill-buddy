@@ -2,6 +2,34 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.9 - 2026-08-28
+
+### Added
+
+- Added frontmatter parse diagnostics for installed Skills, local and Git imports, and marketplace downloads, including file paths and line numbers when available.
+
+### Improved
+
+- Preserved installed Skills with malformed frontmatter as visible entries, excluded them from drift comparisons, and blocked unsafe actions until their `SKILL.md` files are fixed.
+
+### Fixed
+
+- Fixed broken linked Skills causing synchronization to fail.
+
+---
+
+### 新增
+
+- 为已安装 Skill、本地与 Git 导入以及市场下载增加 frontmatter 解析诊断，并在可用时展示文件路径和错误行号。
+
+### 优化
+
+- 保留 frontmatter 损坏的已安装 Skill 并标记为解析失败，同时避免其参与漂移比对，并在修复 `SKILL.md` 前阻止不安全操作。
+
+### 修复
+
+- 修复失效链接型 Skill 导致技能同步失败的问题。
+
 ## 0.1.8 - 2026-08-28
 
 ### Added
