@@ -96,6 +96,23 @@ describe.each(cases)('PlatformAdapter($id)', (def) => {
     expect(listed[0]!.skill.description).toBe('updated')
   })
 
+  it.runIf(process.platform !== 'win32')(
+    'replaces a dangling Skill link instead of treating the target path as absent',
+    async () => {
+      const skillsDir = at(home, userSkillsDir!)
+      await fs.mkdir(skillsDir, { recursive: true })
+      const linkPath = join(skillsDir, sample.name)
+      await fs.symlink(join(home, 'missing-skill'), linkPath)
+
+      await adapter.install(sample, 'user')
+
+      expect((await fs.lstat(linkPath)).isSymbolicLink()).toBe(false)
+      expect(await adapter.list('user')).toEqual([
+        expect.objectContaining({ path: linkPath, skill: expect.objectContaining(sample) }),
+      ])
+    },
+  )
+
   it('copies and lists resource files', async () => {
     const resourceSrc = join(home, 'template.txt')
     await fs.writeFile(resourceSrc, 'hello', 'utf8')

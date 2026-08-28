@@ -11,6 +11,17 @@ import {
 } from '../skill-io.js'
 import { exists, isKebabCase } from './shared.js'
 
+/** 判断路径条目本身是否存在，不跟随可能已经失效的符号链接。 */
+async function entryExists(path: string): Promise<boolean> {
+  try {
+    await fs.lstat(path)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+
 /**
  * Base adapter for platforms following the SKILL.md folder convention
  * (a directory per skill containing SKILL.md with YAML frontmatter).
@@ -84,7 +95,9 @@ export abstract class SkillDirAdapter implements AgentAdapter {
         }
       }
       await fs.writeFile(join(stagingPath, SKILL_FILE_NAME), raw, 'utf8')
-      const hadPrevious = await exists(skillPath)
+      // fs.access 会跟随链接，失效链接会被误判为不存在；Windows 随后会以
+      // EPERM 拒绝把暂存目录改名到仍被该链接占用的目标路径。
+      const hadPrevious = await entryExists(skillPath)
       if (hadPrevious) await fs.rename(skillPath, backupPath)
       try {
         await fs.rename(stagingPath, skillPath)
