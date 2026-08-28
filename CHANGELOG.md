@@ -2,6 +2,30 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.8 - 2026-08-28
+
+### Added
+
+- Added built-in clear controls to all shared input fields.
+- Added a shared five-row textarea with an inline character counter for Skill bundle descriptions.
+
+### Improved
+
+- Improved linked Skill management with broken-link cleanup, link status indicators, and safer IPC payload handling.
+- Included actionable error details in batch operation failure feedback.
+
+---
+
+### 新增
+
+- 为所有公共输入框默认增加内置清空按钮。
+- 抽象技能包描述文本域，统一为五行输入、内部滚动和右下角字符计数。
+
+### 优化
+
+- 完善链接型 Skill 管理，支持断链清理、链接状态提示，并增强 IPC 参数安全处理。
+- 批量操作失败提示中补充具体错误信息，便于定位问题。
+
 ## 0.1.7 - 2026-08-27
 
 ### Added
