@@ -69,12 +69,14 @@ const gitUrlModel = computed({
   </button>
 
   <div v-else class="flex gap-2">
-    <Input
-      v-model="gitUrlModel"
-      class="flex-1 text-sm"
-      :placeholder="t('import.gitPh')"
-      @keydown.enter="emit('fetchGit')"
-    />
+    <div class="min-w-0 flex-1">
+      <Input
+        v-model="gitUrlModel"
+        class="text-sm"
+        :placeholder="t('import.gitPh')"
+        @keydown.enter="emit('fetchGit')"
+      />
+    </div>
     <Button
       size="sm"
       class="cursor-pointer"

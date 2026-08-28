@@ -10,6 +10,7 @@ import {
 } from 'reka-ui'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { useGroups } from '@/composables/useGroups'
 import type { MarketSkillSource } from '@/lib/market'
 import { GROUP_DESCRIPTION_MAX_LENGTH } from '@/lib/preset-format'
@@ -64,16 +65,12 @@ function submit(): void {
           autofocus
           @keydown.enter.prevent="submit"
         />
-        <Input
+        <Textarea
           v-model="description"
           :placeholder="t('groups.descriptionPh')"
           :maxlength="GROUP_DESCRIPTION_MAX_LENGTH"
           class="mt-3 text-sm"
-          @keydown.enter.prevent="submit"
         />
-        <p class="mt-1 text-right text-xs text-muted-foreground">
-          {{ description.length }}/{{ GROUP_DESCRIPTION_MAX_LENGTH }}
-        </p>
         <div class="mt-4 flex justify-end gap-2">
           <Button variant="ghost" size="sm" class="cursor-pointer" @click="emit('update:open', false)">
             {{ t('common.cancel') }}

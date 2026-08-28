@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Search,
   TriangleAlert,
-  X,
 } from '@lucide/vue'
 import type { GroupRuntimeState } from '@/lib/group-runtime'
 import GroupContextHeader from '@/components/skills/GroupContextHeader.vue'
@@ -146,17 +145,12 @@ const batchModel = computed({
       <div class="app-no-drag flex min-w-0 flex-1 flex-wrap items-center gap-2">
         <div class="relative w-64 max-w-full grow sm:grow-0">
           <Search class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input v-model="searchModel" :placeholder="t('app.searchPlaceholder')" class="h-8 pl-8 pr-8" />
-          <button
-            v-if="props.search"
-            type="button"
-            class="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            :title="t('app.clearSearch')"
-            :aria-label="t('app.clearSearch')"
-            @click="searchModel = ''"
-          >
-            <X class="size-3.5" />
-          </button>
+          <Input
+            v-model="searchModel"
+            :placeholder="t('app.searchPlaceholder')"
+            :clear-label="t('app.clearSearch')"
+            class="h-8 pl-8"
+          />
         </div>
         <Select v-model="ownershipModel" :options="props.ownershipOptions" />
         <Select v-model="sortModel" :options="props.sortOptions" />
