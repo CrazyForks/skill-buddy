@@ -38,6 +38,8 @@ export default {
     noMatch: 'No skills matching "{q}"',
     noFilteredMatch: 'No Skills match the current filters',
     clearFilters: 'Clear filters',
+    skillParseWarnings: '{n} Skill file(s) failed to parse; other Skills are still available',
+    skillParseLine: 'line {n}',
   },
   skillTree: {
     global: 'Global',
@@ -288,6 +290,7 @@ export default {
     installN: 'Install to {n} platforms',
   },
   import: {
+    skillParseWarnings: '{n} Skill file(s) failed to parse and were skipped',
     title: 'Import',
     tabLocal: 'Local folder',
     tabGit: 'Git repository',
@@ -644,6 +647,7 @@ export default {
     back: 'Back',
   },
   market: {
+    skillParseWarnings: '{n} market Skill file(s) failed to parse and were skipped',
     title: 'Explore skills',
     sourceSkillsSh: 'skills.sh',
     sourceSkillhub: 'SkillHub',

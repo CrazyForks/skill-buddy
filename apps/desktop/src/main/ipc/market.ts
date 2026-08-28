@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs'
 import { isIP } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
-import { findSkills } from '@skillbuddy/core'
+import { findSkills, type SkillParseWarning } from '@skillbuddy/core'
 import { unzipSync } from 'fflate'
 import { readSecret } from '../secrets.js'
 import type { PathAccessPolicy } from '../path-policy.js'
@@ -262,7 +262,9 @@ export function registerMarketIpc(pathPolicy: PathAccessPolicy): void {
         await fs.mkdir(dirname(destination), { recursive: true })
         await fs.writeFile(destination, data)
       }
-      return { root, items: await findSkills(unpacked) }
+      const warnings: SkillParseWarning[] = []
+      const items = await findSkills(unpacked, 5, (warning) => warnings.push(warning))
+      return { root, items, warnings }
     } catch (error) {
       pathPolicy.revokeTemporaryRoot(root)
       await fs.rm(root, { recursive: true, force: true })

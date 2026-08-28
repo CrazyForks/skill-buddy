@@ -1,5 +1,5 @@
 import { computed, ref, shallowRef, watch } from 'vue'
-import type { AggregatedSkill, PlatformStatus, Skill } from '@skillbuddy/core'
+import type { AggregatedSkill, PlatformStatus, Skill, SkillParseWarning } from '@skillbuddy/core'
 import type { InstallTarget, TargetResult } from '#shared/ipc'
 import { i18n } from '../i18n'
 import { matchesSkillInstallation } from '../lib/skill-installations'
@@ -9,6 +9,7 @@ const skills = shallowRef<AggregatedSkill[]>([])
 const platforms = shallowRef<PlatformStatus[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const scanWarnings = shallowRef<SkillParseWarning[]>([])
 const lastCheckedAt = shallowRef<number | null>(null)
 
 const search = ref('')
@@ -204,14 +205,15 @@ async function performRefresh(): Promise<void> {
   error.value = null
   try {
     const [scanned, platformList] = await Promise.all([
-      window.skillsManager.scanSkills([...projectRoots.value]),
+      window.skillsManager.scanSkillsDiagnostics([...projectRoots.value]),
       window.skillsManager.listPlatforms(),
     ])
-    skills.value = scanned
+    skills.value = scanned.skills
+    scanWarnings.value = scanned.warnings
     platforms.value = platformList
     lastScanStartedAt = scanStartedAt
     lastCheckedAt.value = Date.now()
-    notifyDriftIfNeeded(scanned)
+    notifyDriftIfNeeded(scanned.skills)
     void window.skillsManager.watchStart([...projectRoots.value])
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -324,6 +326,7 @@ export function useSkills() {
     countByPlatform,
     loading,
     error,
+    scanWarnings,
     lastCheckedAt,
     search,
     platformFilter,

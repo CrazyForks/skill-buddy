@@ -33,6 +33,11 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   const writableInstallations = computed(() =>
     skill.value.installations.filter((installation) => !installation.readOnly),
   )
+  // frontmatter 解析失败的安装只剩兜底占位内容，绝不能当作同步基准或安装源，
+  // 否则一次同步就会把空内容写回其它平台。
+  const readableInstallations = computed(() =>
+    skill.value.installations.filter((installation) => !installation.parseError),
+  )
   const installedTargets = computed<InstallTarget[]>(() =>
     skill.value.installations.map((installation) => ({
       agent: installation.agent,
@@ -43,6 +48,7 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   const baseInstallation = computed(
     () =>
       skill.value.installations.find((installation) => installation.path === basePath.value) ??
+      readableInstallations.value[0] ??
       skill.value.installations[0] ??
       null,
   )
@@ -66,6 +72,9 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   }
 
   function selectBase(path: string): void {
+    // 解析失败的安装不可作为基准，点击直接忽略（UI 上该项也是禁用态）。
+    const target = skill.value.installations.find((installation) => installation.path === path)
+    if (target?.parseError) return
     basePath.value = path
   }
 

@@ -15,8 +15,10 @@ import {
   listSkillRoots,
   registerPlatform,
   scanInstalledSkills,
+  scanInstalledSkillsWithWarnings,
   type InstalledSkill,
   type Skill,
+  type SkillParseWarning,
 } from '@skillbuddy/core'
 import type { CustomPlatformInput, InstallTarget } from '#shared/ipc'
 import { readFilePreview } from '../file-preview'
@@ -184,6 +186,16 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     const roots = await resolveSkillRoots(projectRoots)
     pathPolicy.setSkillRoots(roots)
     return await aggregateSkills(await scanInstalledSkills(projectRoots, roots))
+  })
+
+  ipcMain.handle('skills:scan-diagnostics', async (_event, projectRoots: string[] = []) => {
+    const roots = await resolveSkillRoots(projectRoots)
+    pathPolicy.setSkillRoots(roots)
+    const result = await scanInstalledSkillsWithWarnings(projectRoots, roots)
+    return {
+      skills: await aggregateSkills(result.skills),
+      warnings: result.warnings,
+    }
   })
 
   ipcMain.handle('platforms:list', () => listPlatformStatus())
@@ -498,7 +510,9 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
       await fs.rm(root, { recursive: true, force: true })
       throw new Error(`git clone failed: ${error instanceof Error ? error.message : String(error)}`)
     }
-    return { root, items: await findSkills(root) }
+    const warnings: SkillParseWarning[] = []
+    const items = await findSkills(root, 5, (warning) => warnings.push(warning))
+    return { root, items, warnings }
   })
 
   ipcMain.handle('skills:cleanup-import', async (_event, root: string) => {

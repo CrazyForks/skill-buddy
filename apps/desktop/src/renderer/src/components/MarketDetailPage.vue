@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ExternalLink } from '@lucide/vue'
+import { ArrowLeft, ExternalLink, TriangleAlert } from '@lucide/vue'
 import SidebarToggle from '@/components/SidebarToggle.vue'
 import MarketFilesTab from '@/components/market/MarketFilesTab.vue'
 import MarketOverviewTab from '@/components/market/MarketOverviewTab.vue'
@@ -37,6 +37,7 @@ const {
   overviewLoading,
   matched,
   overviewContent,
+  parseWarnings,
   groupSkillName,
   groupSkillSource,
   groupOptions,
@@ -104,6 +105,21 @@ watch(
           @update:targets="setTargets"
           @install="install"
         />
+
+        <div
+          v-if="parseWarnings.length > 0"
+          class="flex flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+        >
+          <div class="flex items-center gap-2 font-medium">
+            <TriangleAlert class="size-4 shrink-0" />
+            <span>{{ t('market.skillParseWarnings', { n: parseWarnings.length }) }}</span>
+          </div>
+          <div v-for="warning in parseWarnings" :key="warning.path" class="break-all pl-6 text-xs">
+            <span>{{ warning.path }}</span>
+            <span v-if="warning.line"> · {{ t('app.skillParseLine', { n: warning.line }) }}</span>
+            <span> · {{ warning.message }}</span>
+          </div>
+        </div>
 
         <MarketSkillGroupsPanel
           :groups="groupOptions"

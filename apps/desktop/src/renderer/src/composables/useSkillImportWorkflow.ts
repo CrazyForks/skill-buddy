@@ -7,7 +7,7 @@ import {
   type MaybeRefOrGetter,
 } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { FoundSkill } from '@skillbuddy/core'
+import type { FoundSkill, SkillParseWarning } from '@skillbuddy/core'
 import type { InstallTarget } from '#shared/ipc'
 import { useSkills } from '@/composables/useSkills'
 import { agentLabel } from '@/lib/agents'
@@ -33,6 +33,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
   const targets = ref<InstallTarget[]>([])
   const busy = shallowRef(false)
   const error = shallowRef<string | null>(null)
+  const parseWarnings = shallowRef<SkillParseWarning[]>([])
   let sourceRequestId = 0
   let workflowSessionId = 0
 
@@ -55,6 +56,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     targets.value = []
     busy.value = false
     error.value = null
+    parseWarnings.value = []
   }
 
   watch(
@@ -79,9 +81,10 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     error.value = null
     fetching.value = true
     try {
-      const found = await window.skillsManager.findSkillsInDir(path)
+      const result = await window.skillsManager.findSkillsInDir(path)
       if (requestId !== sourceRequestId || !toValue(options.open)) return
-      setItems(found)
+      parseWarnings.value = result.warnings ?? []
+      setItems(result.items)
     } catch (cause) {
       if (requestId === sourceRequestId) {
         error.value = cause instanceof Error ? cause.message : String(cause)
@@ -93,6 +96,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
 
   async function pickLocalDir(): Promise<void> {
     error.value = null
+    parseWarnings.value = []
     const requestId = sourceRequestId
     const dir = await window.skillsManager.pickDirectory()
     if (dir && requestId === sourceRequestId && toValue(options.open)) {
@@ -120,6 +124,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
         return
       }
       cloneRoot.value = result.root
+      parseWarnings.value = result.warnings ?? []
       setItems(result.items)
     } catch (cause) {
       if (requestId === sourceRequestId) {
@@ -223,6 +228,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     targets,
     busy,
     error,
+    parseWarnings,
     setTab,
     setGitUrl,
     setTargets,

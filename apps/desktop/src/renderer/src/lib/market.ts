@@ -1,4 +1,4 @@
-import type { FoundSkill } from '@skillbuddy/core'
+import type { FoundSkill, SkillParseWarning } from '@skillbuddy/core'
 
 export type MarketSourceId = 'skills-sh' | 'skillhub' | 'github'
 
@@ -88,7 +88,7 @@ export function formatMarketCount(n: number): string {
 /** 下载市场资源，并返回临时目录中的全部 Skill。调用方负责清理 root。 */
 export function fetchMarketSkillSource(
   item: MarketItem,
-): Promise<{ root: string; items: FoundSkill[] }> {
+): Promise<{ root: string; items: FoundSkill[]; warnings: SkillParseWarning[] }> {
   return item.kind === 'skills-sh' || item.kind === 'github'
     ? window.skillsManager.importFromGit(`https://github.com/${item.repo}`)
     : window.skillsManager.skillhubFetch(item.slug!, item.namespace ?? '')

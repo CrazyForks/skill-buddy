@@ -19,6 +19,7 @@ function skill(): AggregatedSkill {
     description: canonical.description,
     tags: [],
     hasDrift: false,
+    hasParseError: false,
     installations: [
       {
         agent: 'codex',

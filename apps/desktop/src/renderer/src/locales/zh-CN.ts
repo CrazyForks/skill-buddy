@@ -38,6 +38,8 @@ export default {
     noMatch: '没有匹配「{q}」的 skill',
     noFilteredMatch: '当前筛选条件下没有匹配的 Skill',
     clearFilters: '清除筛选',
+    skillParseWarnings: '有 {n} 个 Skill 文件解析失败，其他 Skill 仍可用',
+    skillParseLine: '第 {n} 行',
   },
   skillTree: {
     global: '全局',
@@ -288,6 +290,7 @@ export default {
     installN: '安装到 {n} 个平台',
   },
   import: {
+    skillParseWarnings: '有 {n} 个 Skill 文件解析失败，已跳过',
     title: '导入',
     tabLocal: '本地文件夹',
     tabGit: 'Git 仓库',
@@ -644,6 +647,7 @@ export default {
     back: '上一步',
   },
   market: {
+    skillParseWarnings: '有 {n} 个市场 Skill 文件解析失败，已跳过',
     title: '探索技能',
     sourceSkillsSh: 'skills.sh',
     sourceSkillhub: 'SkillHub',

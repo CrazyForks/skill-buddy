@@ -30,6 +30,7 @@ function aggregate(name: string, installations: InstalledSkill[]): AggregatedSki
     description: name,
     tags: [],
     hasDrift: false,
+    hasParseError: false,
     installations: installations.map((item) => ({ ...item, contentHash: name })),
   }
 }

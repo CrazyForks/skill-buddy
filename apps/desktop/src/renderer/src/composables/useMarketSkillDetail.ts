@@ -9,7 +9,7 @@ import {
   type MaybeRefOrGetter,
 } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { FoundSkill } from '@skillbuddy/core'
+import type { FoundSkill, SkillParseWarning } from '@skillbuddy/core'
 import type { InstallTarget } from '#shared/ipc'
 import { useSettings } from '@/composables/useSettings'
 import { useSkills } from '@/composables/useSkills'
@@ -45,6 +45,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
   const matched = shallowRef<FoundSkill | null>(null)
   const sourceRoot = shallowRef<string | null>(null)
   const matchedItemKey = shallowRef<string | null>(null)
+  const parseWarnings = shallowRef<SkillParseWarning[]>([])
   let sourceRequestId = 0
   let installRequestId = 0
   let disposed = false
@@ -96,6 +97,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
     overviewLoading.value = true
     matched.value = null
     matchedItemKey.value = null
+    parseWarnings.value = []
     await cleanupSourceRoot()
     if (requestId !== sourceRequestId || requestedItem.key !== item.value.key) return
     try {
@@ -105,6 +107,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
         return
       }
       sourceRoot.value = result.root
+      parseWarnings.value = result.warnings ?? []
       matched.value = matchMarketSkill(requestedItem, result.items) ?? null
       matchedItemKey.value = requestedItem.key
     } catch {
@@ -245,6 +248,7 @@ export function useMarketSkillDetail(options: UseMarketSkillDetailOptions) {
     overviewLoading,
     matched,
     overviewContent,
+    parseWarnings,
     groupSkillName,
     groupSkillSource,
     groupOptions,

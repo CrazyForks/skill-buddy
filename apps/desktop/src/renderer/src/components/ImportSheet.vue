@@ -28,6 +28,7 @@ const {
   targets,
   busy,
   error,
+  parseWarnings,
   setTab,
   setGitUrl,
   setTargets,
@@ -79,6 +80,15 @@ const {
             />
 
             <template v-if="searched">
+              <div
+                v-if="parseWarnings.length > 0"
+                class="flex flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+              >
+                <div class="font-medium">{{ t('import.skillParseWarnings', { n: parseWarnings.length }) }}</div>
+                <div v-for="warning in parseWarnings" :key="warning.path" class="break-all text-xs">
+                  {{ warning.path }}<span v-if="warning.line"> · {{ t('app.skillParseLine', { n: warning.line }) }}</span> · {{ warning.message }}
+                </div>
+              </div>
               <p v-if="items.length === 0" class="text-sm text-muted-foreground">
                 {{ t('import.none') }}
               </p>

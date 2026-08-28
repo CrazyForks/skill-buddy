@@ -9,6 +9,7 @@ import type {
   FoundSkill,
   PlatformStatus,
   Skill,
+  SkillParseWarning,
 } from '@skillbuddy/core'
 import type {
   AiConversationContext,
@@ -204,6 +205,10 @@ const api = {
   },
   scanSkills: (projectRoots: string[] = []): Promise<AggregatedSkill[]> =>
     ipcRenderer.invoke('skills:scan', projectRoots),
+  scanSkillsDiagnostics: (
+    projectRoots: string[] = [],
+  ): Promise<{ skills: AggregatedSkill[]; warnings: SkillParseWarning[] }> =>
+    ipcRenderer.invoke('skills:scan-diagnostics', projectRoots),
   listPlatforms: (): Promise<PlatformStatus[]> => ipcRenderer.invoke('platforms:list'),
   registerPlatforms: (defs: CustomPlatformInput[]): Promise<void> =>
     ipcRenderer.invoke('platforms:register', defs),
@@ -221,9 +226,16 @@ const api = {
   ): Promise<TargetResult[]> => ipcRenderer.invoke('skills:set-enabled', name, targets, enabled),
   revealInFolder: (path: string): Promise<void> => ipcRenderer.invoke('skills:reveal', path),
   pickDirectory: (): Promise<string | null> => ipcRenderer.invoke('dialog:pick-directory'),
-  findSkillsInDir: (root: string): Promise<FoundSkill[]> =>
+  findSkillsInDir: (root: string): Promise<{
+    items: FoundSkill[]
+    warnings: SkillParseWarning[]
+  }> =>
     ipcRenderer.invoke('skills:find-in-dir', root),
-  importFromGit: (url: string): Promise<{ root: string; items: FoundSkill[] }> =>
+  importFromGit: (url: string): Promise<{
+    root: string
+    items: FoundSkill[]
+    warnings: SkillParseWarning[]
+  }> =>
     ipcRenderer.invoke('skills:import-git', url),
   cleanupImport: (root: string): Promise<void> =>
     ipcRenderer.invoke('skills:cleanup-import', root),
@@ -371,7 +383,7 @@ const api = {
   skillhubFetch: (
     slug: string,
     namespace: string,
-  ): Promise<{ root: string; items: FoundSkill[] }> =>
+  ): Promise<{ root: string; items: FoundSkill[]; warnings: SkillParseWarning[] }> =>
     ipcRenderer.invoke('market:skillhub-fetch', slug, namespace),
   watchStart: (projectRoots: string[]): Promise<number> =>
     ipcRenderer.invoke('watch:start', projectRoots),

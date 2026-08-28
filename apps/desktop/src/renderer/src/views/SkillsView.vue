@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, X } from '@lucide/vue'
+import { FolderOpen, TriangleAlert, X } from '@lucide/vue'
 import type { AggregatedSkill } from '@skillbuddy/core'
 import GroupEmptyState from '@/components/groups/GroupEmptyState.vue'
 import GroupMissingSkillCard from '@/components/groups/GroupMissingSkillCard.vue'
@@ -40,6 +40,7 @@ const {
   detectedPlatforms,
   loading,
   error,
+  scanWarnings,
   search,
   driftOnly,
   platformFilter,
@@ -232,6 +233,21 @@ function clearFilters(): void {
       @toggle-select-all="toggleSelectAll"
       @clear-selection="clearSelection"
     />
+
+    <div
+      v-if="scanWarnings.length > 0"
+      class="mx-6 mt-3 flex shrink-0 flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+    >
+      <div class="flex items-center gap-2 font-medium">
+        <TriangleAlert class="size-4 shrink-0" />
+        <span>{{ t('app.skillParseWarnings', { n: scanWarnings.length }) }}</span>
+      </div>
+      <div v-for="warning in scanWarnings" :key="warning.path" class="break-all pl-6 text-xs">
+        <span>{{ warning.path }}</span>
+        <span v-if="warning.line"> · {{ t('app.skillParseLine', { n: warning.line }) }}</span>
+        <span> · {{ warning.message }}</span>
+      </div>
+    </div>
 
     <ScrollArea class="flex-1" viewport-class="px-6 py-5">
       <GroupApplyPanel
