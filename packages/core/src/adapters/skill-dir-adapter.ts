@@ -63,6 +63,7 @@ export abstract class SkillDirAdapter implements AgentAdapter {
         canToggle: this.supportsToggle,
         enabled: state.enabled,
         modifiedAt,
+        parseError: state.parseError,
         skill: state.skill,
       })
     }

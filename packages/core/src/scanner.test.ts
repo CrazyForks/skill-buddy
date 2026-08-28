@@ -153,7 +153,7 @@ describe('scanInstalledSkills', () => {
     ])
   })
 
-  it('单个损坏的 Skill 不阻断同一根目录下的其他 Skill', async () => {
+  it('单个损坏的 Skill 不阻断同一根目录下的其他 Skill，并被标记为解析失败', async () => {
     const home = await tempHome()
     const root = join(home, 'custom-skills')
     await fs.mkdir(join(root, 'broken'), { recursive: true })
@@ -173,8 +173,16 @@ describe('scanInstalledSkills', () => {
     ]
 
     const skills = await scanInstalledSkills([], roots)
-    expect(skills).toHaveLength(1)
-    expect(skills[0]).toEqual(expect.objectContaining({ path: join(root, 'healthy') }))
+    // 损坏的 Skill 不再被静默丢弃，而是带上 parseError 一并返回，
+    // 这样界面能提示用户去修文件；健康的 Skill 不受影响。
+    expect(skills).toHaveLength(2)
+    const healthy = skills.find((item) => item.path === join(root, 'healthy'))
+    const broken = skills.find((item) => item.path === join(root, 'broken'))
+    expect(healthy?.parseError).toBeUndefined()
+    expect(healthy?.skill.description).toBe('ok')
+    expect(broken?.parseError).toEqual(
+      expect.objectContaining({ path: join(root, 'broken', 'SKILL.md') }),
+    )
   })
 })
 

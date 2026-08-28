@@ -17,7 +17,6 @@ export {
   findSkills,
   type FoundSkill,
   type SkillFileState,
-  type SkillParseWarning,
   SKILL_FILE_NAME,
   DISABLED_SKILL_FILE_NAME,
 } from './skill-io.js'

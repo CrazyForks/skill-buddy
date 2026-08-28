@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import matter from 'gray-matter'
 import { SKILLBUDDY_DIR_NAME } from './skill-link.js'
-import type { Skill } from './types.js'
+import type { Skill, SkillParseWarning } from './types.js'
 import { exists } from './adapters/shared.js'
 
 export const SKILL_FILE_NAME = 'SKILL.md'
@@ -11,13 +11,11 @@ export const DISABLED_SKILL_FILE_NAME = 'SKILL.md.disabled'
 export interface SkillFileState {
   skill: Skill
   enabled: boolean
+  /** frontmatter 解析失败时的诊断；此时 `skill` 仅是兜底占位。 */
+  parseError?: SkillParseWarning
 }
 
-export interface SkillParseWarning {
-  path: string
-  message: string
-  line?: number
-}
+export type { SkillParseWarning }
 
 type ParseWarningHandler = (warning: SkillParseWarning) => void
 
@@ -42,9 +40,53 @@ function parseMatter(
   }
 }
 
+interface SkillFileRead {
+  skill: Skill
+  parseError?: SkillParseWarning
+}
+
+/**
+ * Read one SKILL.md (or its disabled twin) into a Skill.
+ *
+ * frontmatter 损坏时不返回 null，而是给出带 `parseError` 的兜底 Skill：名称取目录名、
+ * 描述与正文为空。调用方据此决定是「隐藏」还是「标记后照常展示」。
+ */
+async function readSkillFile(
+  skillPath: string,
+  filePath: string,
+  fallbackName?: string,
+  onWarning?: ParseWarningHandler,
+): Promise<SkillFileRead | null> {
+  const raw = await fs.readFile(filePath, 'utf8').catch(() => null)
+  if (raw === null) return null
+  let parseError: SkillParseWarning | undefined
+  const parsed = parseMatter(raw, filePath, (warning) => {
+    parseError = warning
+    onWarning?.(warning)
+  })
+  const data = (parsed?.data ?? {}) as Record<string, unknown>
+  // 正文刻意留空：损坏文件的原文若灌进 content，详情页保存时会被再套一层 frontmatter。
+  const content = parsed ? parsed.content.trim() : ''
+  return {
+    parseError,
+    skill: {
+      name: typeof data.name === 'string' ? data.name : (fallbackName ?? ''),
+      description: typeof data.description === 'string' ? data.description : '',
+      version: typeof data.version === 'string' ? data.version : undefined,
+      tags: Array.isArray(data.tags) ? data.tags.filter((t) => typeof t === 'string') : undefined,
+      content,
+      resources: await collectResources(skillPath),
+      metadata: data,
+    },
+  }
+}
+
 /**
  * Read one SKILL.md-convention folder into a canonical Skill.
  * Returns null when the folder has no readable SKILL.md.
+ *
+ * 导入、团队库等写入型场景走这里：frontmatter 损坏的 Skill 一律拒绝，
+ * 不能把坏文件复制扩散出去。只读展示请用 {@link readSkillDirState}。
  */
 export async function readSkillDir(
   skillPath: string,
@@ -53,29 +95,17 @@ export async function readSkillDir(
 ): Promise<Skill | null> {
   const skillFile = join(skillPath, SKILL_FILE_NAME)
   if (!(await exists(skillFile))) return null
-  let raw: string
-  try {
-    raw = await fs.readFile(skillFile, 'utf8')
-  } catch {
-    return null
-  }
-  // 单个 Skill 的 frontmatter 损坏时按“不可读 Skill”处理。
-  // 解析失败不应冒泡到全量扫描，否则一个第三方文件就会让整个 Skills 页面不可用。
-  const parsed = parseMatter(raw, skillFile, onWarning)
-  if (!parsed) return null
-  const { data, content } = parsed
-  return {
-    name: typeof data.name === 'string' ? data.name : (fallbackName ?? ''),
-    description: typeof data.description === 'string' ? data.description : '',
-    version: typeof data.version === 'string' ? data.version : undefined,
-    tags: Array.isArray(data.tags) ? data.tags.filter((t) => typeof t === 'string') : undefined,
-    content: content.trim(),
-    resources: await collectResources(skillPath),
-    metadata: data,
-  }
+  const read = await readSkillFile(skillPath, skillFile, fallbackName, onWarning)
+  if (!read || read.parseError) return null
+  return read.skill
 }
 
-/** Read an active or SkillBuddy-disabled skill while preserving its state. */
+/**
+ * Read an active or SkillBuddy-disabled skill while preserving its state.
+ *
+ * 与 {@link readSkillDir} 不同，frontmatter 损坏时这里仍返回条目并带上 `parseError`，
+ * 让扫描结果里保留一条可见的「解析失败」记录。
+ */
 export async function readSkillDirState(
   skillPath: string,
   fallbackName?: string,
@@ -83,29 +113,16 @@ export async function readSkillDirState(
 ): Promise<SkillFileState | null> {
   const activePath = join(skillPath, SKILL_FILE_NAME)
   const disabledPath = join(skillPath, DISABLED_SKILL_FILE_NAME)
-  if (await exists(activePath)) {
-    const skill = await readSkillDir(skillPath, fallbackName, onWarning)
-    return skill ? { skill, enabled: true } : null
-  }
-  if (!(await exists(disabledPath))) return null
-  const raw = await fs.readFile(disabledPath, 'utf8').catch(() => null)
-  if (raw === null) return null
-  // disabled 文件与 active 文件使用相同的容错策略，避免禁用 Skill 阻断全量扫描。
-  const parsed = parseMatter(raw, disabledPath, onWarning)
-  if (!parsed) return null
-  const { data, content } = parsed
-  return {
-    enabled: false,
-    skill: {
-      name: typeof data.name === 'string' ? data.name : (fallbackName ?? ''),
-      description: typeof data.description === 'string' ? data.description : '',
-      version: typeof data.version === 'string' ? data.version : undefined,
-      tags: Array.isArray(data.tags) ? data.tags.filter((t) => typeof t === 'string') : undefined,
-      content: content.trim(),
-      resources: await collectResources(skillPath),
-      metadata: data,
-    },
-  }
+  const enabled = await exists(activePath)
+  if (!enabled && !(await exists(disabledPath))) return null
+  const read = await readSkillFile(
+    skillPath,
+    enabled ? activePath : disabledPath,
+    fallbackName,
+    onWarning,
+  )
+  if (!read) return null
+  return { enabled, skill: read.skill, parseError: read.parseError }
 }
 
 /** Walk a skill directory and collect non-SKILL.md files as resources. */

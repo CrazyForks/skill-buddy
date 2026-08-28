@@ -34,6 +34,15 @@ export interface Skill {
   metadata?: Record<string, unknown>
 }
 
+/** A frontmatter parse failure on one SKILL.md, surfaced instead of silently dropped. */
+export interface SkillParseWarning {
+  /** Absolute path of the file that failed to parse. */
+  path: string
+  message: string
+  /** 1-based line reported by the YAML parser, when available. */
+  line?: number
+}
+
 /** Where a skill can be installed for a given agent. */
 export type InstallScope = 'user' | 'project'
 
@@ -90,6 +99,13 @@ export interface InstalledSkill {
   linkTarget?: string
   /** Whether the link target is missing, so the Skill can neither be read nor enabled. */
   linkBroken?: boolean
+  /**
+   * frontmatter 解析失败时的诊断。
+   *
+   * 此时 `skill` 只是兜底占位（名称取目录名、描述与正文为空），条目仍会出现在列表里，
+   * 以便用户看得见并去修文件，而不是让它静默消失。
+   */
+  parseError?: SkillParseWarning
   /** SKILL.md mtime, ms since epoch. */
   modifiedAt?: number
 }

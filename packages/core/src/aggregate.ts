@@ -19,6 +19,8 @@ export interface AggregatedSkill {
   tags: string[]
   installations: Installation[]
   hasDrift: boolean
+  /** 是否存在 frontmatter 解析失败的安装，UI 据此提示用户去修文件。 */
+  hasParseError: boolean
 }
 
 async function hashSkill(skill: Skill): Promise<string> {
@@ -63,8 +65,10 @@ export async function aggregateSkills(items: InstalledSkill[]): Promise<Aggregat
   }
   return [...byName.entries()]
     .map(([name, installations]) => {
-      const first = installations[0]!
-      const hashes = new Set(installations.map((i) => i.contentHash))
+      // 解析失败的安装只有兜底占位内容，既不能代表这个 Skill，也不该参与漂移比对。
+      const readable = installations.filter((item) => !item.parseError)
+      const first = readable[0] ?? installations[0]!
+      const hashes = new Set(readable.map((i) => i.contentHash))
       return {
         name,
         description: first.skill.description,
@@ -72,6 +76,7 @@ export async function aggregateSkills(items: InstalledSkill[]): Promise<Aggregat
         tags: first.skill.tags ?? [],
         installations,
         hasDrift: hashes.size > 1,
+        hasParseError: readable.length < installations.length,
       }
     })
     .sort((a, b) => a.name.localeCompare(b.name))

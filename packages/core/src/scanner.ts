@@ -189,7 +189,7 @@ async function scanParkedLinks(
       .stat(join(parked.path, SKILL_FILE_NAME))
       .then((entry) => entry.mtimeMs)
       .catch(() => undefined)
-    skills.push({ ...base, canToggle: root.canToggle, modifiedAt, skill: state.skill })
+    skills.push({ ...base, canToggle: root.canToggle, modifiedAt, parseError: state.parseError, skill: state.skill })
   }
   return skills
 }
@@ -235,6 +235,7 @@ async function scanSkillRoot(
       canToggle: link.linkKind === 'runtime' ? false : root.canToggle,
       enabled: state.enabled,
       modifiedAt,
+      parseError: state.parseError,
       skill: state.skill,
     })
   }
