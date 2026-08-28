@@ -6,6 +6,7 @@ import CopyButton from '@/components/CopyButton.vue'
 import PlatformIcon from '@/components/PlatformIcon.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip } from '@/components/ui/tooltip'
 import { agentLabel } from '@/lib/agents'
 
 /** 安装位置列表只展示安装状态，并将文件操作意图交给详情页统一执行。 */
@@ -116,32 +117,40 @@ function originLabel(installation: Installation): string {
           >
             {{ installationEnabled(installation) ? t('detail.enabled') : t('detail.disabled') }}
           </Badge>
-          <Badge
+          <Tooltip
             v-if="installation.linked"
-            variant="outline"
-            :class="[
-              'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 font-normal',
-              installation.linkBroken
-                ? 'border-destructive/40 text-destructive'
-                : 'text-muted-foreground',
-            ]"
-            :title="linkTitle(installation)"
+            :content="linkTitle(installation)"
+            content-class="max-w-96 whitespace-pre-line break-all"
           >
-            <Unlink v-if="installation.linkBroken" class="size-3 shrink-0" />
-            <Link2 v-else class="size-3 shrink-0" />
-            <span class="truncate">
-              {{ installation.linkBroken ? t('detail.linkBroken') : t('detail.linked') }}
-            </span>
-          </Badge>
-          <Badge
+            <Badge
+              variant="outline"
+              :class="[
+                'flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 font-normal',
+                installation.linkBroken
+                  ? 'border-destructive/40 text-destructive'
+                  : 'text-muted-foreground',
+              ]"
+            >
+              <Unlink v-if="installation.linkBroken" class="size-3 shrink-0" />
+              <Link2 v-else class="size-3 shrink-0" />
+              <span class="truncate">
+                {{ installation.linkBroken ? t('detail.linkBroken') : t('detail.linked') }}
+              </span>
+            </Badge>
+          </Tooltip>
+          <Tooltip
             v-if="installation.parseError"
-            variant="outline"
-            class="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border-destructive/40 px-2 py-0.5 font-normal text-destructive"
-            :title="parseErrorTitle(installation)"
+            :content="parseErrorTitle(installation)"
+            content-class="max-w-96 whitespace-pre-line break-all"
           >
-            <TriangleAlert class="size-3 shrink-0" />
-            <span class="truncate">{{ t('detail.parseError') }}</span>
-          </Badge>
+            <Badge
+              variant="outline"
+              class="flex items-center gap-1 whitespace-nowrap rounded-md border-destructive/40 px-2 py-0.5 font-normal text-destructive"
+            >
+              <TriangleAlert class="size-3 shrink-0" />
+              <span class="truncate">{{ t('detail.parseError') }}</span>
+            </Badge>
+          </Tooltip>
         </div>
         <span class="flex shrink-0 items-center gap-0.5">
           <CopyButton :text="installation.path" class="size-7" />
