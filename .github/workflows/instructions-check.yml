@@ -1,0 +1,36 @@
+name: 项目指令合规检查
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      library_path:
+        description: 团队库在 runner 上的本地路径
+        required: false
+        default: team-library
+        type: string
+
+jobs:
+  instructions:
+    if: ${{ hashFiles('.skillbuddy/team.yaml') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出项目
+        uses: actions/checkout@v4
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+      - name: 构建 CLI
+        run: pnpm --filter @skillbuddy/core build && pnpm --filter @skillbuddy/cli build
+      - name: 执行项目指令检查
+        env:
+          LIBRARY_PATH: ${{ inputs.library_path || 'team-library' }}
+        run: pnpm --filter @skillbuddy/cli exec skm instructions check --project "$GITHUB_WORKSPACE" --library "$GITHUB_WORKSPACE/$LIBRARY_PATH" --json
