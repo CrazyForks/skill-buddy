@@ -8,6 +8,7 @@ import { registerMcpMarketIpc } from './ipc/mcp-market.js'
 import { registerSkillsIpc } from './ipc/skills.js'
 import { registerSystemIpc } from './ipc/system.js'
 import { registerTeamLibraryIpc } from './ipc/team-library.js'
+import { registerInstructionsIpc } from './ipc/instructions.js'
 import { PathAccessPolicy } from './path-policy.js'
 import {
   flushDesktopPreferences,
@@ -52,6 +53,7 @@ function registerIpc(tray: TrayController): void {
   registerMarketIpc(pathPolicy)
   registerMcpMarketIpc()
   registerTeamLibraryIpc(pathPolicy)
+  registerInstructionsIpc()
   registerTrayIpc(tray)
   const mcpService = registerMcpIpc()
   disposeMcp = () => mcpService.dispose()

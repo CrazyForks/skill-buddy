@@ -4,6 +4,7 @@ import { config as configureMarkdown, MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import hljs from '@/lib/highlight'
 import { sanitizeMarkdownHtml } from '@/lib/sanitize-markdown'
+import { normalizeMarkdownPreviewId } from '@/lib/markdown-preview'
 
 const props = defineProps<{ content: string; previewId?: string }>()
 
@@ -28,7 +29,7 @@ onMounted(() => {
 
 onUnmounted(() => observer?.disconnect())
 
-const id = computed(() => props.previewId ?? 'md-view')
+const id = computed(() => normalizeMarkdownPreviewId(props.previewId))
 </script>
 
 <template>

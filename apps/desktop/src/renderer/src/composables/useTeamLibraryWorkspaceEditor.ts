@@ -2,6 +2,7 @@ import { computed, ref, shallowRef, watch, type DeepReadonly } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type {
   TeamLibraryBundleDraft,
+  TeamLibraryInstructionDraft,
   TeamLibraryMcpDraft,
   TeamLibraryPolicy,
   TeamLibrarySkillDraft,
@@ -11,13 +12,15 @@ import { useSettings } from '@/composables/useSettings'
 import { useTeamLibraryManagement } from '@/composables/useTeamLibraryManagement'
 import { fetchMarketSkillSource, matchMarketSkill, type MarketItem } from '@/lib/market'
 
-export type TeamLibraryTab = 'skills' | 'mcp' | 'bundles' | 'policy' | 'changes'
+export type TeamLibraryTab = 'skills' | 'mcp' | 'instructions' | 'bundles' | 'policy' | 'changes'
 
 export interface TeamPolicyForm {
   requiredSkills: string
   requiredMcp: string
   recommendedSkills: string
   recommendedMcp: string
+  requiredInstructions: string
+  recommendedInstructions: string
   blocked: string
 }
 
@@ -39,6 +42,7 @@ export function useTeamLibraryWorkspaceEditor() {
   const mcpMarketBusy = shallowRef(false)
   const mcpMarketError = shallowRef<string | null>(null)
   const bundleDialogOpen = shallowRef(false)
+  const instructionDialogOpen = shallowRef(false)
   const bundleError = shallowRef<string | null>(null)
   const policyScope = shallowRef('organization')
   const newTeamId = shallowRef('')
@@ -46,11 +50,14 @@ export function useTeamLibraryWorkspaceEditor() {
   const editingSkill = shallowRef<TeamLibrarySkillDraft | null>(null)
   const editingMcp = shallowRef<TeamLibraryMcpDraft | null>(null)
   const editingBundle = shallowRef<TeamLibraryBundleDraft | null>(null)
+  const editingInstruction = shallowRef<TeamLibraryInstructionDraft | null>(null)
   const policy = ref<TeamPolicyForm>({
     requiredSkills: '',
     requiredMcp: '',
     recommendedSkills: '',
     recommendedMcp: '',
+    requiredInstructions: '',
+    recommendedInstructions: '',
     blocked: '',
   })
 
@@ -99,6 +106,8 @@ export function useTeamLibraryWorkspaceEditor() {
       requiredMcp: value.required.mcp.join('\n'),
       recommendedSkills: value.recommended.skills.join('\n'),
       recommendedMcp: value.recommended.mcp.join('\n'),
+      requiredInstructions: value.required.instructions.join('\n'),
+      recommendedInstructions: value.recommended.instructions.join('\n'),
       blocked: value.blocked
         .map((item) => `${item.ref} | ${item.versions ?? ''} | ${item.reason}`)
         .join('\n'),
@@ -113,8 +122,8 @@ export function useTeamLibraryWorkspaceEditor() {
         newTeamId.value = ''
         newTeamName.value = ''
         loadPolicy({
-          required: { skills: [], mcp: [] },
-          recommended: { skills: [], mcp: [] },
+          required: { skills: [], mcp: [], instructions: [] },
+          recommended: { skills: [], mcp: [], instructions: [] },
           blocked: [],
         })
         return
@@ -123,8 +132,8 @@ export function useTeamLibraryWorkspaceEditor() {
         scope === 'organization'
           ? value.policy
           : (value.teamPolicies[scope] ?? {
-              required: { skills: [], mcp: [] },
-              recommended: { skills: [], mcp: [] },
+              required: { skills: [], mcp: [], instructions: [] },
+              recommended: { skills: [], mcp: [], instructions: [] },
               blocked: [],
             }),
       )
@@ -176,6 +185,28 @@ export function useTeamLibraryWorkspaceEditor() {
 
   async function saveMcp(input: TeamLibraryMcpDraft): Promise<void> {
     if (await manager.saveMcp(input)) mcpDialogOpen.value = false
+  }
+
+  function createInstruction(): void {
+    editingInstruction.value = null
+    instructionDialogOpen.value = true
+  }
+
+  async function editInstruction(path: string): Promise<void> {
+    if (!manager.workspace.value) return
+    try {
+      editingInstruction.value = await window.skillsManager.teamContributionGetInstruction(
+        manager.workspace.value.id,
+        path,
+      )
+      instructionDialogOpen.value = true
+    } catch (cause) {
+      manager.reportError(cause)
+    }
+  }
+
+  async function saveInstruction(input: TeamLibraryInstructionDraft): Promise<void> {
+    if (await manager.saveInstruction(input)) instructionDialogOpen.value = false
   }
 
   function createBundle(): void {
@@ -297,10 +328,12 @@ export function useTeamLibraryWorkspaceEditor() {
         required: {
           skills: list(policy.value.requiredSkills),
           mcp: list(policy.value.requiredMcp),
+          instructions: list(policy.value.requiredInstructions),
         },
         recommended: {
           skills: list(policy.value.recommendedSkills),
           mcp: list(policy.value.recommendedMcp),
+          instructions: list(policy.value.recommendedInstructions),
         },
         blocked,
       },
@@ -325,6 +358,8 @@ export function useTeamLibraryWorkspaceEditor() {
     editingSkill,
     mcpDialogOpen,
     editingMcp,
+    instructionDialogOpen,
+    editingInstruction,
     bundleDialogOpen,
     editingBundle,
     bundleError,
@@ -340,6 +375,9 @@ export function useTeamLibraryWorkspaceEditor() {
     saveSkill,
     editMcp,
     saveMcp,
+    createInstruction,
+    editInstruction,
+    saveInstruction,
     createBundle,
     editBundle,
     saveBundle,

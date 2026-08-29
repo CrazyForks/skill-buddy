@@ -6,6 +6,7 @@ import type {
   TeamLibraryBundleDraft,
   TeamLibraryCatalog,
   TeamLibraryConfig,
+  TeamLibraryInstructionDraft,
   TeamLibraryMcpDraft,
   TeamLibraryMutationResult,
   TeamLibraryPolicyDraft,
@@ -124,6 +125,10 @@ function saveMcp(input: TeamLibraryMcpDraft): Promise<TeamLibraryMutationResult 
   return mutate((id) => window.skillsManager.teamContributionUpsertMcp(id, input))
 }
 
+function saveInstruction(input: TeamLibraryInstructionDraft): Promise<TeamLibraryMutationResult | null> {
+  return mutate((id) => window.skillsManager.teamContributionUpsertInstruction(id, input))
+}
+
 function saveBundle(input: TeamLibraryBundleDraft): Promise<TeamLibraryMutationResult | null> {
   return mutate((id) => window.skillsManager.teamContributionUpsertBundle(id, input))
 }
@@ -212,6 +217,7 @@ export function useTeamLibraryManagement() {
     saveSkill,
     importSkill,
     saveMcp,
+    saveInstruction,
     saveBundle,
     savePolicy,
     remove,

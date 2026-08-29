@@ -14,6 +14,7 @@ import type {
 import type {
   AiConversationContext,
   AiConversationEvent,
+  EffectiveInstructionChain,
   AppInfo,
   ConfirmOptions,
   CustomPlatformInput,
@@ -24,6 +25,16 @@ import type {
   GitRestorePreview,
   InAppBrowserState,
   InstallTarget,
+  InstructionBridgePlanRequest,
+  InstructionEffectiveChainRequest,
+  InstructionDeletePlanRequest,
+  InstructionOperationPlanView,
+  InstructionOperationResult,
+  InstructionReadRequest,
+  InstructionRuleProfile,
+  InstructionReadResult,
+  InstructionScanRequest,
+  InstructionWritePlanRequest,
   LinkOpenMode,
   McpMarketValidationResult,
   McpRemovePlanRequest,
@@ -44,6 +55,7 @@ import type {
   TeamLibraryCatalog,
   TeamLibraryInitializeInput,
   TeamLibraryInitializeResult,
+  TeamLibraryInstructionDraft,
   TeamLibraryInstallRecord,
   TeamLibraryMcp,
   TeamLibraryMcpDraft,
@@ -55,6 +67,7 @@ import type {
   TeamLibrarySkillDraft,
   TeamLibrarySkillImportInput,
   TeamLibrarySyncResult,
+  InstructionServiceScan,
   TeamProjectConfigResult,
   TeamProjectConfig,
   TrayCommand,
@@ -108,6 +121,8 @@ const api = {
     ipcRenderer.invoke('team-library:contribution-get-skill', id, path),
   teamContributionGetMcp: (id: string, path: string): Promise<TeamLibraryMcpDraft> =>
     ipcRenderer.invoke('team-library:contribution-get-mcp', id, path),
+  teamContributionGetInstruction: (id: string, path: string): Promise<TeamLibraryInstructionDraft> =>
+    ipcRenderer.invoke('team-library:contribution-get-instruction', id, path),
   teamContributionUpsertSkill: (
     id: string,
     input: TeamLibrarySkillDraft,
@@ -123,6 +138,11 @@ const api = {
     input: TeamLibraryMcpDraft,
   ): Promise<TeamLibraryMutationResult> =>
     ipcRenderer.invoke('team-library:contribution-upsert-mcp', id, JSON.parse(JSON.stringify(input))),
+  teamContributionUpsertInstruction: (
+    id: string,
+    input: TeamLibraryInstructionDraft,
+  ): Promise<TeamLibraryMutationResult> =>
+    ipcRenderer.invoke('team-library:contribution-upsert-instruction', id, { ...input }),
   teamContributionUpsertBundle: (
     id: string,
     input: TeamLibraryBundleDraft,
@@ -209,6 +229,35 @@ const api = {
     projectRoots: string[] = [],
   ): Promise<{ skills: AggregatedSkill[]; warnings: SkillParseWarning[] }> =>
     ipcRenderer.invoke('skills:scan-diagnostics', projectRoots),
+  scanInstructions: (request: InstructionScanRequest): Promise<InstructionServiceScan> =>
+    ipcRenderer.invoke('instructions:scan', request),
+  scanProjectInstructions: (request: InstructionScanRequest): Promise<InstructionServiceScan> =>
+    ipcRenderer.invoke('instructions:scan-projects', request),
+  listInstructionProfiles: (): Promise<InstructionRuleProfile[]> =>
+    ipcRenderer.invoke('instructions:profiles'),
+  effectiveInstructionChain: (request: InstructionEffectiveChainRequest): Promise<EffectiveInstructionChain> =>
+    ipcRenderer.invoke('instructions:effective-chain', request),
+  readInstruction: (request: InstructionReadRequest): Promise<InstructionReadResult> =>
+    ipcRenderer.invoke('instructions:read', request),
+  createInstructionWritePlan: (request: InstructionWritePlanRequest): Promise<InstructionOperationPlanView> =>
+    ipcRenderer.invoke('instructions:plan-write', request),
+  createInstructionDeletePlan: (request: InstructionDeletePlanRequest): Promise<InstructionOperationPlanView> =>
+    ipcRenderer.invoke('instructions:plan-delete', request),
+  createInstructionBridgePlan: (request: InstructionBridgePlanRequest): Promise<InstructionOperationPlanView> =>
+    ipcRenderer.invoke('instructions:plan-bridge', request),
+  applyInstructionPlan: (planId: string): Promise<InstructionOperationResult> =>
+    ipcRenderer.invoke('instructions:apply-plan', planId),
+  applyInstructionBridgePlan: (planId: string): Promise<InstructionOperationResult> =>
+    ipcRenderer.invoke('instructions:apply-bridge', planId),
+  restoreInstructionOperation: (
+    operationId: string,
+  ): Promise<{ path: string; ok: boolean; error?: string }[]> =>
+    ipcRenderer.invoke('instructions:restore', operationId),
+  watchInstructionsStart: (projectRoots: string[]): Promise<number> =>
+    ipcRenderer.invoke('instructions:watch-start', projectRoots),
+  onInstructionsChanged: (callback: () => void): void => {
+    ipcRenderer.on('instructions:changed', callback)
+  },
   listPlatforms: (): Promise<PlatformStatus[]> => ipcRenderer.invoke('platforms:list'),
   registerPlatforms: (defs: CustomPlatformInput[]): Promise<void> =>
     ipcRenderer.invoke('platforms:register', defs),

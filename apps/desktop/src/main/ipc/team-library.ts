@@ -4,6 +4,7 @@ import type {
   TeamLibraryConfig,
   TeamLibraryBundleDraft,
   TeamLibraryInitializeInput,
+  TeamLibraryInstructionDraft,
   TeamLibraryMcpDraft,
   TeamLibraryPolicyDraft,
   TeamLibraryProbeInput,
@@ -37,6 +38,7 @@ import {
 import {
   deleteTeamResource,
   getTeamContributionMcp,
+  getTeamContributionInstruction,
   getTeamContributionSkill,
   importTeamSkill,
   teamContributionCatalog,
@@ -44,6 +46,7 @@ import {
   updateTeamOrganizationPolicy,
   upsertTeamBundle,
   upsertTeamMcp,
+  upsertTeamInstruction,
   upsertTeamSkill,
   validateTeamLibraryWorkspace,
 } from '../team-library-management'
@@ -84,6 +87,8 @@ export function registerTeamLibraryIpc(pathPolicy: PathAccessPolicy): void {
     getTeamContributionSkill(id, path))
   ipcMain.handle('team-library:contribution-get-mcp', (_event, id: string, path: string) =>
     getTeamContributionMcp(id, path))
+  ipcMain.handle('team-library:contribution-get-instruction', (_event, id: string, path: string) =>
+    getTeamContributionInstruction(id, path))
   ipcMain.handle(
     'team-library:contribution-upsert-skill',
     (_event, id: string, input: TeamLibrarySkillDraft) => upsertTeamSkill(id, input),
@@ -98,6 +103,10 @@ export function registerTeamLibraryIpc(pathPolicy: PathAccessPolicy): void {
   ipcMain.handle(
     'team-library:contribution-upsert-mcp',
     (_event, id: string, input: TeamLibraryMcpDraft) => upsertTeamMcp(id, input),
+  )
+  ipcMain.handle(
+    'team-library:contribution-upsert-instruction',
+    (_event, id: string, input: TeamLibraryInstructionDraft) => upsertTeamInstruction(id, input),
   )
   ipcMain.handle(
     'team-library:contribution-upsert-bundle',
