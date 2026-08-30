@@ -356,6 +356,7 @@ export default {
       'link-read-only': 'Linked instruction files cannot be edited directly. Edit the source file instead.',
       'invalid-encoding': 'The file is not valid UTF-8 and cannot be edited safely.',
       'externally-changed': 'Another program changed the file. Compare the diff and refresh before retrying.',
+      'already-exists': 'The target file already exists. Edit the existing instruction file instead.',
       'delete-link-only': 'Only the link entry will be removed; the linked source file remains unchanged.',
       'invalid-target': 'This operation is not allowed for the target path.',
       'bridge-already-exists': 'CLAUDE.md already imports AGENTS.md; no additional bridge is needed.',

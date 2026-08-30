@@ -356,6 +356,7 @@ export default {
       'link-read-only': '链接型指令文件不可直接编辑，请编辑其源文件。',
       'invalid-encoding': '文件不是有效 UTF-8，无法安全编辑。',
       'externally-changed': '文件已被其他程序修改，请比较差异并刷新后重试。',
+      'already-exists': '目标文件已存在，请改为编辑现有指令文件。',
       'delete-link-only': '只会删除链接条目，被链接的源文件保持不变。',
       'invalid-target': '目标路径不允许执行此操作。',
       'bridge-already-exists': 'CLAUDE.md 已经包含 AGENTS.md 导入，无需重复创建。',

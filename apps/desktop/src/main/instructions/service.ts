@@ -155,7 +155,9 @@ export class InstructionService {
     }
     const actualIdentity = snapshot?.identity ?? null
     if (actualIdentity !== request.expectedHash) {
-      blockers.push({ code: 'externally-changed', message: '文件已在编辑期间发生外部变化，请比较后重新编辑' })
+      blockers.push(request.expectedHash === null
+        ? { code: 'already-exists', message: '目标文件已存在，请改为编辑现有指令文件' }
+        : { code: 'externally-changed', message: '文件已在编辑期间发生外部变化，请比较后重新编辑' })
     }
     const view = this.makePlanView({
       intent: 'write',
@@ -194,7 +196,12 @@ export class InstructionService {
             return '[non-UTF-8 content]'
           }
         })()
-    if (snapshot.identity !== request.expectedHash) {
+    /**
+     * 与扫描结果比较而不是与 snapshot.identity 比较：符号链接的 contentHash 是链接目标
+     * 内容哈希，超限文件的 contentHash 为空，两者都与文件身份哈希不同源。plan 生成之后的
+     * 外部改动由 transactionalDeleteInstruction 的 expectedIdentity 校验负责。
+     */
+    if (target.document?.contentHash !== request.expectedHash) {
       blockers.push({ code: 'externally-changed', message: '文件已在操作前发生外部变化，请刷新后重试' })
     }
     if (snapshot.kind === 'symlink') {
@@ -411,11 +418,12 @@ export class InstructionService {
   private deleteImpacts(target: InstructionManagedTarget): NonNullable<InstructionOperationPlanView['impacts']> {
     if (!target.document) return []
     const seen = new Set<string>()
+    const profiles = this.profiles()
     return target.document.bindings.flatMap((binding) => {
       const key = `${binding.surface.vendorId}/${binding.surface.productId}/${binding.surface.surfaceId}`
       if (seen.has(key)) return []
       seen.add(key)
-      const profile = this.profiles().find((candidate) =>
+      const profile = profiles.find((candidate) =>
         candidate.key.vendorId === binding.surface.vendorId
         && candidate.key.productId === binding.surface.productId
         && candidate.key.surfaceId === binding.surface.surfaceId,

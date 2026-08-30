@@ -28,6 +28,7 @@ import {
 
 const pathPolicy = new PathAccessPolicy()
 let disposeMcp: (() => void) | undefined
+let disposeInstructions: (() => void) | undefined
 let trayController: TrayController | undefined
 let waitingForPreferenceFlush = false
 
@@ -53,7 +54,8 @@ function registerIpc(tray: TrayController): void {
   registerMarketIpc(pathPolicy)
   registerMcpMarketIpc()
   registerTeamLibraryIpc(pathPolicy)
-  registerInstructionsIpc()
+  const instructionService = registerInstructionsIpc()
+  disposeInstructions = () => instructionService.stopWatch()
   registerTrayIpc(tray)
   const mcpService = registerMcpIpc()
   disposeMcp = () => mcpService.dispose()
@@ -111,6 +113,8 @@ app.on('before-quit', (event) => {
   setQuitting(true)
   disposeMcp?.()
   disposeMcp = undefined
+  disposeInstructions?.()
+  disposeInstructions = undefined
   if (!hasPendingDesktopPreferenceSaves()) return
   event.preventDefault()
   if (waitingForPreferenceFlush) return

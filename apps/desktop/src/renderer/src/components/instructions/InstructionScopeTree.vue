@@ -57,9 +57,6 @@ function selectScope(scope: string): void {
 
 <template>
   <section class="instruction-scroll flex w-72 shrink-0 flex-col overflow-y-auto border-r bg-muted/15">
-    <div class="border-b px-3 py-3 text-xs font-medium text-muted-foreground">
-      {{ $t('instructions.scopes') }}
-    </div>
     <div class="space-y-0.5 p-2">
       <section
         v-for="scope in scopes"

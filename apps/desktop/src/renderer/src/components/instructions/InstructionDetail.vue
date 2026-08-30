@@ -156,7 +156,7 @@ function updateTargetDirectory(value: string | undefined): void {
       >
         <Badge
           variant="secondary"
-          class="flex max-w-32 items-center gap-1 truncate text-xs"
+          class="flex max-w-40 items-center gap-1 whitespace-nowrap text-xs"
         >
           <PlatformIcon
             v-if="bindingTools[0]"

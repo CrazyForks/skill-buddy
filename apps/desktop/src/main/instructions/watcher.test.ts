@@ -27,6 +27,30 @@ describe('InstructionWatcher', () => {
     expect(onChange).toHaveBeenCalledTimes(callsAfterFirstWrite)
   })
 
+  it('ignores writes under excluded directories and its own temporary files', async () => {
+    const root = await fs.realpath(await fs.mkdtemp(join(tmpdir(), 'skillbuddy-watcher-ignore-')))
+    cleanup.push(root)
+    await fs.mkdir(join(root, 'node_modules', 'pkg'), { recursive: true })
+    await fs.mkdir(join(root, 'dist'), { recursive: true })
+    const watcher = new InstructionWatcher({ debounceMs: 20 })
+    const onChange = vi.fn()
+    watcher.start([root], [], onChange)
+    // 递归监听启动时会补报启动前的历史事件，先等它排空再断言过滤行为。
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    onChange.mockClear()
+
+    await fs.writeFile(join(root, 'node_modules', 'pkg', 'AGENTS.md'), 'noise\n', 'utf8')
+    await fs.writeFile(join(root, 'dist', 'AGENTS.md'), 'noise\n', 'utf8')
+    await fs.writeFile(join(root, '.skillbuddy-abc.tmp'), 'noise\n', 'utf8')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(onChange).not.toHaveBeenCalled()
+
+    await fs.writeFile(join(root, 'AGENTS.md'), 'real\n', 'utf8')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(onChange).toHaveBeenCalled()
+    watcher.stop()
+  })
+
   it('restarts cleanly without retaining old watchers', async () => {
     const root = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-watcher-restart-'))
     cleanup.push(root)
