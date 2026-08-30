@@ -215,6 +215,30 @@ async function assertNoSymlinks(root: string): Promise<void> {
   await walk(root)
 }
 
+/**
+ * 选一个远端尚未占用的草稿分支名。
+ *
+ * 每轮变更都会从最新主分支重新拉分支，若沿用上一轮已推送的同名分支，
+ * 两者没有共同历史，推送会以非快进被拒绝。这里在创建时就避让，
+ * 而不是等用户写完内容、点了发布才失败。
+ */
+async function availableContributionBranch(root: string, slug: string): Promise<string> {
+  const taken = new Set(
+    (await runTeamContributionCommand('git', ['ls-remote', '--heads', 'origin', `refs/heads/skillbuddy/${slug}*`], root)
+      .catch(() => ''))
+      .split('\n')
+      .map((line) => line.split('\t').at(-1)?.replace('refs/heads/', '').trim())
+      .filter((name): name is string => Boolean(name)),
+  )
+  const base = `skillbuddy/${slug}`
+  if (!taken.has(base)) return base
+  for (let index = 2; index <= 99; index += 1) {
+    const candidate = `${base}-${index}`
+    if (!taken.has(candidate)) return candidate
+  }
+  throw new Error(`分支标识 ${slug} 的可用编号已用尽，请换一个标识`)
+}
+
 /** 创建独立 Git 分支工作区，供用户编辑后提交 PR/MR。 */
 export async function prepareTeamContribution(
   input: TeamLibraryConfig,
@@ -241,7 +265,7 @@ export async function prepareTeamContribution(
     await assertNoSymlinks(root)
     const manifest = await readTeamLibraryManifest(root)
     const baseRevision = await runTeamContributionCommand('git', ['rev-parse', 'HEAD'], root)
-    const branch = `skillbuddy/${slug}`
+    const branch = await availableContributionBranch(root, slug)
     await runTeamContributionCommand('git', ['checkout', '-b', branch], root)
     const result: TeamContributionWorkspace = {
       id,

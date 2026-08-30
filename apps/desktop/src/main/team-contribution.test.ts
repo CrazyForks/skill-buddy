@@ -61,3 +61,56 @@ describe('runTeamContributionCommand', () => {
     expect(shifted.some((path) => path.startsWith('nstructions/'))).toBe(true)
   })
 })
+
+/** 复刻 availableContributionBranch 的选名逻辑，验证与真实远端交互的结果。 */
+async function pickBranch(root: string, slug: string): Promise<string> {
+  const listed = await runTeamContributionCommand(
+    'git', ['ls-remote', '--heads', 'origin', `refs/heads/skillbuddy/${slug}*`], root, 30_000,
+  ).catch(() => '')
+  const taken = new Set(
+    listed.split('\n')
+      .map((line) => line.split('\t').at(-1)?.replace('refs/heads/', '').trim())
+      .filter((name): name is string => Boolean(name)),
+  )
+  const base = `skillbuddy/${slug}`
+  if (!taken.has(base)) return base
+  for (let index = 2; index <= 99; index += 1) {
+    if (!taken.has(`${base}-${index}`)) return `${base}-${index}`
+  }
+  throw new Error('exhausted')
+}
+
+describe('choosing a draft branch name', () => {
+  it('avoids branch names the remote already has so a later push is not rejected', async () => {
+    const remote = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-branch-remote-'))
+    cleanup.push(remote)
+    await execFileAsync('git', ['init', '-q', '--bare', '--initial-branch', 'main', '.'], { cwd: remote })
+
+    const work = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-branch-work-'))
+    cleanup.push(work)
+    const root = join(work, 'repository')
+    await execFileAsync('git', ['clone', '-q', remote, root])
+    const git = (...args: string[]) => execFileAsync('git', args, { cwd: root })
+    await git('config', 'user.email', 'test@example.com')
+    await git('config', 'user.name', 'test')
+    await fs.writeFile(join(root, 'a.md'), 'v1\n', 'utf8')
+    await git('add', '--all')
+    await git('commit', '-qm', 'init')
+    await git('push', '-q', 'origin', 'HEAD:main')
+
+    // 第一轮：默认标识可用
+    expect(await pickBranch(root, 'manage-team-library')).toBe('skillbuddy/manage-team-library')
+
+    await git('checkout', '-qb', 'skillbuddy/manage-team-library')
+    await git('push', '-q', 'origin', 'skillbuddy/manage-team-library')
+
+    // 第二轮：同一个标识已被占用，自动让位
+    expect(await pickBranch(root, 'manage-team-library')).toBe('skillbuddy/manage-team-library-2')
+
+    await git('push', '-q', 'origin', 'skillbuddy/manage-team-library:skillbuddy/manage-team-library-2')
+
+    // 第三轮继续顺延，且不会被前缀相同的分支干扰
+    expect(await pickBranch(root, 'manage-team-library')).toBe('skillbuddy/manage-team-library-3')
+    expect(await pickBranch(root, 'other-change')).toBe('skillbuddy/other-change')
+  })
+})
