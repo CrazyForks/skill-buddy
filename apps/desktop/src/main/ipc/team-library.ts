@@ -14,6 +14,7 @@ import type {
 } from '#shared/ipc'
 import type { PathAccessPolicy } from '../path-policy'
 import {
+  getTeamLibraryInstruction,
   getTeamLibraryMcp,
   getTeamLibrarySkill,
   assertTeamLibraryMcpInstallAllowed,
@@ -34,6 +35,7 @@ import {
   openTeamContribution,
   prepareTeamContribution,
   publishTeamContribution,
+  syncTeamContributionBase,
 } from '../team-contribution'
 import {
   deleteTeamResource,
@@ -69,6 +71,9 @@ export function registerTeamLibraryIpc(pathPolicy: PathAccessPolicy): void {
   ipcMain.handle('team-library:contribution-list', () => listTeamContributions())
   ipcMain.handle('team-library:contribution-open', (_event, id: string) => openTeamContribution(id))
   ipcMain.handle('team-library:contribution-discard', (_event, id: string) => discardTeamContribution(id))
+  ipcMain.handle('team-library:contribution-sync-base', (_event, id: string) =>
+    syncTeamContributionBase(id),
+  )
   ipcMain.handle(
     'team-library:contribution-publish',
     async (_event, id: string, title: string, body: string) => {
@@ -134,6 +139,9 @@ export function registerTeamLibraryIpc(pathPolicy: PathAccessPolicy): void {
   )
   ipcMain.handle('team-library:get-mcp', (_event, config: TeamLibraryConfig, path: string) =>
     getTeamLibraryMcp(config, path),
+  )
+  ipcMain.handle('team-library:get-instruction', (_event, config: TeamLibraryConfig, path: string) =>
+    getTeamLibraryInstruction(config, path),
   )
   ipcMain.handle('team-library:installations', () => listTeamSkillInstallations())
   ipcMain.handle(

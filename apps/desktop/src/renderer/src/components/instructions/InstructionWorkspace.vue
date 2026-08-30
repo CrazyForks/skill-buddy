@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, shallowRef } from 'vue'
-import { Plus, RefreshCw, TriangleAlert } from '@lucide/vue'
+import { Plus, RefreshCw } from '@lucide/vue'
 import InstructionCreateDialog from './InstructionCreateDialog.vue'
 import InstructionDetail from './InstructionDetail.vue'
 import InstructionEditor from './InstructionEditor.vue'
@@ -115,13 +115,6 @@ onMounted(() => void refresh())
         </p>
       </div>
       <div class="flex-1" />
-      <div
-        v-if="diagnostics.length"
-        class="app-no-drag flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400"
-      >
-        <TriangleAlert class="size-3.5" />
-        {{ diagnostics.length }} {{ $t('instructions.diagnostics') }}
-      </div>
       <Button
         variant="outline"
         size="sm"

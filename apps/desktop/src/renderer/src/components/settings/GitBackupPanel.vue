@@ -10,6 +10,7 @@ import { useSettings } from '@/composables/useSettings'
 import { useSkills } from '@/composables/useSkills'
 import { showToast } from '@/composables/useToast'
 import { mergePreset } from '@/lib/preset-format'
+import { confirmDialog } from '@/composables/useConfirm'
 
 const { t } = useI18n()
 const { groups } = useSettings()
@@ -85,7 +86,7 @@ async function restore(): Promise<void> {
   const snapshot = preview.value
   const targets = restoreTargets.value
   if (!snapshot || targets.length === 0 || busy.value) return
-  const confirmed = await window.skillsManager.confirmDialog({
+  const confirmed = await confirmDialog({
     title: t('settings.restoreConfirmTitle'),
     message: t('settings.restoreConfirmMsg', {
       skills: snapshot.items.length,

@@ -19,11 +19,16 @@ const WORKSPACE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f
 const WORKSPACE_METADATA_FILE = 'workspace.json'
 const workspaces = new Map<string, TeamContributionWorkspace>()
 
+/**
+ * @param preserveIndent - 保留 stdout 行首空白。`git status --porcelain` 的状态码是固定两列，
+ *   第一列为空时整行以空格开头，默认的 trim 会削掉它，令按位切割的路径整体错位一格。
+ */
 export async function runTeamContributionCommand(
   command: string,
   args: string[],
   cwd?: string,
   timeout = 120_000,
+  preserveIndent = false,
 ): Promise<string> {
   try {
     const result = await execFileAsync(command, args, {
@@ -32,7 +37,7 @@ export async function runTeamContributionCommand(
       maxBuffer: 4 * 1024 * 1024,
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
     })
-    return result.stdout.trim()
+    return preserveIndent ? result.stdout.replace(/\s+$/, '') : result.stdout.trim()
   } catch (error) {
     const stderr = typeof (error as { stderr?: unknown })?.stderr === 'string'
       ? (error as { stderr: string }).stderr
@@ -270,6 +275,51 @@ export async function discardTeamContribution(id: string): Promise<void> {
   await fs.rm(workspaceDirectory(id), { recursive: true, force: true })
 }
 
+/**
+ * 把草稿分支重建到团队库最新基线，保留尚未提交的改动。
+ *
+ * 工作区是 `--depth 1` 浅克隆，没有共同祖先可供变基，因此改用
+ * 「暂存改动 → 硬重置到最新远端 → 恢复改动」。恢复冲突时保留现场并如实报错，
+ * 不做任何自动取舍，避免悄悄丢掉成员已经写好的内容。
+ */
+export async function syncTeamContributionBase(id: string): Promise<TeamContributionWorkspace> {
+  const current = teamContributionWorkspace(id)
+  await runTeamContributionCommand('git', ['fetch', '--depth', '1', 'origin', current.baseBranch], current.root)
+  const remoteRevision = await runTeamContributionCommand('git', ['rev-parse', `origin/${current.baseBranch}`], current.root)
+  if (remoteRevision === current.baseRevision) return current
+
+  const dirty = Boolean(await runTeamContributionCommand('git', ['status', '--porcelain'], current.root))
+  if (dirty) {
+    await runTeamContributionCommand(
+      'git',
+      ['stash', 'push', '--include-untracked', '--message', `skillbuddy-sync-${id}`],
+      current.root,
+    )
+  }
+  try {
+    await runTeamContributionCommand('git', ['reset', '--hard', `origin/${current.baseBranch}`], current.root)
+  } catch (error) {
+    if (dirty) {
+      await runTeamContributionCommand('git', ['stash', 'pop'], current.root).catch(() => undefined)
+    }
+    throw error
+  }
+
+  const next: TeamContributionWorkspace = { ...current, baseRevision: remoteRevision }
+  workspaces.set(id, next)
+  await persistTeamContribution(next)
+
+  if (dirty) {
+    try {
+      await runTeamContributionCommand('git', ['stash', 'pop'], current.root)
+    } catch {
+      throw new Error('已同步到团队库最新版本，但你的草稿改动与新内容存在冲突。请用“打开目录”在本地解决冲突后再发布。')
+    }
+  }
+  await assertNoSymlinks(current.root)
+  return next
+}
+
 /** 提交并推送贡献分支，然后通过 gh 或 glab 创建 PR/MR。 */
 export async function publishTeamContribution(
   id: string,
@@ -285,7 +335,7 @@ export async function publishTeamContribution(
   await runTeamContributionCommand('git', ['fetch', '--depth', '1', 'origin', current.baseBranch], current.root)
   const remoteRevision = await runTeamContributionCommand('git', ['rev-parse', `origin/${current.baseBranch}`], current.root)
   if (remoteRevision !== current.baseRevision) {
-    throw new Error('团队库主分支已经更新，请同步后创建新的变更分支，避免覆盖其他成员的修改')
+    throw new Error('团队库主分支已经更新。请点击“同步主分支”把草稿重建到最新版本后再发布，避免覆盖其他成员的修改')
   }
   await runTeamContributionCommand('git', ['add', '--all'], current.root)
   await runTeamContributionCommand('git', ['commit', '-m', title], current.root)
@@ -355,7 +405,7 @@ function changedFileStatus(value: string): TeamContributionChangedFile['status']
 export async function teamContributionDiff(id: string): Promise<TeamContributionDiff> {
   const current = teamContributionWorkspace(id)
   await runTeamContributionCommand('git', ['add', '--intent-to-add', '--all'], current.root)
-  const status = await runTeamContributionCommand('git', ['status', '--porcelain'], current.root)
+  const status = await runTeamContributionCommand('git', ['status', '--porcelain'], current.root, 120_000, true)
   const files = status.split('\n').flatMap((line): TeamContributionChangedFile[] => {
     if (!line.trim()) return []
     const rawPath = line.slice(3).trim()

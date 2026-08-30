@@ -165,7 +165,10 @@ async function refreshTeam(): Promise<void> {
       <GitTeamBundleCatalog v-if="activeTab === 'bundles'" />
       <GitTeamSkillCatalog v-else-if="activeTab === 'skills'" />
       <GitTeamMcpCatalog v-else-if="activeTab === 'mcp'" />
-      <GitTeamInstructionCatalog v-else-if="activeTab === 'instructions'" />
+      <GitTeamInstructionCatalog
+        v-else-if="activeTab === 'instructions'"
+        @manage="activeTab = 'manage'"
+      />
       <TeamProjectInstallPanel v-else-if="activeTab === 'projects'" :catalogs="catalogs" />
       <TeamLibraryManagementPanel v-else-if="activeTab === 'manage'" />
     </template>

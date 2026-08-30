@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Tooltip } from '@/components/ui/tooltip'
+import { VirtualSelect } from '@/components/ui/virtual-select'
 
 const props = defineProps<{
   document: InstructionDocument | null
@@ -284,10 +285,12 @@ function updateTargetDirectory(value: string | undefined): void {
       </Badge>
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <span class="shrink-0 text-xs text-muted-foreground">{{ $t('instructions.targetDirectory') }}</span>
-        <Select
+        <VirtualSelect
           :model-value="props.targetDirectory"
           :options="targetOptions"
           :placeholder="$t('instructions.targetDirectory')"
+          :search-placeholder="$t('instructions.searchDirectories')"
+          :empty-text="$t('instructions.noMatchingDirectories')"
           class="min-w-52 flex-1"
           @update:model-value="updateTargetDirectory"
         />

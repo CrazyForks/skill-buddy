@@ -28,6 +28,17 @@ export interface TeamProjectRequirementStatus {
   detail?: number
   policyReason?: string
   recommended?: boolean
+  /** 仅指令模板：可直接写入项目时携带定位信息，供“应用模板”使用。 */
+  template?: TeamProjectInstructionTemplateRef
+}
+
+export interface TeamProjectInstructionTemplateRef {
+  libraryId: string
+  templatePath: string
+  projectRoot: string
+  targetPath: string
+  /** 目标文件当前内容哈希；文件不存在时为 null。 */
+  expectedHash: string | null
 }
 
 export interface TeamProjectCompliance {
@@ -250,12 +261,29 @@ function instructionStatus(
     : document.contentHash === resource.contentHash
       ? 'satisfied'
       : 'outdated'
+  /**
+   * 只有可安全写入的目标才提供“应用模板”：链接文件、只读文件、超限文件
+   * 都交给指令页处理，避免在团队页给出一个必然被计划拦下的按钮。
+   */
+  const writable = !document
+    || (!document.linked && !document.readOnly && !document.contentTruncated && !document.encodingInvalid)
   return {
     type: 'instruction',
     ref,
     label: resource.name,
     state,
     ...(recommended ? { recommended: true } : {}),
+    ...(state !== 'satisfied' && writable
+      ? {
+          template: {
+            libraryId: resource.libraryId,
+            templatePath: resource.path,
+            projectRoot,
+            targetPath,
+            expectedHash: document?.contentHash ?? null,
+          },
+        }
+      : {}),
   }
 }
 

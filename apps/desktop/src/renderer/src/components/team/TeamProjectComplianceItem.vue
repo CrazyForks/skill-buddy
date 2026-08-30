@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { AlertTriangle, CircleCheck, FileCog, FileWarning, FolderGit2, PackageCheck, ServerCog, Settings2, Sparkles } from '@lucide/vue'
+import { AlertTriangle, CircleCheck, Download, FileCog, FileWarning, FolderGit2, PackageCheck, ServerCog, Settings2, Sparkles } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type {
   TeamProjectCompliance,
+  TeamProjectInstructionTemplateRef,
   TeamProjectRequirementStatus,
 } from '@/composables/useTeamProjects'
 import { pathBasename } from '@/lib/paths'
 
 const props = defineProps<{ project: TeamProjectCompliance }>()
-const emit = defineEmits<{ configure: [project: TeamProjectCompliance] }>()
+const emit = defineEmits<{
+  configure: [project: TeamProjectCompliance]
+  applyTemplate: [template: TeamProjectInstructionTemplateRef]
+}>()
 const { t } = useI18n()
 
 const issues = computed(() => props.project.requirements.filter((item) => item.state !== 'satisfied'))
@@ -103,6 +107,16 @@ function reasonLabel(item: TeamProjectRequirementStatus): string | null {
           >
             <AlertTriangle class="mr-1 size-3.5" />{{ stateLabel(item) }}
           </Badge>
+          <Button
+            v-if="item.template"
+            variant="outline"
+            size="sm"
+            class="shrink-0 cursor-pointer"
+            :title="t('team.projectApplyInstructionHint')"
+            @click="emit('applyTemplate', item.template)"
+          >
+            <Download class="size-3.5" />{{ t('team.projectApplyInstruction') }}
+          </Button>
         </li>
       </ul>
     </div>

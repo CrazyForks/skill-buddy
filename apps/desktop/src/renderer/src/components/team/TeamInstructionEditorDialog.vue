@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import type { TeamLibraryInstructionDraft } from '#shared/ipc'
@@ -42,6 +42,17 @@ watch(() => [props.open, props.initial], () => {
   if (props.open) reset()
 }, { immediate: true })
 
+/**
+ * 描述留空由主进程补默认值，与 parseInstructionTemplate 的兜底保持一致，
+ * 因此这里只校验真正无法推导的字段。
+ */
+const missingFields = computed(() => [
+  ...(form.id.trim() ? [] : [t('team.formId')]),
+  ...(form.name.trim() ? [] : [t('team.formName')]),
+  ...(form.target.trim() ? [] : [t('team.instructionTarget')]),
+  ...(form.content.trim() ? [] : [t('team.instructionContent')]),
+])
+
 function submit(): void {
   emit('save', {
     ...form,
@@ -82,7 +93,7 @@ function submit(): void {
               {{ t('team.formVersion') }}
               <Input
                 v-model="form.version"
-                placeholder="1.0.0"
+                :placeholder="t('team.formVersionPh')"
               />
             </label>
             <label class="grid gap-1.5 text-sm font-medium">
@@ -110,7 +121,13 @@ function submit(): void {
             />
           </label>
         </form>
-        <div class="flex justify-end gap-2 border-t px-5 py-4">
+        <div class="flex items-center justify-end gap-2 border-t px-5 py-4">
+          <p
+            v-if="missingFields.length"
+            class="mr-auto text-xs text-muted-foreground"
+          >
+            {{ t('team.formMissingFields', { fields: missingFields.join('、') }) }}
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -122,7 +139,8 @@ function submit(): void {
           <Button
             size="sm"
             class="cursor-pointer"
-            :disabled="!form.id.trim() || !form.name.trim() || !form.description.trim() || !form.target.trim() || !form.content.trim()"
+            :disabled="missingFields.length > 0"
+            :title="missingFields.length ? t('team.formMissingFields', { fields: missingFields.join('、') }) : undefined"
             :loading="props.busy"
             @click="submit"
           >

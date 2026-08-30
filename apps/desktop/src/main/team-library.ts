@@ -782,6 +782,20 @@ export async function getTeamLibraryMcp(input: TeamLibraryConfig, path: string):
   return item
 }
 
+/** 按需读取单个指令模板的完整正文；目录为控制体积不携带正文。 */
+export async function getTeamLibraryInstruction(
+  input: TeamLibraryConfig,
+  path: string,
+): Promise<TeamLibraryInstruction> {
+  const config = validateTeamLibraryConfig(input)
+  const state = await readState(config)
+  const root = teamLibraryRepositoryRoot(config)
+  const resolved = resolveTeamLibrary(config, await readTeamLibraryManifest(root))
+  const item = (await listInstructions(root, resolved, state.revision)).find((entry) => entry.path === path)
+  if (!item) throw new Error(`指令模板不存在：${path}`)
+  return item
+}
+
 export async function materializeTeamSkill(
   input: TeamLibraryConfig,
   path: string,

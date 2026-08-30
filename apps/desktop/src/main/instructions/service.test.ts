@@ -92,3 +92,65 @@ describe('InstructionService delete plans', () => {
     expect(plan.canApply).toBe(false)
   })
 })
+
+describe('applying a team instruction template', () => {
+  it('creates a missing target and overwrites an outdated one after showing the diff', async () => {
+    const root = await createRoot('skillbuddy-template-apply-')
+    const service = await createService()
+    const target = join(root, 'AGENTS.md')
+    const content = '# Team baseline\n\n- Use pnpm.\n'
+    await service.scan([root])
+
+    const created = await service.createWritePlan({
+      projectRoots: [root],
+      path: target,
+      content,
+      expectedHash: null,
+    })
+    expect(created.blockers).toEqual([])
+    expect(created.created).toBe(true)
+    expect(created.afterText).toBe(content)
+    await expect(service.applyPlan(created.planId)).resolves.toMatchObject({ ok: true })
+    await expect(fs.readFile(target, 'utf8')).resolves.toBe(content)
+
+    const scan = await service.scan([root])
+    const document = scan.documents.find((item) => item.path === target)
+    const updated = '# Team baseline v2\n\n- Use pnpm.\n'
+    const overwrite = await service.createWritePlan({
+      projectRoots: [root],
+      path: target,
+      content: updated,
+      expectedHash: document!.contentHash,
+    })
+    expect(overwrite.blockers).toEqual([])
+    expect(overwrite.beforeText).toBe(content)
+    expect(overwrite.afterText).toBe(updated)
+    await expect(service.applyPlan(overwrite.planId)).resolves.toMatchObject({ ok: true })
+    await expect(fs.readFile(target, 'utf8')).resolves.toBe(updated)
+  })
+
+  it('refuses a template target that escapes the project or is not a known instruction file', async () => {
+    const root = await createRoot('skillbuddy-template-escape-')
+    const outside = await createRoot('skillbuddy-template-outside-')
+    const service = await createService()
+    await service.scan([root])
+
+    const escaped = await service.createWritePlan({
+      projectRoots: [root],
+      path: join(outside, 'AGENTS.md'),
+      content: '# evil\n',
+      expectedHash: null,
+    })
+    expect(escaped.canApply).toBe(false)
+    expect(escaped.blockers.map((blocker) => blocker.code)).toContain('invalid-target')
+
+    const unknownName = await service.createWritePlan({
+      projectRoots: [root],
+      path: join(root, '.zshrc'),
+      content: '# evil\n',
+      expectedHash: null,
+    })
+    expect(unknownName.canApply).toBe(false)
+    expect(unknownName.blockers.map((blocker) => blocker.code)).toContain('invalid-target')
+  })
+})

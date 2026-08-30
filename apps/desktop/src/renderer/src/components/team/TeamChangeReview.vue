@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, shallowRef, type DeepReadonly } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ExternalLink, FileDiff, FolderOpen, GitPullRequest, RotateCcw } from '@lucide/vue'
+import { FileDiff, FolderOpen, GitPullRequest, RefreshCw, RotateCcw } from '@lucide/vue'
 import type { TeamContributionDiff, TeamContributionPublishResult } from '#shared/ipc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import TeamPublishResult from '@/components/team/TeamPublishResult.vue'
 import { Input } from '@/components/ui/input'
 
 const props = defineProps<{
@@ -12,15 +13,12 @@ const props = defineProps<{
   result: DeepReadonly<TeamContributionPublishResult> | null
   busy: boolean
 }>()
-const emit = defineEmits<{ publish: [title: string, body: string]; open: []; discard: [] }>()
+const emit = defineEmits<{ publish: [title: string, body: string]; open: []; discard: []; syncBase: [] }>()
 const { t } = useI18n()
 const title = shallowRef(t('team.managementDefaultTitle'))
 const body = shallowRef(t('team.managementDefaultBody'))
 const canPublish = computed(() => Boolean(props.diff?.files.length && !props.diff?.issues?.length && title.value.trim()))
 
-function openResult(): void {
-  if (props.result?.url) void window.skillsManager.openLink(props.result.url)
-}
 </script>
 
 <template>
@@ -29,6 +27,16 @@ function openResult(): void {
       <span class="text-sm text-muted-foreground">{{ t('team.changesHint') }}</span>
       <div class="flex gap-2">
         <Button variant="outline" size="sm" class="cursor-pointer" @click="emit('open')"><FolderOpen />{{ t('team.openDirectory') }}</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="cursor-pointer"
+          :disabled="busy"
+          :title="t('team.syncBaseHint')"
+          @click="emit('syncBase')"
+        >
+          <RefreshCw />{{ t('team.syncBase') }}
+        </Button>
         <Button variant="ghost" size="sm" class="cursor-pointer" :disabled="busy" @click="emit('discard')"><RotateCcw />{{ t('team.discardDraft') }}</Button>
       </div>
     </div>
@@ -61,10 +69,6 @@ function openResult(): void {
       <Button class="w-fit cursor-pointer" size="sm" :disabled="!canPublish" :loading="busy" @click="emit('publish', title, body)"><GitPullRequest v-if="!busy" />{{ busy ? t('team.contributionPublishing') : t('team.contributionPublish') }}</Button>
     </div>
 
-    <div v-if="result" class="rounded-md border px-4 py-3 text-sm">
-      <p>{{ t('team.contributionPushed', { branch: result.branch }) }}</p>
-      <p v-if="result.warning" class="mt-1 text-amber-700 dark:text-amber-400">{{ result.warning }}</p>
-      <Button v-if="result.url" variant="link" class="mt-1 h-auto cursor-pointer p-0" @click="openResult"><ExternalLink />{{ t('team.contributionOpenRequest') }}</Button>
-    </div>
+    <TeamPublishResult :result="result" />
   </div>
 </template>

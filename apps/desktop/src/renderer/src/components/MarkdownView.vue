@@ -45,11 +45,15 @@ const id = computed(() => normalizeMarkdownPreviewId(props.previewId))
   />
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 /* blend the preview into the app surface instead of its own page background */
 .markdown-view {
   --md-bk-color: transparent;
   font-size: 14px;
+}
+.markdown-view :deep(.md-editor-preview .md-editor-code .md-editor-code-head) {
+  // md-editor-v3 defaults to z-index: 10000, which places code headers above app dialogs.
+  z-index: 1;
 }
 .markdown-view :deep(.md-editor-preview-wrapper) {
   padding: 0;

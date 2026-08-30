@@ -11,6 +11,7 @@ import { teamLibraryConfigKey } from '#shared/team-library'
 import { useSettings } from '@/composables/useSettings'
 import { useTeamLibraryManagement } from '@/composables/useTeamLibraryManagement'
 import { fetchMarketSkillSource, matchMarketSkill, type MarketItem } from '@/lib/market'
+import { confirmDialog } from '@/composables/useConfirm'
 
 export type TeamLibraryTab = 'skills' | 'mcp' | 'instructions' | 'bundles' | 'policy' | 'changes'
 
@@ -294,7 +295,7 @@ export function useTeamLibraryWorkspaceEditor() {
   }
 
   async function remove(path: string, label: string): Promise<void> {
-    const confirmed = await window.skillsManager.confirmDialog({
+    const confirmed = await confirmDialog({
       title: t('team.removeAssetTitle', { label }),
       message: t('team.removeAssetMessage', { path }),
       confirmLabel: t('common.delete'),

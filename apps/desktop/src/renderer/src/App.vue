@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent, shallowRef } from 'vue'
+import AppConfirm from '@/components/AppConfirm.vue'
 import AppToast from '@/components/AppToast.vue'
 import InAppBrowser from '@/components/InAppBrowser.vue'
 import GroupDeleteDialog from '@/components/groups/GroupDeleteDialog.vue'
@@ -86,6 +87,7 @@ useAppLifecycle({ refreshLocal })
 
 <template>
   <AppToast />
+  <AppConfirm />
   <InAppBrowser />
   <div class="relative flex h-screen flex-col">
     <WindowTopBar :show-sidebar-toggle="!settingsOpen" />
