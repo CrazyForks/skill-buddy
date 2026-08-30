@@ -190,27 +190,35 @@ skm instructions check \
 
 必需模板缺少、漂移或引用无法解析时命令返回非零状态；增加 `--json` 可获得机器可读结果。命令不会联网，也不会修改项目或团队库。
 
-机器可读输出示例：
+默认输出每个模板一行，前缀为 `PASS` / `WARN`（推荐项未满足）/ `FAIL`（必需项未满足）：
+
+```text
+FAIL instructions/engineering-baseline.md AGENTS.md [outdated]
+instruction policy failed
+```
+
+`--json` 输出结构如下，`state` 取值为 `satisfied` / `missing` / `outdated` / `unresolved`：
 
 ```json
 {
-  "ok": false,
   "projectRoot": "/workspace/app",
   "libraryRoot": "/workspace/ai-team-library",
-  "required": [
+  "libraryId": "acme-ai",
+  "compliant": false,
+  "items": [
     {
-      "templateId": "engineering-baseline",
-      "targetPath": "/workspace/app/AGENTS.md",
+      "ref": "instructions/engineering-baseline.md",
+      "recommended": false,
       "state": "outdated",
-      "expectedHash": "8f0...",
-      "actualHash": "1ac..."
+      "target": "AGENTS.md",
+      "templatePath": "instructions/engineering-baseline.md",
+      "version": "1.0.0"
     }
-  ],
-  "recommended": []
+  ]
 }
 ```
 
-仓库可以将检查接入 Pull Request 工作流。示例工作流位于 `.github/workflows/instructions-check.yml`，默认约定团队库已检出到 `team-library/`；也可以通过手动触发参数传入其他本地路径。
+仓库可以将检查接入 Pull Request 工作流。示例工作流位于 `.github/workflows/instructions-check.yml`：项目根没有 `.skillbuddy/team.yaml` 时整个检查跳过；团队库仓库通过仓库变量 `TEAM_LIBRARY_REPO` 指定（私有库再配 `TEAM_LIBRARY_TOKEN`），会被检出到 `team-library/`；团队库已随项目一起检出时留空该变量，并用手动触发参数 `library_path` 指向项目内目录。
 
 有效策略按“组织 → 团队 → 项目”合并。必装和推荐资源取并集；相同 `ref + versions` 的禁用规则由后层覆盖前层。`.skillbuddy` 目录与 `team.yaml` 必须位于项目内且不能是符号链接。
 
