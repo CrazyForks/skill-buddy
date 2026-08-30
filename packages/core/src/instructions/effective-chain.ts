@@ -1,40 +1,12 @@
 import { dirname, isAbsolute, resolve, relative, sep } from 'node:path'
 import { findInstructionProfile } from './profiles.js'
+import { instructionEffectiveDirectory } from './paths.js'
 import { surfaceKey } from './types.js'
 import type { EffectiveInstructionChain, InstructionDiagnostic, InstructionDocument, SurfaceRef } from './types.js'
 
 function inRoot(root: string, path: string): boolean {
   const rel = relative(root, path)
   return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
-}
-
-function effectiveDirectory(document: InstructionDocument, profile: ReturnType<typeof findInstructionProfile>): string {
-  const physicalDirectory = dirname(document.path)
-  if (!profile || document.scope !== 'project' || !document.projectRoot) return physicalDirectory
-  const relativePath = relative(document.projectRoot, document.path).replaceAll('\\', '/')
-  const nestedCandidates = [
-    ...profile.projectFileCandidates,
-    ...profile.projectFallbacks,
-    ...profile.localOverlayCandidates,
-    ...(profile.overrideCandidates ?? []),
-  ].filter((candidate) => candidate.includes('/') || candidate.includes('\\'))
-  for (const candidate of nestedCandidates) {
-    const normalized = candidate.replaceAll('\\', '/')
-    if (relativePath !== normalized && !relativePath.endsWith(`/${normalized}`)) continue
-    const depth = normalized.split('/').length - 1
-    let directory = physicalDirectory
-    for (let index = 0; index < depth; index += 1) directory = dirname(directory)
-    return directory
-  }
-  const relativeDirectory = dirname(relativePath).replaceAll('\\', '/')
-  for (const candidate of profile.rulesDirCandidates ?? []) {
-    const normalized = candidate.replaceAll('\\', '/').replace(/\/$/, '')
-    if (relativeDirectory !== normalized && !relativeDirectory.endsWith(`/${normalized}`)) continue
-    let directory = physicalDirectory
-    for (let index = 0; index < normalized.split('/').length; index += 1) directory = dirname(directory)
-    return directory
-  }
-  return physicalDirectory
 }
 
 export function deriveEffectiveInstructionChain(
@@ -69,7 +41,7 @@ export function deriveEffectiveInstructionChain(
   }
   const selected: InstructionDocument[] = []
   for (const level of levels) {
-    const matches = projectDocuments.filter((document) => effectiveDirectory(document, profile) === level && document.bindings.some((binding) =>
+    const matches = projectDocuments.filter((document) => instructionEffectiveDirectory(document, profile) === level && document.bindings.some((binding) =>
       surfaceKey(binding.surface) === surfaceKey(surface)
       && binding.role !== 'requires-config'
       && binding.role !== 'unsupported'
@@ -100,6 +72,7 @@ export function deriveEffectiveInstructionChain(
   if (requiresConfig) warnings.push({ code: 'requires-config', severity: 'info', message: '发现需要工具配置后才会生效的候选指令', paths: [], fixable: false })
   if (profile.key.productId === 'workbuddy') warnings.push({ code: 'unsupported', severity: 'info', message: '该工具没有已验证的项目指令文件机制', paths: [], fixable: false })
   if (chain.length === 0 && profile.key.productId !== 'workbuddy') warnings.push({ code: 'no-instructions', severity: 'warning', message: '目标目录没有发现该工具的指令文件', paths: [target], fixable: false })
+  // community / unknown 已在上面提前返回，此处只会命中 verified：给出链但标注证据等级。
   if (profile.evidence !== 'official') warnings.push({ code: 'unverified-rule', severity: 'info', message: `规则证据等级：${profile.evidence}`, paths: [], fixable: false })
   return { surface, projectRoot: root, targetDirectory: target, documents: chain, warnings, includesGlobal: globalDocuments.length > 0 }
 }

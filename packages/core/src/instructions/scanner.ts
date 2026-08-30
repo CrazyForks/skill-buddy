@@ -3,10 +3,12 @@ import { constants, promises as fs } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { INSTRUCTION_PROFILES } from './profiles.js'
+import { instructionEffectiveDirectory, normalizedPath } from './paths.js'
 import { MAX_INSTRUCTION_FILE_BYTES } from './constants.js'
-import type { InstructionBinding, InstructionDirectory, InstructionDocument, InstructionDiagnostic, InstructionKind, InstructionRuleProfile, InstructionScanResult } from './types.js'
+import type { InstructionBinding, InstructionDirectory, InstructionDocument, InstructionDiagnostic, InstructionKind, InstructionScanResult } from './types.js'
 
-const DEFAULT_EXCLUDES = new Set(['.git', '.cache', '.next', '.nuxt', '.output', '.pnpm-store', '.turbo', '.vite', 'build', 'coverage', 'dist', 'node_modules', 'out', 'temp', 'tmp'])
+/** 扫描与文件监听共用的目录排除集，元素均为小写。 */
+export const INSTRUCTION_SCAN_EXCLUDES: ReadonlySet<string> = new Set(['.git', '.cache', '.next', '.nuxt', '.output', '.pnpm-store', '.turbo', '.vite', 'build', 'coverage', 'dist', 'node_modules', 'out', 'temp', 'tmp'])
 const MAX_DEPTH = 12
 export { MAX_INSTRUCTION_FILE_BYTES } from './constants.js'
 
@@ -30,10 +32,6 @@ function candidateNames(): Set<string> {
     profile.overrideCandidates?.forEach((name) => names.add(basename(name)))
   }
   return names
-}
-
-function normalizedPath(path: string): string {
-  return path.replaceAll('\\', '/')
 }
 
 function matchesCandidate(path: string, projectRoot: string | undefined, candidate: string): boolean {
@@ -92,43 +90,11 @@ function bindingForDocument(path: string, scope: 'user' | 'project', projectRoot
   })
 }
 
-function profileDirectory(document: InstructionDocument, profile: InstructionRuleProfile): string {
-  const physicalDirectory = dirname(document.path)
-  if (!document.projectRoot) return physicalDirectory
-  const relativePath = normalizedPath(relative(document.projectRoot, document.path))
-  const nestedCandidates = [
-    ...profile.projectFileCandidates,
-    ...profile.projectFallbacks,
-    ...profile.localOverlayCandidates,
-    ...(profile.overrideCandidates ?? []),
-  ].filter((candidate) => normalizedPath(candidate).includes('/'))
-  for (const candidate of nestedCandidates) {
-    const normalized = normalizedPath(candidate)
-    if (relativePath !== normalized && !relativePath.endsWith(`/${normalized}`)) continue
-    let directory = physicalDirectory
-    for (let index = 1; index < normalized.split('/').length; index += 1) {
-      directory = dirname(directory)
-    }
-    return directory
-  }
-  const relativeDirectory = normalizedPath(dirname(relativePath))
-  for (const candidate of profile.rulesDirCandidates ?? []) {
-    const normalized = normalizedPath(candidate).replace(/\/$/, '')
-    if (relativeDirectory !== normalized && !relativeDirectory.endsWith(`/${normalized}`)) continue
-    let directory = physicalDirectory
-    for (let index = 0; index < normalized.split('/').length; index += 1) {
-      directory = dirname(directory)
-    }
-    return directory
-  }
-  return physicalDirectory
-}
-
 function applyFallbackShadowing(documents: InstructionDocument[]): void {
   for (const profile of INSTRUCTION_PROFILES) {
     const directories = new Map<string, InstructionDocument[]>()
     for (const document of documents.filter((item) => item.scope === 'project')) {
-      const directory = profileDirectory(document, profile)
+      const directory = instructionEffectiveDirectory(document, profile)
       const list = directories.get(directory) ?? []
       list.push(document)
       directories.set(directory, list)
@@ -216,15 +182,15 @@ async function readDocument(path: string, scope: 'user' | 'project', projectRoot
   } catch {
     encodingInvalid = true
   }
+  const importsAgents = !encodingInvalid
+    && content.toString('utf8').split(/\r?\n/).some((line) => line.trim() === '@AGENTS.md')
+  const linksAgents = linked && realPath !== null && basename(realPath).toLowerCase() === 'agents.md'
   const bindings = bindingForDocument(path, scope, projectRoot).map((binding) => {
-    const text = content.toString('utf8')
-    const importsAgents = text.split(/\r?\n/).some((line) => line.trim() === '@AGENTS.md')
-    const linksAgents = linked && realPath !== null && basename(realPath).toLowerCase() === 'agents.md'
     if (
       scope === 'project'
       && basename(path) === 'CLAUDE.md'
       && binding.surface.vendorId === 'anthropic'
-      && ((!encodingInvalid && importsAgents) || linksAgents)
+      && (importsAgents || linksAgents)
     ) {
       return { ...binding, status: 'bridged' as const }
     }
@@ -257,7 +223,7 @@ async function walk(root: string, names: Set<string>, rulesDirectories: string[]
     const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => [])
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.isSymbolicLink()) {
-        if (!DEFAULT_EXCLUDES.has(entry.name.toLowerCase())) await visit(join(directory, entry.name), depth + 1)
+        if (!INSTRUCTION_SCAN_EXCLUDES.has(entry.name.toLowerCase())) await visit(join(directory, entry.name), depth + 1)
       } else if (entry.isFile() || entry.isSymbolicLink()) {
         const path = join(directory, entry.name)
         const inRulesDirectory = rulesDirectories.some((candidate) => matchesRulesDirectory(path, root, candidate))
