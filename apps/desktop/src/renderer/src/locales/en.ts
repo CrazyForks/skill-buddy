@@ -594,8 +594,6 @@ export default {
     instructionTemplateHint: 'Maintain reviewed AI instruction templates and detect project content drift through policy.',
     instructionTemplateCreate: 'New instruction template',
     instructionTemplateEdit: 'Edit instruction template',
-    syncBase: 'Sync main branch',
-    syncBaseHint: 'Rebuild this draft on the latest team library while keeping your unpublished changes.',
     discardDraftTitle: 'Discard the current draft?',
     discardDraftMessage: 'The whole draft workspace will be deleted. Changes that were never pushed cannot be recovered.',
     instructionTemplateEmpty: 'The team library has no AI instruction templates yet.',

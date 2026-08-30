@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, type DeepReadonly } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FileDiff, FolderOpen, GitPullRequest, RefreshCw, RotateCcw } from '@lucide/vue'
+import { FileDiff, FolderOpen, GitPullRequest, RotateCcw } from '@lucide/vue'
 import type { TeamContributionDiff, TeamContributionPublishResult } from '#shared/ipc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ const props = defineProps<{
   result: DeepReadonly<TeamContributionPublishResult> | null
   busy: boolean
 }>()
-const emit = defineEmits<{ publish: [title: string, body: string]; open: []; discard: []; syncBase: [] }>()
+const emit = defineEmits<{ publish: [title: string, body: string]; open: []; discard: [] }>()
 const { t } = useI18n()
 const title = shallowRef(t('team.managementDefaultTitle'))
 const body = shallowRef(t('team.managementDefaultBody'))
@@ -27,16 +27,6 @@ const canPublish = computed(() => Boolean(props.diff?.files.length && !props.dif
       <span class="text-sm text-muted-foreground">{{ t('team.changesHint') }}</span>
       <div class="flex gap-2">
         <Button variant="outline" size="sm" class="cursor-pointer" @click="emit('open')"><FolderOpen />{{ t('team.openDirectory') }}</Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="cursor-pointer"
-          :disabled="busy"
-          :title="t('team.syncBaseHint')"
-          @click="emit('syncBase')"
-        >
-          <RefreshCw />{{ t('team.syncBase') }}
-        </Button>
         <Button variant="ghost" size="sm" class="cursor-pointer" :disabled="busy" @click="emit('discard')"><RotateCcw />{{ t('team.discardDraft') }}</Button>
       </div>
     </div>

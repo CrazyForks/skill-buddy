@@ -275,51 +275,6 @@ export async function discardTeamContribution(id: string): Promise<void> {
   await fs.rm(workspaceDirectory(id), { recursive: true, force: true })
 }
 
-/**
- * 把草稿分支重建到团队库最新基线，保留尚未提交的改动。
- *
- * 工作区是 `--depth 1` 浅克隆，没有共同祖先可供变基，因此改用
- * 「暂存改动 → 硬重置到最新远端 → 恢复改动」。恢复冲突时保留现场并如实报错，
- * 不做任何自动取舍，避免悄悄丢掉成员已经写好的内容。
- */
-export async function syncTeamContributionBase(id: string): Promise<TeamContributionWorkspace> {
-  const current = teamContributionWorkspace(id)
-  await runTeamContributionCommand('git', ['fetch', '--depth', '1', 'origin', current.baseBranch], current.root)
-  const remoteRevision = await runTeamContributionCommand('git', ['rev-parse', `origin/${current.baseBranch}`], current.root)
-  if (remoteRevision === current.baseRevision) return current
-
-  const dirty = Boolean(await runTeamContributionCommand('git', ['status', '--porcelain'], current.root))
-  if (dirty) {
-    await runTeamContributionCommand(
-      'git',
-      ['stash', 'push', '--include-untracked', '--message', `skillbuddy-sync-${id}`],
-      current.root,
-    )
-  }
-  try {
-    await runTeamContributionCommand('git', ['reset', '--hard', `origin/${current.baseBranch}`], current.root)
-  } catch (error) {
-    if (dirty) {
-      await runTeamContributionCommand('git', ['stash', 'pop'], current.root).catch(() => undefined)
-    }
-    throw error
-  }
-
-  const next: TeamContributionWorkspace = { ...current, baseRevision: remoteRevision }
-  workspaces.set(id, next)
-  await persistTeamContribution(next)
-
-  if (dirty) {
-    try {
-      await runTeamContributionCommand('git', ['stash', 'pop'], current.root)
-    } catch {
-      throw new Error('已同步到团队库最新版本，但你的草稿改动与新内容存在冲突。请用“打开目录”在本地解决冲突后再发布。')
-    }
-  }
-  await assertNoSymlinks(current.root)
-  return next
-}
-
 /** 提交并推送贡献分支，然后通过 gh 或 glab 创建 PR/MR。 */
 export async function publishTeamContribution(
   id: string,
@@ -332,11 +287,6 @@ export async function publishTeamContribution(
   if (!title || title.length > 200) throw new Error('贡献标题不能为空且不能超过 200 个字符')
   if (body.length > 20_000) throw new Error('贡献说明不能超过 20000 个字符')
   if (!await runTeamContributionCommand('git', ['status', '--porcelain'], current.root)) throw new Error('贡献工作区没有待提交修改')
-  await runTeamContributionCommand('git', ['fetch', '--depth', '1', 'origin', current.baseBranch], current.root)
-  const remoteRevision = await runTeamContributionCommand('git', ['rev-parse', `origin/${current.baseBranch}`], current.root)
-  if (remoteRevision !== current.baseRevision) {
-    throw new Error('团队库主分支已经更新。请点击“同步主分支”把草稿重建到最新版本后再发布，避免覆盖其他成员的修改')
-  }
   await runTeamContributionCommand('git', ['add', '--all'], current.root)
   await runTeamContributionCommand('git', ['commit', '-m', title], current.root)
   await runTeamContributionCommand('git', ['push', '--set-upstream', 'origin', current.branch], current.root)

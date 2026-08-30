@@ -128,8 +128,6 @@ const api = {
     invoke('team-library:contribution-list'),
   teamContributionOpen: (id: string): Promise<void> =>
     invoke('team-library:contribution-open', id),
-  teamContributionSyncBase: (id: string): Promise<TeamContributionWorkspace> =>
-    invoke('team-library:contribution-sync-base', id),
   teamContributionDiscard: (id: string): Promise<void> =>
     invoke('team-library:contribution-discard', id),
   teamContributionPublish: (

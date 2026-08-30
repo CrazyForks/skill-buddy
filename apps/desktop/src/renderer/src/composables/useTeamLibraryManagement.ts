@@ -187,21 +187,6 @@ async function publish(title: string, body: string): Promise<TeamContributionPub
   }
 }
 
-/** 把草稿分支重建到团队库最新基线；未提交的改动会被保留。 */
-async function syncBase(): Promise<void> {
-  if (!workspace.value) return
-  busy.value = true
-  error.value = null
-  try {
-    workspace.value = await window.skillsManager.teamContributionSyncBase(workspace.value.id)
-    await refreshDraft()
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
-  } finally {
-    busy.value = false
-  }
-}
-
 async function discard(): Promise<void> {
   if (!workspace.value) return
   busy.value = true
@@ -251,7 +236,6 @@ export function useTeamLibraryManagement() {
     openWorkspace,
     reportError,
     publish,
-    syncBase,
     discard,
     reset,
   }

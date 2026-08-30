@@ -594,8 +594,6 @@ export default {
     instructionTemplateHint: '维护经过团队审查的 AI 指令模板，并通过项目策略检查内容漂移。',
     instructionTemplateCreate: '新增指令模板',
     instructionTemplateEdit: '编辑指令模板',
-    syncBase: '同步主分支',
-    syncBaseHint: '把当前草稿重建到团队库最新版本，保留尚未发布的改动。',
     discardDraftTitle: '放弃当前草稿？',
     discardDraftMessage: '整个草稿工作区都会被删除，尚未推送的改动无法恢复。',
     instructionTemplateEmpty: '团队库还没有 AI 指令模板。',

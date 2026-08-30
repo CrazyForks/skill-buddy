@@ -35,7 +35,6 @@ import {
   openTeamContribution,
   prepareTeamContribution,
   publishTeamContribution,
-  syncTeamContributionBase,
 } from '../team-contribution'
 import {
   deleteTeamResource,
@@ -71,9 +70,6 @@ export function registerTeamLibraryIpc(pathPolicy: PathAccessPolicy): void {
   ipcMain.handle('team-library:contribution-list', () => listTeamContributions())
   ipcMain.handle('team-library:contribution-open', (_event, id: string) => openTeamContribution(id))
   ipcMain.handle('team-library:contribution-discard', (_event, id: string) => discardTeamContribution(id))
-  ipcMain.handle('team-library:contribution-sync-base', (_event, id: string) =>
-    syncTeamContributionBase(id),
-  )
   ipcMain.handle(
     'team-library:contribution-publish',
     async (_event, id: string, title: string, body: string) => {

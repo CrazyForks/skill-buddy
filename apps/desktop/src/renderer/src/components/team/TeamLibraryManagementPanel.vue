@@ -154,7 +154,6 @@ async function discardDraft(): Promise<void> {
         :result="manager.publishResult.value"
         :busy="manager.busy.value"
         @open="manager.openWorkspace"
-        @sync-base="manager.syncBase"
         @discard="discardDraft"
         @publish="manager.publish"
       />
