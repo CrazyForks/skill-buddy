@@ -16,6 +16,7 @@ import githubcopilotSvg from '@lobehub/icons-static-svg/icons/githubcopilot.svg?
 import grokSvg from '@lobehub/icons-static-svg/icons/grok.svg?raw'
 import kimiSvg from '@lobehub/icons-static-svg/icons/kimi.svg?raw'
 import opencodeSvg from '@lobehub/icons-static-svg/icons/opencode.svg?raw'
+import ompIcon from '@/assets/platform-icons/omp.svg'
 import piSvg from '@lobehub/icons-static-svg/icons/pi.svg?raw'
 import qwenIcon from '@lobehub/icons-static-svg/icons/qwen-color.svg'
 import traeIcon from '@lobehub/icons-static-svg/icons/trae-color.svg'
@@ -52,6 +53,7 @@ const ICONS: Record<string, PlatformIconDef> = {
   'qwen-code': { src: qwenIcon },
   opencode: { maskSrc: svgMask(opencodeSvg) },
   pi: { maskSrc: svgMask(piSvg) },
+  omp: { src: ompIcon },
   codebuddy: { src: codebuddyIcon },
   trae: { src: traeIcon },
   'trae-cn': { src: traeIcon },

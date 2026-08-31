@@ -26,6 +26,8 @@ export {
   discoverCodexSupplementalRoots,
   discoverDoubaoSupplementalRoots,
   discoverLingxiSupplementalRoots,
+  discoverOmpSupplementalRoots,
+  discoverPiSupplementalRoots,
 } from './adapters/index.js'
 
 /** Detection status of every registered platform, for pickers and sidebars. */
@@ -93,7 +95,7 @@ export async function listSkillRoots(projectRoots: string[] = []): Promise<Skill
       })
     }
 
-    const supplementalRoots = await adapter.supplementalRoots?.()
+    const supplementalRoots = await adapter.supplementalRoots?.(projectRoots)
     if (supplementalRoots) {
       roots.push(...supplementalRoots)
     } else {

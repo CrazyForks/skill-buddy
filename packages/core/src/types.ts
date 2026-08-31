@@ -7,6 +7,8 @@ export type BuiltinAgentId =
   | 'gemini-cli'
   | 'qwen-code'
   | 'opencode'
+  | 'pi'
+  | 'omp'
   | 'trae'
   | 'trae-cn'
   | 'codebuddy'
@@ -47,7 +49,7 @@ export interface SkillParseWarning {
 export type InstallScope = 'user' | 'project'
 
 /** How a discovered skill is managed on disk. */
-export type SkillOrigin = InstallScope | 'legacy' | 'admin' | 'system' | 'plugin'
+export type SkillOrigin = InstallScope | 'shared' | 'legacy' | 'admin' | 'system' | 'plugin'
 
 /** How a linked Skill's directory entry is owned, deciding whether it may be moved. */
 export type SkillLinkKind =
@@ -124,7 +126,7 @@ export interface AgentAdapter {
   readonly supportsToggle?: boolean
   readonly capabilities?: AdapterCapabilities
   /** Additional read-only or derived roots owned by the platform. */
-  supplementalRoots?: () => SkillRoot[] | Promise<SkillRoot[]>
+  supplementalRoots?: (projectRoots?: string[]) => SkillRoot[] | Promise<SkillRoot[]>
   /** Compatibility hook for adapters exposing roots without their agent id. */
   supplementalSkillRoots?(): Promise<SupplementalSkillRoot[]> | SupplementalSkillRoot[]
   /** Directory that holds skills for the given scope; null if unsupported. */
