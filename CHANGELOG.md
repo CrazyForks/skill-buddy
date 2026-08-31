@@ -228,7 +228,7 @@ The first public desktop release of SkillBuddy for macOS, Windows, and Linux.
 
 ### Added
 
-- Aggregated Skills from Claude Code, Codex, Cursor, OpenCode, GitHub Copilot, Gemini CLI, CodeBuddy, Trae, WorkBuddy, Doubao, Kimi Code, and Z Code.
+- Aggregated Skills from Claude Code, Codex, Cursor, OpenCode, GitHub Copilot, Gemini CLI, CodeBuddy, Trae, WorkBuddy, Doubao, Kimi Code, and ZCode.
 - Scanning, search, detail views, editing, enable/disable, uninstall, and batch installation for user-level and project-level Skills.
 - Cross-platform drift detection, diff inspection, and synchronization from a selected baseline.
 - Skill imports from local directories, Git repositories, and public marketplaces.
@@ -266,7 +266,7 @@ SkillBuddy 首个面向 macOS、Windows 和 Linux 的桌面端公开版本。
 
 ### 新增
 
-- 聚合 Claude Code、Codex、Cursor、OpenCode、GitHub Copilot、Gemini CLI、CodeBuddy、Trae、WorkBuddy、豆包、Kimi Code 和 Z Code 的 Skills。
+- 聚合 Claude Code、Codex、Cursor、OpenCode、GitHub Copilot、Gemini CLI、CodeBuddy、Trae、WorkBuddy、豆包、Kimi Code 和 ZCode 的 Skills。
 - 支持用户级与项目级 Skills 的扫描、搜索、详情查看、编辑、启用、禁用、卸载和批量安装。
 - 支持跨平台漂移检测、差异查看和按选定基准同步。
 - 支持从本地目录、Git 仓库和公开市场导入 Skills。

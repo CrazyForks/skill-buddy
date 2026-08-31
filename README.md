@@ -104,7 +104,7 @@ SkillBuddy includes built-in Skill directory conventions for:
 | WorkBuddy | ✓ | - |
 | Doubao | ✓ | - |
 | Kimi Code | ✓ | ✓ |
-| Z Code | ✓ | ✓ |
+| ZCode | ✓ | ✓ |
 
 MCP formats, scopes, and capabilities vary by platform. SkillBuddy displays the detected configuration surfaces and validates every planned change before applying it. Some conventions still need broader real-device feedback; see [Platform conventions](docs/platform-conventions.md).
 

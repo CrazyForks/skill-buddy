@@ -335,7 +335,7 @@ export interface TeamContributionWorkspace {
   baseBranch: string
   baseRevision: string
   createdAt: number
-  provider: 'github' | 'gitlab' | 'unsupported'
+  provider: 'github' | 'gitlab' | 'gitee' | 'unsupported'
 }
 
 export interface TeamContributionPublishResult {

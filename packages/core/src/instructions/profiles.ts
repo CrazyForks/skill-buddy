@@ -119,7 +119,7 @@ export const INSTRUCTION_PROFILES: InstructionRuleProfile[] = [
   {
     ...base,
     key: surface('zcode', 'zcode', 'ide'),
-    displayName: 'Z Code',
+    displayName: 'ZCode',
     platformId: 'zcode',
     globalPaths: [join(home, '.zcode', 'AGENTS.md')],
     projectFileCandidates: ['AGENTS.md'],
