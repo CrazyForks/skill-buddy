@@ -10,7 +10,7 @@ vi.mock('electron', () => ({
   shell: { openPath: async () => '' },
 }))
 
-const { runTeamContributionCommand } = await import('./team-contribution')
+const { runTeamContributionCommand, providerOf } = await import('./team-contribution')
 
 const execFileAsync = promisify(execFile)
 const cleanup: string[] = []
@@ -112,5 +112,27 @@ describe('choosing a draft branch name', () => {
     // 第三轮继续顺延，且不会被前缀相同的分支干扰
     expect(await pickBranch(root, 'manage-team-library')).toBe('skillbuddy/manage-team-library-3')
     expect(await pickBranch(root, 'other-change')).toBe('skillbuddy/other-change')
+  })
+})
+
+describe('providerOf', () => {
+  it.each([
+    ['https://github.com/acme/library.git', 'github'],
+    ['git@gitlab.com:acme/library.git', 'gitlab'],
+    ['https://gitee.com/acme/library.git', 'gitee'],
+    // 自建实例：gh 与 glab 都支持企业版主机，识别不出等于永远创建不了 PR/MR。
+    ['https://gitlab.acme.com/team/library.git', 'gitlab'],
+    ['git@github.acme.com:team/library.git', 'github'],
+    ['https://acme.ghe.com/team/library.git', 'github'],
+  ])('把 %s 识别为 %s', (remoteUrl, expected) => {
+    expect(providerOf(remoteUrl)).toBe(expected)
+  })
+
+  it.each([
+    'https://my-github-mirror.com/acme/library.git',
+    'https://git.acme.com/team/library.git',
+    'not a url',
+  ])('不把无关远程地址 %s 误判成已知平台', (remoteUrl) => {
+    expect(providerOf(remoteUrl)).toBe('unsupported')
   })
 })

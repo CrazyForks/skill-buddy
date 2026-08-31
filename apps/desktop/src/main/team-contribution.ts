@@ -53,11 +53,55 @@ export async function runTeamContributionCommand(
   }
 }
 
-function providerOf(remoteUrl: string): TeamContributionWorkspace['provider'] {
-  const lower = remoteUrl.toLowerCase()
-  if (lower.includes('github')) return 'github'
-  if (lower.includes('gitlab')) return 'gitlab'
+/** 从远程地址判断代码托管平台，决定用 gh / glab 还是回退到网页创建 PR。 */
+export function providerOf(remoteUrl: string): TeamContributionWorkspace['provider'] {
+  const host = remoteHost(remoteUrl)
+  if (!host) return 'unsupported'
+  if (host === 'github.com' || host.endsWith('.github.com')) return 'github'
+  if (host === 'gitlab.com' || host.endsWith('.gitlab.com')) return 'gitlab'
+  if (host === 'gitee.com' || host.endsWith('.gitee.com')) return 'gitee'
+  // 自建实例按点分标签精确匹配，覆盖 gitlab.acme.com / github.acme.com / acme.ghe.com；
+  // gh 与 glab 都支持企业版主机，不匹配就等于白推一个永远不会被创建的 PR/MR 分支。
+  // 用标签而非子串，避免把 my-github-mirror.com 这类无关域名误判成 GitHub。
+  const labels = host.split('.')
+  if (labels.includes('gitlab')) return 'gitlab'
+  if (labels.includes('github') || labels.includes('ghe')) return 'github'
+  if (labels.includes('gitee')) return 'gitee'
   return 'unsupported'
+}
+
+/** 提取 HTTPS、SSH URL 和 scp 风格 Git 地址中的远程主机名。 */
+function remoteHost(remoteUrl: string): string {
+  const value = remoteUrl.trim()
+  if (!value.includes('://')) {
+    const scpMatch = value.match(/^(?:[^@/:]+@)?([^:/]+):/)
+    if (scpMatch?.[1]) return scpMatch[1].toLowerCase()
+  }
+  try {
+    return new URL(value).hostname.toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+/** 为 Gitee 生成已带源分支和目标分支的 Pull Request 创建地址。 */
+function giteePullRequestUrl(remoteUrl: string, branch: string, baseBranch: string): string | undefined {
+  const value = remoteUrl.trim()
+  const host = remoteHost(value)
+  if (!host) return undefined
+  const scpMatch = !value.includes('://')
+    ? value.match(/^(?:[^@/:]+@)?[^:/]+:(.+)$/)
+    : null
+  const repositoryPath = scpMatch?.[1] ?? (() => {
+    try {
+      return new URL(value).pathname
+    } catch {
+      return ''
+    }
+  })()
+  const normalizedPath = repositoryPath.replace(/^\/+|\/+$/g, '').replace(/\.git$/i, '')
+  if (!normalizedPath || normalizedPath.split('/').length < 2) return undefined
+  return `https://${host}/${normalizedPath}/pulls/new?source_branch=${encodeURIComponent(branch)}&target_branch=${encodeURIComponent(baseBranch)}`
 }
 
 function workspaceDirectory(id: string): string {
@@ -91,7 +135,7 @@ function parseWorkspaceMetadata(id: string, value: unknown): TeamContributionWor
     !baseBranch ||
     !baseRevision ||
     typeof item.createdAt !== 'number' || !Number.isFinite(item.createdAt) ||
-    (provider !== 'github' && provider !== 'gitlab' && provider !== 'unsupported')
+    (provider !== 'github' && provider !== 'gitlab' && provider !== 'gitee' && provider !== 'unsupported')
   ) {
     throw new Error('草稿元数据无效')
   }
@@ -299,7 +343,7 @@ export async function discardTeamContribution(id: string): Promise<void> {
   await fs.rm(workspaceDirectory(id), { recursive: true, force: true })
 }
 
-/** 提交并推送贡献分支，然后通过 gh 或 glab 创建 PR/MR。 */
+/** 提交并推送贡献分支，再按远程平台创建或打开 PR/MR。 */
 export async function publishTeamContribution(
   id: string,
   titleInput: string,
@@ -319,7 +363,19 @@ export async function publishTeamContribution(
       pushed: true,
       provider: current.provider,
       branch: current.branch,
-      warning: '分支已推送，但当前远程地址无法识别为 GitHub 或 GitLab',
+      warning: '分支已推送，但当前远程地址无法识别为 GitHub、GitLab 或 Gitee',
+    }
+  }
+  if (current.provider === 'gitee') {
+    const url = giteePullRequestUrl(current.remoteUrl, current.branch, current.baseBranch)
+    return {
+      pushed: true,
+      provider: current.provider,
+      branch: current.branch,
+      ...(url ? { url } : {}),
+      warning: url
+        ? '分支已推送，请在 Gitee 页面确认并创建 Pull Request'
+        : '分支已推送，请在 Gitee 仓库页面手动创建 Pull Request',
     }
   }
   try {
