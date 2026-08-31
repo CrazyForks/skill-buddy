@@ -70,9 +70,15 @@ onMounted(() => void refreshInstructions())
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-6">
+  <div class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-6">
     <!-- stats -->
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <!--
+      按容器可用宽度分列，而不是视口断点：断点看的是视口，但容器被 max-w 锁死，
+      md:grid-cols-5 在窄窗口下会算出 ~118px 的列宽，把中文标题压成竖排。
+      auto-fill 让宽度够时自然排满 5 列，不够时逐级降到 4/3/2 列；
+      不用 auto-fit 是为了让落单的第 5 张保持正常宽度，而不是被拉伸成整行。
+    -->
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
       <Card
         v-for="stat in stats"
         :key="stat.label"
@@ -98,7 +104,7 @@ onMounted(() => void refreshInstructions())
               ? instructionCardListeners
               : {}"
         >
-          <span class="flex items-center gap-2.5">
+          <span class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <span
               :class="[
                 'flex size-9 shrink-0 items-center justify-center rounded-full',
@@ -107,11 +113,15 @@ onMounted(() => void refreshInstructions())
             >
               <component :is="stat.icon" class="size-4" />
             </span>
-            <span class="text-sm font-semibold">{{ stat.label }}</span>
+            <!--
+              min-w-20 让标题在放不下时整体换行到第二行，而不是被压缩到 min-content。
+              中文没有空格断点，min-content 等于单字宽，压缩的结果就是逐字竖排。
+            -->
+            <span class="min-w-20 flex-1 text-sm font-semibold leading-tight">{{ stat.label }}</span>
             <ChevronRight
               v-if="stat.action"
               :class="[
-                'ml-auto size-4 text-muted-foreground transition-colors',
+                'ml-auto size-4 shrink-0 text-muted-foreground transition-colors',
                 stat.action === 'drift'
                   ? 'group-hover:text-amber-600 group-focus-within:text-amber-600 dark:group-hover:text-amber-400 dark:group-focus-within:text-amber-400'
                   : 'group-hover:text-rose-600 group-focus-within:text-rose-600 dark:group-hover:text-rose-400 dark:group-focus-within:text-rose-400',
