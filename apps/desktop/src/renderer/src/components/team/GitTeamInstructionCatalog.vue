@@ -111,7 +111,7 @@ async function handleApply(target: {
         <Button
           variant="outline"
           size="sm"
-          class="mt-0.5 shrink-0 cursor-pointer"
+          class="shrink-0 cursor-pointer self-center"
           :title="t('team.instructionApplyHint')"
           @click="openApply(item)"
         >

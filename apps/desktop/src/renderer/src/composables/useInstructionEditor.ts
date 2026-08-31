@@ -140,7 +140,7 @@ export function useInstructionEditor() {
             : t('instructions.editor.saved'),
         {
           actionLabel: t('common.undo'),
-          duration: 10 * 60_000,
+          duration: 10_000,
           onAction: async () => {
             const restored = await window.skillsManager.restoreInstructionOperation(result.operationId)
             if (!restored.some((item) => item.ok)) {
