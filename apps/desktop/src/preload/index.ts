@@ -22,6 +22,8 @@ import type {
   FilePreviewResult,
   GitBackupRequest,
   GitBackupResult,
+  GitInstructionRestoreRequest,
+  GitInstructionRestoreResult,
   GitRestorePreview,
   InAppBrowserState,
   InstallTarget,
@@ -231,6 +233,9 @@ const api = {
   prepareGitRestore: (
     request: Pick<GitBackupRequest, 'remoteUrl' | 'branch'>,
   ): Promise<GitRestorePreview> => invoke('backup:prepare-restore', request),
+  restoreGitInstructions: (
+    request: GitInstructionRestoreRequest,
+  ): Promise<GitInstructionRestoreResult[]> => invoke('backup:restore-instructions', request),
   scanMcpServers: (projectRoots: string[] = []): Promise<McpScanResult> =>
     invoke('mcp:scan', projectRoots),
   createMcpUpsertPlan: (request: McpUpsertPlanRequest): Promise<McpOperationPlanView> =>

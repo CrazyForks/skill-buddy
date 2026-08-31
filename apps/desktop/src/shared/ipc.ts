@@ -93,7 +93,19 @@ export interface GitBackupResult {
   committed: boolean
   skills: number
   presets: number
+  instructions: number
   commit?: string
+}
+
+export type GitInstructionRestoreState = 'create' | 'unchanged' | 'conflict' | 'blocked'
+
+export interface GitInstructionRestorePreview {
+  surface: SurfaceRef
+  displayName: string
+  fileName: string
+  targetPath: string
+  state: GitInstructionRestoreState
+  error?: string
 }
 
 export interface GitRestorePreview {
@@ -101,6 +113,19 @@ export interface GitRestorePreview {
   createdAt: string
   items: FoundSkill[]
   presets: BackupPreset[]
+  instructions: GitInstructionRestorePreview[]
+}
+
+export interface GitInstructionRestoreRequest {
+  root: string
+  overwriteConflicts: boolean
+}
+
+export interface GitInstructionRestoreResult {
+  path: string
+  ok: boolean
+  skipped?: boolean
+  error?: string
 }
 
 /** Minimal existing-skill context exposed to a local AI agent. */
