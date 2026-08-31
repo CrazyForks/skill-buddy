@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, FileText, Link2, Pencil, ShieldCheck, Trash2 } from '@lucide/vue'
 import {
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Tooltip } from '@/components/ui/tooltip'
 import { VirtualSelect } from '@/components/ui/virtual-select'
+import { useSkills } from '@/composables/useSkills'
 
 const props = defineProps<{
   document: InstructionDocument | null
@@ -34,6 +35,7 @@ const props = defineProps<{
   diagnostics: InstructionDiagnostic[]
 }>()
 const { locale } = useI18n()
+const { detectedPlatforms } = useSkills()
 const emit = defineEmits<{
   'update:surfaceKey': [value: string]
   'update:targetDirectory': [value: string]
@@ -42,10 +44,16 @@ const emit = defineEmits<{
   bridge: [sourcePath?: string]
 }>()
 
-const profileOptions = computed(() => props.profiles.map((profile) => ({
-  value: `${profile.key.vendorId}/${profile.key.productId}/${profile.key.surfaceId}`,
-  label: profile.displayName,
-})))
+const detectedProfiles = computed(() => props.profiles.filter((profile) =>
+  detectedPlatforms.value.some((platform) => platform.id === profile.platformId)))
+/** 一个平台都没检测到时回退到全部 Surface，否则下拉为空、触发器空白且无法切换分析工具。 */
+const profileOptions = computed(() =>
+  (detectedProfiles.value.length > 0 ? detectedProfiles.value : props.profiles)
+    .map((profile) => ({
+      value: `${profile.key.vendorId}/${profile.key.productId}/${profile.key.surfaceId}`,
+      label: profile.displayName,
+      iconId: profile.platformId ?? undefined,
+    })))
 const selectedProfile = computed(() => props.profiles.find((profile) =>
   `${profile.key.vendorId}/${profile.key.productId}/${profile.key.surfaceId}` === props.surfaceKey,
 ) ?? null)
@@ -124,6 +132,16 @@ const canBridge = computed(() => Boolean(
   && props.document.fileName === 'AGENTS.md'
   && !props.document.linkBroken,
 ))
+
+watch(
+  profileOptions,
+  (options) => {
+    if (options.length > 0 && !options.some((option) => option.value === props.surfaceKey)) {
+      emit('update:surfaceKey', options[0]!.value)
+    }
+  },
+  { immediate: true },
+)
 
 function updateSurfaceKey(value: string | undefined): void {
   if (value) emit('update:surfaceKey', value)
@@ -268,7 +286,28 @@ function updateTargetDirectory(value: string | undefined): void {
           :options="profileOptions"
           class="w-40"
           @update:model-value="updateSurfaceKey"
-        />
+        >
+          <template #value="{ option }">
+            <span class="flex min-w-0 items-center gap-2">
+              <PlatformIcon
+                v-if="option?.iconId"
+                :id="option.iconId"
+                :size="14"
+              />
+              <span class="truncate">{{ option?.label }}</span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-2">
+              <PlatformIcon
+                v-if="option.iconId"
+                :id="option.iconId"
+                :size="14"
+              />
+              <span class="truncate">{{ option.label }}</span>
+            </span>
+          </template>
+        </Select>
       </div>
       <Badge
         variant="outline"

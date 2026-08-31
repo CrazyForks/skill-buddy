@@ -1,4 +1,4 @@
-import { computed, readonly, shallowReadonly, shallowRef, watch } from 'vue'
+import { computed, effectScope, readonly, shallowReadonly, shallowRef, watch } from 'vue'
 import type {
   EffectiveInstructionChain,
   InstructionDocument,
@@ -18,7 +18,6 @@ const content = shallowRef('')
 const contentLoading = shallowRef(false)
 const contentTruncated = shallowRef(false)
 const chain = shallowRef<EffectiveInstructionChain | null>(null)
-let initialized = false
 let refreshPromise: Promise<void> | null = null
 let watchedRootsKey = ''
 
@@ -26,7 +25,7 @@ function profileKey(profile: InstructionRuleProfile): string {
   return `${profile.key.vendorId}/${profile.key.productId}/${profile.key.surfaceId}`
 }
 
-export function useInstructions() {
+function createInstructionsStore() {
   const { projectRoots: registeredProjectRoots } = useSettings()
 
   const documents = computed(() => scan.value?.documents ?? [])
@@ -152,12 +151,9 @@ export function useInstructions() {
     }
   }
 
-  if (!initialized) {
-    initialized = true
-    window.skillsManager.onInstructionsChanged(() => void refresh())
-    watch(registeredProjectRoots, () => void refresh(), { deep: true })
-    watch([selectedSurfaceKey, targetDirectory, selectedScope], () => void refreshChain())
-  }
+  window.skillsManager.onInstructionsChanged(() => void refresh())
+  watch(registeredProjectRoots, () => void refresh(), { deep: true })
+  watch([selectedSurfaceKey, targetDirectory, selectedScope], () => void refreshChain())
 
   return {
     scan: readonly(scan),
@@ -188,6 +184,23 @@ export function useInstructions() {
     refreshChain,
     profileKey,
   }
+}
+
+type InstructionsStore = ReturnType<typeof createInstructionsStore>
+
+let store: InstructionsStore | null = null
+
+/**
+ * 全局唯一的指令 store。
+ *
+ * store 内的 computed 与 watch 都创建在独立的 effect scope 中，不归属任何组件实例。
+ * 否则它们会挂在首个调用方（当前是 DashboardPage）的 scope 上，一旦该组件被
+ * `<KeepAlive :max="3">` 按 LRU 淘汰卸载，生效链刷新和项目根目录重扫就会永久失效。
+ */
+export function useInstructions(): InstructionsStore {
+  store ??= effectScope(true).run(createInstructionsStore) ?? null
+  if (!store) throw new Error('指令 store 初始化失败')
+  return store
 }
 
 function joinPath(root: string, relativePath: string): string {

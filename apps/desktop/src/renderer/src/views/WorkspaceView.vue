@@ -214,6 +214,7 @@ watch(skills, (value) => {
           @open-market="marketSelected = $event"
           @open-attention="attentionOpen = true"
           @open-drift="openDriftSkills"
+          @open-instructions="emit('navigate', 'instructions')"
           @new-skill="openConversation()"
           @import-skills="emit('importSkills')"
         />
