@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron'
+import { appendFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { TrayCommand } from '#shared/ipc'
 import { getDesktopPreferences } from './preferences'
@@ -8,6 +9,15 @@ import type { WindowThemeColors } from './window-chrome'
 
 let mainWindow: BrowserWindow | null = null
 let quitting = false
+
+/** 将远端用户机器上的渲染异常落盘，避免打包后只能看到白屏而没有堆栈。 */
+function appendRendererLog(message: string): void {
+  const logsDirectory = app.getPath('logs')
+  const line = `[${new Date().toISOString()}] ${message}\n`
+  void mkdir(logsDirectory, { recursive: true })
+    .then(() => appendFile(join(logsDirectory, 'renderer.log'), line, 'utf8'))
+    .catch(() => undefined)
+}
 
 /** 返回开发态与打包态均可访问的桌面应用图标路径。 */
 export function desktopIconPath(): string {
@@ -59,6 +69,23 @@ export function createWindow(options: { showOnReady?: boolean } = {}): BrowserWi
   })
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = null
+  })
+  let lastRendererRecoveryAt = 0
+  window.webContents.on('render-process-gone', (_event, details) => {
+    console.error('SkillBuddy renderer exited unexpectedly', details)
+    appendRendererLog(`renderer process gone: ${JSON.stringify(details)}`)
+    if (quitting || window.isDestroyed() || details.reason === 'clean-exit') return
+
+    const now = Date.now()
+    if (now - lastRendererRecoveryAt < 10_000) return
+    lastRendererRecoveryAt = now
+    setTimeout(() => {
+      if (!quitting && !window.isDestroyed()) window.webContents.reload()
+    }, 250)
+  })
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    if (level !== 3) return
+    appendRendererLog(`renderer error: ${message} (${sourceId}:${line})`)
   })
   window.webContents.setWindowOpenHandler(({ url }) => {
     openLink(window, url)

@@ -258,11 +258,14 @@ export function applyAppearance(dark: boolean): void {
 /** 将实际生效的页面背景和前景色同步给 Windows 原生标题栏。 */
 export function syncWindowChromeTheme(): void {
   if (typeof document === 'undefined') return
-  const styles = getComputedStyle(document.documentElement)
-  const background = styles.getPropertyValue('--background').trim()
-  const foreground = styles.getPropertyValue('--foreground').trim()
-  if (!background || !foreground) return
-  void window.skillsManager?.setWindowChromeTheme({ background, foreground })
+  // Windows 原生标题栏不接受 Chromium 的 oklch() 表达式；直接使用主题配置
+  // 中的十六进制颜色，避免原生控制区因解析失败继续显示初始化白色。
+  const mode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  const colors = appearance.value[mode]
+  void window.skillsManager?.setWindowChromeTheme({
+    background: colors.background,
+    foreground: colors.foreground,
+  })
 }
 
 /** 导出当前配置（用于「复制主题」）。 */

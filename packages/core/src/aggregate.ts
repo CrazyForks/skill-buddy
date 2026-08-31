@@ -29,7 +29,9 @@ async function hashSkill(skill: Skill): Promise<string> {
     description: skill.description,
     version: skill.version ?? '',
     tags: [...(skill.tags ?? [])].sort(),
-    content: skill.content,
+    // SKILL.md 在 Windows 与 Unix 之间复制时可能只改变换行格式，
+    // 这种平台差异不应被识别为内容漂移。
+    content: skill.content.replace(/\r\n?/g, '\n'),
   }
   hash.update(JSON.stringify(fields))
   for (const [relativePath, source] of Object.entries(skill.resources ?? {}).sort(([a], [b]) =>

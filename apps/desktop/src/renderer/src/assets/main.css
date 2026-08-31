@@ -92,14 +92,15 @@
     background: var(--muted);
   }
   .vibrancy .sidebar-surface {
-    background: color-mix(in srgb, var(--background) 58%, transparent);
-    backdrop-filter: blur(28px) saturate(140%);
+    /* 提高主题底色占比，避免 macOS 材质把暖色主题染成红色。 */
+    background: color-mix(in srgb, var(--background) 92%, transparent);
+    backdrop-filter: blur(28px);
   }
   .vibrancy:not(.dark) .sidebar-surface {
-    background: color-mix(in srgb, var(--background) 58%, transparent);
+    background: color-mix(in srgb, var(--background) 92%, transparent);
   }
   .dark.vibrancy .sidebar-surface {
-    background: color-mix(in srgb, var(--background) 58%, transparent);
+    background: color-mix(in srgb, var(--background) 92%, transparent);
   }
   .content-surface {
     @apply border-l bg-background;

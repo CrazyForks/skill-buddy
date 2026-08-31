@@ -64,6 +64,7 @@ export function useSkillDetailActions(options: UseSkillDetailActionsOptions) {
   const driftOthers = computed(() =>
     skill.value.installations.filter(
       (installation) =>
+        !installation.parseError &&
         installation.path !== baseInstallation.value?.path &&
         installation.contentHash !== baseInstallation.value?.contentHash,
     ),

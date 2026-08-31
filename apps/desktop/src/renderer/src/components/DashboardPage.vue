@@ -95,7 +95,7 @@ onMounted(() => void refreshInstructions())
           :is="stat.action ? 'button' : 'div'"
           :type="stat.action ? 'button' : undefined"
           :class="[
-            'flex w-full flex-col gap-2 rounded-lg p-4 text-left outline-none',
+            'flex h-full w-full flex-col gap-2 rounded-lg p-4 text-left outline-none',
             stat.action && 'cursor-pointer',
           ]"
           v-on="stat.action === 'drift'
@@ -104,7 +104,7 @@ onMounted(() => void refreshInstructions())
               ? instructionCardListeners
               : {}"
         >
-          <span class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <span class="grid min-h-9 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
             <span
               :class="[
                 'flex size-9 shrink-0 items-center justify-center rounded-full',
@@ -113,15 +113,11 @@ onMounted(() => void refreshInstructions())
             >
               <component :is="stat.icon" class="size-4" />
             </span>
-            <!--
-              min-w-20 让标题在放不下时整体换行到第二行，而不是被压缩到 min-content。
-              中文没有空格断点，min-content 等于单字宽，压缩的结果就是逐字竖排。
-            -->
-            <span class="min-w-20 flex-1 text-sm font-semibold leading-tight">{{ stat.label }}</span>
+            <span class="min-w-0 break-words text-sm font-semibold leading-tight">{{ stat.label }}</span>
             <ChevronRight
               v-if="stat.action"
               :class="[
-                'ml-auto size-4 shrink-0 text-muted-foreground transition-colors',
+                'size-4 shrink-0 text-muted-foreground transition-colors',
                 stat.action === 'drift'
                   ? 'group-hover:text-amber-600 group-focus-within:text-amber-600 dark:group-hover:text-amber-400 dark:group-focus-within:text-amber-400'
                   : 'group-hover:text-rose-600 group-focus-within:text-rose-600 dark:group-hover:text-rose-400 dark:group-focus-within:text-rose-400',
