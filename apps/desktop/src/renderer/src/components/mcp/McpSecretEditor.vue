@@ -56,53 +56,57 @@ async function save(secretName: string): Promise<void> {
     </div>
     <div class="grid gap-2">
       <div
-        v-for="secretName in props.secretNames"
+        v-for="(secretName, index) in props.secretNames"
         :key="secretName"
-        class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+        class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2"
       >
-        <div class="relative min-w-0">
-          <span
-            class="pointer-events-none absolute left-3 top-1/2 z-10 max-w-36 -translate-y-1/2 truncate font-mono text-xs text-muted-foreground"
+        <div class="min-w-0">
+          <label
+            :for="`mcp-secret-${props.installation.id}-${index}`"
+            class="mb-1.5 block truncate font-mono text-xs text-muted-foreground"
           >
             {{ secretName }}
-          </span>
-          <Input
-            v-model="values[secretName]"
-            :type="visibleSecrets[secretName] ? 'text' : 'password'"
-            autocomplete="new-password"
-            :clearable="false"
-            :disabled="props.installation.source.readOnly || props.busy"
-            class="pl-40 pr-10 font-mono"
-            :placeholder="t('mcp.secrets.placeholder')"
-            @keydown.enter="save(secretName)"
-          />
-          <button
-            v-if="values[secretName]"
-            type="button"
-            class="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="props.installation.source.readOnly || props.busy"
-            :title="
-              visibleSecrets[secretName]
-                ? t('mcp.secrets.hide', { name: secretName })
-                : t('mcp.secrets.show', { name: secretName })
-            "
-            :aria-label="
-              visibleSecrets[secretName]
-                ? t('mcp.secrets.hide', { name: secretName })
-                : t('mcp.secrets.show', { name: secretName })
-            "
-            :aria-pressed="visibleSecrets[secretName] === true"
-            @click="toggleVisibility(secretName)"
-          >
-            <EyeOff
-              v-if="visibleSecrets[secretName]"
-              class="size-4"
+          </label>
+          <div class="relative">
+            <Input
+              :id="`mcp-secret-${props.installation.id}-${index}`"
+              v-model="values[secretName]"
+              :type="visibleSecrets[secretName] ? 'text' : 'password'"
+              autocomplete="new-password"
+              :clearable="false"
+              :disabled="props.installation.source.readOnly || props.busy"
+              class="pr-10 font-mono"
+              :placeholder="t('mcp.secrets.placeholder')"
+              @keydown.enter="save(secretName)"
             />
-            <Eye
-              v-else
-              class="size-4"
-            />
-          </button>
+            <button
+              v-if="values[secretName]"
+              type="button"
+              class="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="props.installation.source.readOnly || props.busy"
+              :title="
+                visibleSecrets[secretName]
+                  ? t('mcp.secrets.hide', { name: secretName })
+                  : t('mcp.secrets.show', { name: secretName })
+              "
+              :aria-label="
+                visibleSecrets[secretName]
+                  ? t('mcp.secrets.hide', { name: secretName })
+                  : t('mcp.secrets.show', { name: secretName })
+              "
+              :aria-pressed="visibleSecrets[secretName] === true"
+              @click="toggleVisibility(secretName)"
+            >
+              <EyeOff
+                v-if="visibleSecrets[secretName]"
+                class="size-4"
+              />
+              <Eye
+                v-else
+                class="size-4"
+              />
+            </button>
+          </div>
         </div>
         <Button
           variant="outline"
