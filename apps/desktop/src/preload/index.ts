@@ -38,6 +38,7 @@ import type {
   LinkOpenMode,
   McpMarketValidationResult,
   McpRemovePlanRequest,
+  McpSetSecretRequest,
   McpSoCard,
   McpSoDetail,
   McpTogglePlanRequest,
@@ -240,6 +241,8 @@ const api = {
     invoke('mcp:plan-toggle', request),
   applyMcpPlan: (planId: string): Promise<McpOperationRequestResult> =>
     invoke('mcp:apply-plan', planId),
+  setMcpSecret: (request: McpSetSecretRequest): Promise<McpOperationRequestResult> =>
+    invoke('mcp:set-secret', request),
   restoreMcpOperation: (
     operationId: string,
   ): Promise<{ path: string; ok: boolean; error?: string }[]> =>
@@ -370,6 +373,7 @@ const api = {
     invoke('theme:set', mode),
   setWindowChromeTheme: (colors: { background: string; foreground: string }): Promise<void> =>
     invoke('window:set-theme', colors),
+  setWindowVibrancy: (enabled: boolean): Promise<void> => invoke('window:set-vibrancy', enabled),
   getAppInfo: (): Promise<AppInfo> => invoke('app:info'),
   checkUpdate: (): Promise<UpdateCheckResult> => invoke('app:check-update'),
   downloadUpdate: (latest: string): Promise<UpdateDownloadResult> =>

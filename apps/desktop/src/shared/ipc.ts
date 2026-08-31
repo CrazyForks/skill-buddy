@@ -477,6 +477,13 @@ export interface McpTogglePlanRequest extends McpRemovePlanRequest {
   enabled: boolean
 }
 
+export interface McpSetSecretRequest {
+  projectRoots: string[]
+  installationId: string
+  secretName: string
+  secretValue: string
+}
+
 /** 外部链接的打开方式：系统默认浏览器，或应用内浏览器。 */
 export type LinkOpenMode = 'external' | 'in-app'
 
