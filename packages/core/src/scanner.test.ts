@@ -280,6 +280,59 @@ describe('supplemental skill roots', () => {
     )
   })
 
+  it('does not fall back to legacy user settings when canonical OMP YAML exists', async () => {
+    const home = await tempHome()
+    const projectRoot = join(home, 'project')
+    const agentDir = join(home, '.omp', 'agent')
+    await fs.mkdir(agentDir, { recursive: true })
+    await fs.writeFile(join(agentDir, 'config.yml'), 'theme: dark\n')
+    await fs.writeFile(
+      join(agentDir, 'settings.json'),
+      JSON.stringify({ extensions: ['./legacy-extension'] }),
+    )
+
+    const roots = await discoverOmpSupplementalRoots(home, [projectRoot], {})
+
+    expect(
+      roots.some(
+        (root) => root.path === join(projectRoot, 'legacy-extension', 'skills'),
+      ),
+    ).toBe(false)
+  })
+
+  it('allows project legacy settings to override user OMP extensions', async () => {
+    const home = await tempHome()
+    const projectRoot = join(home, 'project')
+    await Promise.all([
+      fs.mkdir(join(projectRoot, '.omp'), { recursive: true }),
+      fs.mkdir(join(home, '.omp', 'agent'), { recursive: true }),
+    ])
+    await fs.writeFile(join(projectRoot, '.omp', 'config.yml'), 'theme: dark\n')
+    await fs.writeFile(
+      join(projectRoot, '.omp', 'settings.json'),
+      JSON.stringify({ extensions: ['./project-extension'] }),
+    )
+    await fs.writeFile(
+      join(home, '.omp', 'agent', 'config.yml'),
+      'extensions:\n  - ./user-extension\n',
+    )
+
+    const roots = await discoverOmpSupplementalRoots(home, [projectRoot], {})
+
+    expect(roots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: join(projectRoot, 'project-extension', 'skills'),
+          scope: 'project',
+          projectRoot,
+        }),
+      ]),
+    )
+    expect(
+      roots.some((root) => root.path === join(projectRoot, 'user-extension', 'skills')),
+    ).toBe(false)
+  })
+
   it('does not apply Claude enabledPlugins settings to the OMP plugin registry', async () => {
     const home = await tempHome()
     const pluginRoot = join(home, 'plugins', 'omp-marketplace')
@@ -306,6 +359,81 @@ describe('supplemental skill roots', () => {
         expect.objectContaining({ path: join(pluginRoot, 'skills'), origin: 'plugin' }),
       ]),
     )
+  })
+
+  it('lets the OMP registry replace Claude plugins with the same id', async () => {
+    const home = await tempHome()
+    const claudePlugin = join(home, 'plugins', 'claude-copy')
+    const ompPlugin = join(home, 'plugins', 'omp-copy')
+    const disabledClaudePlugin = join(home, 'plugins', 'disabled-claude-copy')
+    const claudeRegistry = join(home, '.claude', 'plugins', 'installed_plugins.json')
+    const ompRegistry = join(home, '.omp', 'plugins', 'installed_plugins.json')
+    await Promise.all([
+      fs.mkdir(dirname(claudeRegistry), { recursive: true }),
+      fs.mkdir(dirname(ompRegistry), { recursive: true }),
+    ])
+    await fs.writeFile(
+      claudeRegistry,
+      JSON.stringify({
+        plugins: {
+          'same@market': [{ installPath: claudePlugin }],
+          'disabled@market': [{ installPath: disabledClaudePlugin }],
+        },
+      }),
+    )
+    await fs.writeFile(
+      ompRegistry,
+      JSON.stringify({
+        plugins: {
+          'same@market': [{ installPath: ompPlugin }],
+          'disabled@market': [{ installPath: join(home, 'plugins', 'disabled-omp'), enabled: false }],
+        },
+      }),
+    )
+
+    const roots = await discoverOmpSupplementalRoots(home, [], {})
+
+    expect(roots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: join(ompPlugin, 'skills'), origin: 'plugin' }),
+      ]),
+    )
+    expect(roots.some((root) => root.path === join(claudePlugin, 'skills'))).toBe(false)
+    expect(roots.some((root) => root.path === join(disabledClaudePlugin, 'skills'))).toBe(false)
+  })
+
+  it('lets project OMP registries shadow user plugins with the same id', async () => {
+    const home = await tempHome()
+    const projectRoot = join(home, 'project')
+    const userPlugin = join(home, 'plugins', 'user-copy')
+    const projectPlugin = join(home, 'plugins', 'project-copy')
+    const userRegistry = join(home, '.omp', 'plugins', 'installed_plugins.json')
+    const projectRegistry = join(projectRoot, '.omp', 'plugins', 'installed_plugins.json')
+    await Promise.all([
+      fs.mkdir(dirname(userRegistry), { recursive: true }),
+      fs.mkdir(dirname(projectRegistry), { recursive: true }),
+    ])
+    await fs.writeFile(
+      userRegistry,
+      JSON.stringify({ plugins: { 'same@market': [{ installPath: userPlugin }] } }),
+    )
+    await fs.writeFile(
+      projectRegistry,
+      JSON.stringify({ plugins: { 'same@market': [{ installPath: projectPlugin }] } }),
+    )
+
+    const roots = await discoverOmpSupplementalRoots(home, [projectRoot], {})
+
+    expect(roots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: join(projectPlugin, 'skills'),
+          scope: 'project',
+          projectRoot,
+        }),
+      ]),
+    )
+    expect(roots.some((root) => root.path === join(userPlugin, 'skills'))).toBe(false)
   })
 
   it('keeps Claude enabledPlugins settings scoped to their project', async () => {
@@ -375,13 +503,100 @@ describe('supplemental skill roots', () => {
     )
     await fs.writeFile(join(pluginRoot, 'package.json'), JSON.stringify({ omp: {} }))
 
-    const roots = await discoverOmpSupplementalRoots(home, [], { XDG_DATA_HOME: xdgDataHome })
+    const roots = await discoverOmpSupplementalRoots(
+      home,
+      [],
+      { XDG_DATA_HOME: xdgDataHome },
+      'linux',
+    )
 
     expect(roots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: join(pluginRoot, 'skills'), origin: 'plugin' }),
       ]),
     )
+  })
+
+  it('keeps OMP plugins in the config root until XDG is initialized', async () => {
+    const home = await tempHome()
+    const xdgDataHome = join(home, 'xdg-data')
+    const pluginsRoot = join(home, '.omp', 'plugins')
+    const pluginRoot = join(pluginsRoot, 'node_modules', 'native-plugin')
+    await fs.mkdir(pluginRoot, { recursive: true })
+    await fs.writeFile(
+      join(pluginsRoot, 'package.json'),
+      JSON.stringify({ dependencies: { 'native-plugin': '1.0.0' } }),
+    )
+    await fs.writeFile(join(pluginRoot, 'package.json'), JSON.stringify({ omp: {} }))
+
+    const roots = await discoverOmpSupplementalRoots(
+      home,
+      [],
+      { XDG_DATA_HOME: xdgDataHome },
+      'linux',
+    )
+
+    expect(roots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: join(pluginRoot, 'skills'), origin: 'plugin' }),
+      ]),
+    )
+  })
+
+  it('uses the profile-specific XDG root only after that OMP profile is initialized', async () => {
+    const home = await tempHome()
+    const xdgDataHome = join(home, 'xdg-data')
+    const configPluginsRoot = join(home, '.omp', 'profiles', 'work', 'plugins')
+    const configPlugin = join(configPluginsRoot, 'node_modules', 'config-plugin')
+    const xdgProfileRoot = join(xdgDataHome, 'omp', 'profiles', 'work')
+    const xdgPluginsRoot = join(xdgProfileRoot, 'plugins')
+    const xdgPlugin = join(xdgPluginsRoot, 'node_modules', 'xdg-plugin')
+    await Promise.all([
+      fs.mkdir(configPlugin, { recursive: true }),
+      fs.mkdir(xdgPlugin, { recursive: true }),
+    ])
+    await fs.writeFile(
+      join(configPluginsRoot, 'package.json'),
+      JSON.stringify({ dependencies: { 'config-plugin': '1.0.0' } }),
+    )
+    await fs.writeFile(join(configPlugin, 'package.json'), JSON.stringify({ omp: {} }))
+    await fs.writeFile(
+      join(xdgPluginsRoot, 'package.json'),
+      JSON.stringify({ dependencies: { 'xdg-plugin': '1.0.0' } }),
+    )
+    await fs.writeFile(join(xdgPlugin, 'package.json'), JSON.stringify({ omp: {} }))
+
+    await fs.rm(xdgProfileRoot, { recursive: true, force: true })
+    const beforeInitialization = await discoverOmpSupplementalRoots(
+      home,
+      [],
+      { OMP_PROFILE: 'work', XDG_DATA_HOME: xdgDataHome },
+      'linux',
+    )
+    expect(beforeInitialization).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: join(configPlugin, 'skills'), origin: 'plugin' }),
+      ]),
+    )
+
+    await fs.mkdir(xdgPlugin, { recursive: true })
+    await fs.writeFile(
+      join(xdgPluginsRoot, 'package.json'),
+      JSON.stringify({ dependencies: { 'xdg-plugin': '1.0.0' } }),
+    )
+    await fs.writeFile(join(xdgPlugin, 'package.json'), JSON.stringify({ omp: {} }))
+    const afterInitialization = await discoverOmpSupplementalRoots(
+      home,
+      [],
+      { OMP_PROFILE: 'work', XDG_DATA_HOME: xdgDataHome },
+      'linux',
+    )
+    expect(afterInitialization).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: join(xdgPlugin, 'skills'), origin: 'plugin' }),
+      ]),
+    )
+    expect(afterInitialization.some((root) => root.path === join(configPlugin, 'skills'))).toBe(false)
   })
 
   it('only discovers enabled OMP plugin packages', async () => {

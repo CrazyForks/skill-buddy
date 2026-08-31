@@ -28,6 +28,13 @@ interface EnabledPluginOverrides {
   projects: Map<string, Map<string, boolean>>
 }
 
+type PluginRootsById = Map<string, SkillRoot[]>
+
+interface ExtensionConfigResult {
+  exists: boolean
+  paths: string[] | null
+}
+
 function activeProfile(env: OmpEnvironment): string | undefined {
   const value = (env.OMP_PROFILE !== undefined ? env.OMP_PROFILE : env.PI_PROFILE)?.trim()
   return value && value !== 'default' && /^[a-z0-9][a-z0-9._-]{0,63}$/.test(value)
@@ -106,29 +113,58 @@ async function enabledPluginOverrides(
   return { user, projects }
 }
 
-function ompPluginsRoot(homeDir: string, env: OmpEnvironment): string {
-  return env.XDG_DATA_HOME && isAbsolute(env.XDG_DATA_HOME)
-    ? join(env.XDG_DATA_HOME, 'omp', 'plugins')
-    : join(ompConfigRoot(homeDir, env), 'plugins')
+async function pathExists(path: string): Promise<boolean> {
+  return fs.access(path).then(
+    () => true,
+    () => false,
+  )
 }
 
-async function pluginRootsFromRegistry(
+async function ompPluginsRoot(
+  homeDir: string,
+  env: OmpEnvironment,
+  platform: NodeJS.Platform,
+): Promise<string> {
+  const configRoot = ompConfigRoot(homeDir, env)
+  const agentDir = resolveOmpAgentDir(homeDir, env)
+  const defaultAgentDir = join(configRoot, 'agent')
+  if (
+    (platform !== 'linux' && platform !== 'darwin')
+    || agentDir !== defaultAgentDir
+    || !env.XDG_DATA_HOME
+    || !isAbsolute(env.XDG_DATA_HOME)
+  ) {
+    return join(configRoot, 'plugins')
+  }
+
+  const profile = activeProfile(env)
+  const xdgRoot = profile
+    ? join(env.XDG_DATA_HOME, 'omp', 'profiles', profile)
+    : join(env.XDG_DATA_HOME, 'omp')
+  return join(await pathExists(xdgRoot) ? xdgRoot : configRoot, 'plugins')
+}
+
+async function pluginRootsByIdFromRegistry(
   agent: SkillRoot['agent'],
   registryPath: string,
   overrides: EnabledPluginOverrides | null,
   defaultProjectRoot?: string,
   activeProjectRoots: string[] = [],
-): Promise<SkillRoot[]> {
+  preserveEmptyPluginIds = false,
+): Promise<PluginRootsById> {
   const registry = await readJson<PluginRegistry>(registryPath)
-  const roots: SkillRoot[] = []
+  const roots = new Map<string, SkillRoot[]>()
   for (const [pluginId, records] of Object.entries(registry?.plugins ?? {})) {
     if (!Array.isArray(records)) continue
+    const pluginRoots: SkillRoot[] = []
     for (const record of records) {
       if (record.enabled === false || typeof record.installPath !== 'string') continue
       const isProject = record.scope === 'local' || record.scope === 'project' || !!defaultProjectRoot
       if (!isProject) {
         if (overrides?.user.get(pluginId) === false) continue
-        roots.push(supplementalRoot(agent, join(record.installPath, 'skills'), 'user', undefined, 'plugin'))
+        pluginRoots.push(
+          supplementalRoot(agent, join(record.installPath, 'skills'), 'user', undefined, 'plugin'),
+        )
         continue
       }
       const recordedProjectRoot = record.projectPath ?? defaultProjectRoot
@@ -141,7 +177,7 @@ async function pluginRootsFromRegistry(
           )
       for (const projectRoot of targetProjects) {
         if (overrides?.projects.get(projectRoot)?.get(pluginId) === false) continue
-        roots.push(
+        pluginRoots.push(
           supplementalRoot(
             agent,
             join(record.installPath, 'skills'),
@@ -152,8 +188,15 @@ async function pluginRootsFromRegistry(
         )
       }
     }
+    if (pluginRoots.length > 0 || (preserveEmptyPluginIds && records.length > 0)) {
+      roots.set(pluginId, pluginRoots)
+    }
   }
   return roots
+}
+
+function mergePluginRoots(target: PluginRootsById, source: PluginRootsById): void {
+  for (const [pluginId, roots] of source) target.set(pluginId, roots)
 }
 
 async function installedOmpExtensionRoots(
@@ -202,18 +245,58 @@ function extensionPaths(value: unknown, projectRoot: string, homeDir: string): s
     })
 }
 
-async function readExtensionPaths(
+async function readExtensionConfig(
   path: string,
   projectRoot: string,
   homeDir: string,
-): Promise<string[] | null> {
+): Promise<ExtensionConfigResult> {
+  let content: string
   try {
-    const content = await fs.readFile(path, 'utf8')
-    const parsed = path.endsWith('.json') ? JSON.parse(content) : parseYaml(content)
-    return extensionPaths(parsed, projectRoot, homeDir)
+    content = await fs.readFile(path, 'utf8')
   } catch {
-    return null
+    return { exists: false, paths: null }
   }
+  try {
+    const parsed = path.endsWith('.json') ? JSON.parse(content) : parseYaml(content)
+    return { exists: true, paths: extensionPaths(parsed, projectRoot, homeDir) }
+  } catch {
+    return { exists: true, paths: null }
+  }
+}
+
+async function configuredExtensionsForProject(
+  projectRoot: string,
+  homeDir: string,
+  agentDir: string,
+): Promise<{ paths: string[]; scope: InstallScope } | null> {
+  if (projectRoot !== agentDir) {
+    const projectYaml = await readExtensionConfig(
+      join(projectRoot, '.omp', 'config.yml'),
+      projectRoot,
+      homeDir,
+    )
+    if (projectYaml.paths !== null) return { paths: projectYaml.paths, scope: 'project' }
+
+    const projectSettings = await readExtensionConfig(
+      join(projectRoot, '.omp', 'settings.json'),
+      projectRoot,
+      homeDir,
+    )
+    if (projectSettings.paths !== null) return { paths: projectSettings.paths, scope: 'project' }
+  }
+
+  for (const fileName of ['config.yml', 'config.yaml']) {
+    const userYaml = await readExtensionConfig(join(agentDir, fileName), projectRoot, homeDir)
+    if (!userYaml.exists) continue
+    return userYaml.paths === null ? null : { paths: userYaml.paths, scope: 'user' }
+  }
+
+  const userSettings = await readExtensionConfig(
+    join(agentDir, 'settings.json'),
+    projectRoot,
+    homeDir,
+  )
+  return userSettings.paths === null ? null : { paths: userSettings.paths, scope: 'user' }
 }
 
 async function configuredExtensionRoots(
@@ -225,33 +308,19 @@ async function configuredExtensionRoots(
   const contexts = projectRoots.length > 0 ? projectRoots : [agentDir]
   const roots: SkillRoot[] = []
   for (const projectRoot of contexts) {
-    const sources = [
-      ...(projectRoot === agentDir
-        ? []
-        : [
-            { path: join(projectRoot, '.omp', 'config.yml'), scope: 'project' as const },
-            { path: join(projectRoot, '.omp', 'settings.json'), scope: 'project' as const },
-          ]),
-      { path: join(agentDir, 'config.yml'), scope: 'user' as const },
-      { path: join(agentDir, 'config.yaml'), scope: 'user' as const },
-      { path: join(agentDir, 'settings.json'), scope: 'user' as const },
-    ]
-    for (const source of sources) {
-      const paths = await readExtensionPaths(source.path, projectRoot, homeDir)
-      if (paths === null) continue
-      roots.push(
-        ...paths.map((path) =>
-          supplementalRoot(
-            agent,
-            join(path, 'skills'),
-            source.scope,
-            source.scope === 'project' ? projectRoot : undefined,
-            'plugin',
-          ),
+    const configured = await configuredExtensionsForProject(projectRoot, homeDir, agentDir)
+    if (!configured) continue
+    roots.push(
+      ...configured.paths.map((path) =>
+        supplementalRoot(
+          agent,
+          join(path, 'skills'),
+          configured.scope,
+          configured.scope === 'project' ? projectRoot : undefined,
+          'plugin',
         ),
-      )
-      break
-    }
+      ),
+    )
   }
   return roots
 }
@@ -262,6 +331,7 @@ export class OmpAdapter extends PlatformAdapter {
     def: PlatformDef,
     private readonly ompHomeDir: string = homedir(),
     private readonly env: OmpEnvironment = process.env,
+    private readonly platform: NodeJS.Platform = process.platform,
   ) {
     super(def, ompHomeDir)
   }
@@ -280,7 +350,7 @@ export class OmpAdapter extends PlatformAdapter {
 
   async supplementalRoots(projectRoots: string[] = []): Promise<SkillRoot[]> {
     const agentDir = resolveOmpAgentDir(this.ompHomeDir, this.env)
-    const pluginsRoot = ompPluginsRoot(this.ompHomeDir, this.env)
+    const pluginsRoot = await ompPluginsRoot(this.ompHomeDir, this.env, this.platform)
     const roots: SkillRoot[] = [
       join(this.ompHomeDir, '.agent', 'skills'),
       join(this.ompHomeDir, '.agents', 'skills'),
@@ -301,33 +371,42 @@ export class OmpAdapter extends PlatformAdapter {
     }
 
     const overrides = await enabledPluginOverrides(this.ompHomeDir, projectRoots)
-    roots.push(
-      ...(await pluginRootsFromRegistry(
-        this.agent,
-        join(this.ompHomeDir, '.claude', 'plugins', 'installed_plugins.json'),
-        overrides,
-        undefined,
-        projectRoots,
-      )),
-      ...(await pluginRootsFromRegistry(
+    const pluginRoots = await pluginRootsByIdFromRegistry(
+      this.agent,
+      join(this.ompHomeDir, '.claude', 'plugins', 'installed_plugins.json'),
+      overrides,
+      undefined,
+      projectRoots,
+    )
+    mergePluginRoots(
+      pluginRoots,
+      await pluginRootsByIdFromRegistry(
         this.agent,
         join(pluginsRoot, 'installed_plugins.json'),
         null,
         undefined,
         projectRoots,
-      )),
+        true,
+      ),
     )
+    const projectPluginRoots = new Map<string, SkillRoot[]>()
     for (const projectRoot of projectRoots) {
-      roots.push(
-        ...(await pluginRootsFromRegistry(
-          this.agent,
-          join(projectRoot, '.omp', 'plugins', 'installed_plugins.json'),
-          null,
-          projectRoot,
-          projectRoots,
-        )),
+      const discovered = await pluginRootsByIdFromRegistry(
+        this.agent,
+        join(projectRoot, '.omp', 'plugins', 'installed_plugins.json'),
+        null,
+        projectRoot,
+        projectRoots,
       )
+      for (const [pluginId, discoveredRoots] of discovered) {
+        projectPluginRoots.set(pluginId, [
+          ...(projectPluginRoots.get(pluginId) ?? []),
+          ...discoveredRoots,
+        ])
+      }
     }
+    mergePluginRoots(pluginRoots, projectPluginRoots)
+    roots.push(...[...pluginRoots.values()].flatMap((items) => items))
     roots.push(
       ...(await configuredExtensionRoots(this.agent, this.ompHomeDir, agentDir, projectRoots)),
       ...(await installedOmpExtensionRoots(this.agent, pluginsRoot, 'user')),
@@ -350,7 +429,8 @@ export function discoverOmpSupplementalRoots(
   homeDir: string = homedir(),
   projectRoots: string[] = [],
   env: OmpEnvironment = process.env,
+  platform: NodeJS.Platform = process.platform,
 ): Promise<SkillRoot[]> {
   const def = BUILTIN_PLATFORMS.find((platform) => platform.id === 'omp')!
-  return new OmpAdapter(def, homeDir, env).supplementalRoots(projectRoots)
+  return new OmpAdapter(def, homeDir, env, platform).supplementalRoots(projectRoots)
 }
