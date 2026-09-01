@@ -156,128 +156,131 @@ function updateTargetDirectory(value: string | undefined): void {
   <section class="flex min-w-0 flex-1 flex-col">
     <div
       v-if="props.document"
-      class="flex h-14 shrink-0 items-center gap-3 border-b px-4"
+      class="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2"
     >
-      <FileText class="size-4 shrink-0 text-muted-foreground" />
-      <div class="min-w-0 flex-1">
+      <div class="min-w-40 flex-1">
         <div class="truncate text-sm font-medium">
           {{ props.document.fileName }}
         </div>
-        <div class="text-xs text-muted-foreground">
+        <div class="truncate text-xs text-muted-foreground">
           {{ fileMetadata }}
         </div>
       </div>
-      <Tooltip
-        v-if="bindingSummary"
-        side="bottom"
-        align="end"
-        content-class="w-52"
-      >
-        <Badge
-          variant="secondary"
-          class="flex max-w-40 items-center gap-1 whitespace-nowrap text-xs"
+      <div class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+        <Tooltip
+          v-if="bindingSummary"
+          side="bottom"
+          align="end"
+          content-class="w-52"
         >
-          <PlatformIcon
-            v-if="bindingTools[0]"
-            :id="bindingTools[0].iconId"
-            :size="13"
-          />
-          <span class="truncate">{{ bindingSummary }}</span>
+          <Badge
+            variant="secondary"
+            class="flex max-w-40 items-center gap-1 whitespace-nowrap text-xs"
+          >
+            <PlatformIcon
+              v-if="bindingTools[0]"
+              :id="bindingTools[0].iconId"
+              :size="13"
+            />
+            <span class="truncate">{{ bindingSummary }}</span>
+          </Badge>
+          <template #content>
+            <div class="font-medium">
+              {{ $t('instructions.supportedTools') }}
+            </div>
+            <ul class="mt-1 space-y-1 text-muted-foreground">
+              <li
+                v-for="tool in bindingTools"
+                :key="tool.key"
+                class="flex items-center gap-2"
+              >
+                <PlatformIcon
+                  :id="tool.iconId"
+                  :size="14"
+                />
+                <span class="truncate">{{ tool.label }}</span>
+              </li>
+            </ul>
+          </template>
+        </Tooltip>
+        <Badge
+          v-if="bridged"
+          variant="success"
+        >
+          {{ $t('instructions.bridged') }}
         </Badge>
-        <template #content>
-          <div class="font-medium">
-            {{ $t('instructions.supportedTools') }}
-          </div>
-          <ul class="mt-1 space-y-1 text-muted-foreground">
-            <li
-              v-for="tool in bindingTools"
-              :key="tool.key"
-              class="flex items-center gap-2"
-            >
-              <PlatformIcon
-                :id="tool.iconId"
-                :size="14"
-              />
-              <span class="truncate">{{ tool.label }}</span>
-            </li>
-          </ul>
-        </template>
-      </Tooltip>
-      <Badge
-        v-if="bridged"
-        variant="success"
-      >
-        {{ $t('instructions.bridged') }}
-      </Badge>
-      <Badge
-        v-if="selectedRole && selectedRole !== 'primary'"
-        variant="outline"
-      >
-        {{ $t(`instructions.role.${selectedRole}`) }}
-      </Badge>
-      <Badge
-        v-if="props.document.linked"
-        variant="secondary"
-        :title="props.document.linkTarget"
-      >
-        <Link2 class="size-3" />{{ $t('instructions.linked') }}
-      </Badge>
-      <Badge
-        v-if="props.document.readOnly"
-        variant="outline"
-      >
-        {{ $t('instructions.readOnly') }}
-      </Badge>
-      <Badge
-        v-if="props.contentTruncated"
-        variant="outline"
-      >
-        {{ $t('instructions.truncated') }}
-      </Badge>
-      <Badge
-        v-if="props.document.encodingInvalid"
-        variant="outline"
-      >
-        {{ $t('instructions.invalidEncoding') }}
-      </Badge>
-      <Button
-        v-if="canBridge"
-        variant="ghost"
-        size="icon"
-        class="size-8"
-        :title="$t('instructions.bridge.action')"
-        :aria-label="$t('instructions.bridge.action')"
-        @click="emit('bridge')"
-      >
-        <Link2 class="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        class="size-8"
-        :disabled="!canEdit"
-        :title="$t('instructions.editor.editAction')"
-        :aria-label="$t('instructions.editor.editAction')"
-        @click="emit('edit')"
-      >
-        <Pencil class="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        class="size-8 text-destructive hover:text-destructive"
-        :disabled="!canDelete"
-        :title="$t('instructions.editor.deleteAction')"
-        :aria-label="$t('instructions.editor.deleteAction')"
-        @click="emit('delete')"
-      >
-        <Trash2 class="size-4" />
-      </Button>
+        <Badge
+          v-if="selectedRole && selectedRole !== 'primary'"
+          variant="outline"
+        >
+          {{ $t(`instructions.role.${selectedRole}`) }}
+        </Badge>
+        <Badge
+          v-if="props.document.linked"
+          variant="secondary"
+          :title="props.document.linkTarget"
+        >
+          <Link2 class="size-3" />{{ $t('instructions.linked') }}
+        </Badge>
+        <Badge
+          v-if="props.document.readOnly"
+          variant="outline"
+        >
+          {{ $t('instructions.readOnly') }}
+        </Badge>
+        <Badge
+          v-if="props.contentTruncated"
+          variant="outline"
+        >
+          {{ $t('instructions.truncated') }}
+        </Badge>
+        <Badge
+          v-if="props.document.encodingInvalid"
+          variant="outline"
+        >
+          {{ $t('instructions.invalidEncoding') }}
+        </Badge>
+        <div class="flex shrink-0 items-center gap-1">
+          <Button
+            v-if="canBridge"
+            variant="ghost"
+            size="icon"
+            class="size-8"
+            :title="$t('instructions.bridge.action')"
+            :aria-label="$t('instructions.bridge.action')"
+            @click="emit('bridge')"
+          >
+            <Link2 class="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8"
+            :disabled="!canEdit"
+            :title="$t('instructions.editor.editAction')"
+            :aria-label="$t('instructions.editor.editAction')"
+            @click="emit('edit')"
+          >
+            <Pencil class="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 text-destructive hover:text-destructive"
+            :disabled="!canDelete"
+            :title="$t('instructions.editor.deleteAction')"
+            :aria-label="$t('instructions.editor.deleteAction')"
+            @click="emit('delete')"
+          >
+            <Trash2 class="size-4" />
+          </Button>
+        </div>
+      </div>
     </div>
 
     <div
       v-if="props.projectScope"
-      class="flex shrink-0 items-center gap-2 border-b px-4 py-2"
+      class="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-2 border-b px-4 py-2"
     >
       <div class="flex shrink-0 items-center gap-2">
         <span class="text-xs text-muted-foreground">{{ $t('instructions.analysisTool') }}</span>
@@ -322,7 +325,7 @@ function updateTargetDirectory(value: string | undefined): void {
       >
         {{ $t('instructions.instructionsOnly') }}
       </Badge>
-      <div class="flex min-w-0 flex-1 items-center gap-2">
+      <div class="flex min-w-0 basis-64 flex-1 items-center gap-2">
         <span class="shrink-0 text-xs text-muted-foreground">{{ $t('instructions.targetDirectory') }}</span>
         <VirtualSelect
           :model-value="props.targetDirectory"
@@ -338,7 +341,7 @@ function updateTargetDirectory(value: string | undefined): void {
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             :title="$t('instructions.effectiveChain')"
             :aria-label="$t('instructions.effectiveChain')"
           >
