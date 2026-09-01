@@ -2,6 +2,42 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.11 - 2026-09-01
+
+### Added
+
+- Added Pi and OMP platform support, including platform-specific discovery and installation targets.
+- Added local Skill imports from one or more `SKILL.md` files, in addition to importing complete Skill folders.
+
+### Improved
+
+- Improved AI instruction detail layout for narrow windows with wrapping status badges and tool controls.
+- Improved local Skill import feedback and drag-and-drop handling for files and folders.
+
+### Fixed
+
+- Fixed standalone `SKILL.md` imports accidentally including sibling files as Skill resources.
+- Removed the redundant file icon from the AI instruction detail header.
+- Aligned OMP discovery with profile and project configuration behavior.
+
+---
+
+### 新增
+
+- 新增 Pi 和 OMP 平台支持，包括平台专属的发现逻辑和安装目标。
+- 新增从一个或多个 `SKILL.md` 文件导入本地 Skill 的能力，同时保留完整 Skill 文件夹导入。
+
+### 优化
+
+- 优化 AI 指令详情页在窄窗口下的布局，状态徽标和工具控件支持自动换行。
+- 优化本地 Skill 导入提示，以及文件和文件夹拖拽处理。
+
+### 修复
+
+- 修复单独导入 `SKILL.md` 时误将同目录其他文件作为 Skill 资源的问题。
+- 移除 AI 指令详情标题栏中多余的文件图标。
+- 修正 OMP 在不同配置文件、Profile 和项目范围下的发现行为。
+
 ## 0.1.10 - 2026-08-31
 
 ### Added
