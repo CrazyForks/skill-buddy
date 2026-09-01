@@ -33,6 +33,7 @@ const {
   setGitUrl,
   setTargets,
   pickLocalDir,
+  pickLocalFiles,
   onDrop,
   fetchGit,
   toggleItem,
@@ -74,7 +75,8 @@ const {
               :fetching="fetching"
               @update:tab="setTab"
               @update:git-url="setGitUrl"
-              @pick-local="pickLocalDir"
+              @pick-files="pickLocalFiles"
+              @pick-directory="pickLocalDir"
               @drop="onDrop"
               @fetch-git="fetchGit"
             />

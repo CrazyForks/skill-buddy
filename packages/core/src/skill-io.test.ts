@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { findSkills, readSkillDir } from './skill-io.js'
+import { findSkills, readSkillDir, readSkillFile } from './skill-io.js'
 
 let root: string
 
@@ -61,6 +61,18 @@ describe('readSkillDir', () => {
     )
 
     await expect(readSkillDir(dir, 'broken')).resolves.toBeNull()
+  })
+})
+
+describe('readSkillFile', () => {
+  it('reads only the selected SKILL.md without sibling resources', async () => {
+    const dir = join(root, 'standalone')
+    await writeSkill(dir, 'standalone')
+    await fs.writeFile(join(dir, 'notes.md'), 'not selected', 'utf8')
+
+    const skill = await readSkillFile(join(dir, 'SKILL.md'), 'standalone')
+    expect(skill?.name).toBe('standalone')
+    expect(skill?.resources).toBeUndefined()
   })
 })
 

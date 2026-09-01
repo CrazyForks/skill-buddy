@@ -76,12 +76,14 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     previewDir.value = null
   }
 
-  async function scanDirectory(path: string): Promise<void> {
+  async function scanLocalSource(
+    scan: () => Promise<{ items: FoundSkill[]; warnings: SkillParseWarning[] }>,
+  ): Promise<void> {
     const requestId = ++sourceRequestId
     error.value = null
     fetching.value = true
     try {
-      const result = await window.skillsManager.findSkillsInDir(path)
+      const result = await scan()
       if (requestId !== sourceRequestId || !toValue(options.open)) return
       parseWarnings.value = result.warnings ?? []
       setItems(result.items)
@@ -94,19 +96,39 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     }
   }
 
+  async function scanPaths(paths: string[]): Promise<void> {
+    if (paths.length === 0) return
+    await scanLocalSource(() => window.skillsManager.findSkillsInPaths(paths))
+  }
+
   async function pickLocalDir(): Promise<void> {
     error.value = null
     parseWarnings.value = []
     const requestId = sourceRequestId
     const dir = await window.skillsManager.pickDirectory()
     if (dir && requestId === sourceRequestId && toValue(options.open)) {
-      await scanDirectory(dir)
+      await scanPaths([dir])
+    }
+  }
+
+  async function pickLocalFiles(): Promise<void> {
+    error.value = null
+    parseWarnings.value = []
+    const requestId = sourceRequestId
+    try {
+      const paths = await window.skillsManager.pickSkillFiles()
+      if (requestId === sourceRequestId && toValue(options.open)) await scanPaths(paths)
+    } catch (cause) {
+      if (requestId === sourceRequestId) {
+        error.value = cause instanceof Error ? cause.message : String(cause)
+      }
     }
   }
 
   async function onDrop(event: DragEvent): Promise<void> {
-    const file = event.dataTransfer?.files[0] as (File & { path?: string }) | undefined
-    if (file?.path) await scanDirectory(file.path)
+    const files = [...(event.dataTransfer?.files ?? [])]
+    if (files.length === 0) return
+    await scanLocalSource(() => window.skillsManager.findDroppedSkills(files))
   }
 
   async function fetchGit(): Promise<void> {
@@ -233,6 +255,7 @@ export function useSkillImportWorkflow(options: UseSkillImportWorkflowOptions) {
     setGitUrl,
     setTargets,
     pickLocalDir,
+    pickLocalFiles,
     onDrop,
     fetchGit,
     toggleItem,

@@ -13,9 +13,12 @@ import {
   getAdapter,
   listPlatformStatus,
   listSkillRoots,
+  readSkillFile,
   registerPlatform,
   scanInstalledSkills,
   scanInstalledSkillsWithWarnings,
+  SKILL_FILE_NAME,
+  type FoundSkill,
   type InstalledSkill,
   type Skill,
   type SkillParseWarning,
@@ -31,6 +34,51 @@ import { installTarget, runTargets } from './targets'
 
 const execFileAsync = promisify(execFile)
 let skillStateMutationQueue = Promise.resolve()
+
+interface SkillImportScanResult {
+  items: FoundSkill[]
+  warnings: SkillParseWarning[]
+}
+
+/** 校验本地导入来源，并返回最小必要的读取授权路径。 */
+async function resolveSkillImportGrantPath(path: string): Promise<string> {
+  const entry = await fs.stat(path).catch(() => null)
+  if (entry?.isDirectory()) return resolve(path)
+  if (entry?.isFile() && basename(path) === SKILL_FILE_NAME) return resolve(path)
+  throw new Error(
+    'Only SKILL.md files or Skill folders can be imported / 仅支持导入 SKILL.md 文件或 Skill 文件夹',
+  )
+}
+
+/** 扫描用户明确选择的 Skill 文件或目录，并按真实 Skill 目录去重。 */
+async function scanSkillImportPaths(paths: string[]): Promise<SkillImportScanResult> {
+  const items = new Map<string, FoundSkill>()
+  const warnings: SkillParseWarning[] = []
+  for (const path of paths) {
+    const entry = await fs.stat(path).catch(() => null)
+    if (entry?.isDirectory()) {
+      const found = await findSkills(resolve(path), 5, (warning) => warnings.push(warning))
+      for (const item of found) items.set(resolve(item.dir), item)
+      continue
+    }
+    if (entry?.isFile() && basename(path) === SKILL_FILE_NAME) {
+      const filePath = resolve(path)
+      const skillDir = dirname(filePath)
+      const skill = await readSkillFile(
+        filePath,
+        basename(skillDir),
+        (warning) => warnings.push(warning),
+      )
+      if (skill) items.set(skillDir, { dir: skillDir, skill })
+      continue
+    }
+    await resolveSkillImportGrantPath(path)
+  }
+  return {
+    items: [...items.values()].sort((a, b) => a.skill.name.localeCompare(b.skill.name)),
+    warnings,
+  }
+}
 
 /** 串行执行 Skill 状态写入，避免共享链接在批量启停时被并发分离。 */
 function enqueueSkillStateMutation<T>(mutation: () => Promise<T>): Promise<T> {
@@ -476,6 +524,21 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
     return selected
   })
 
+  ipcMain.handle('dialog:pick-skill-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Skill files', extensions: ['md'] }],
+    })
+    if (result.canceled) return []
+    for (const path of result.filePaths) {
+      if (basename(path) !== SKILL_FILE_NAME) {
+        throw new Error('Only files named SKILL.md can be imported / 仅支持导入名为 SKILL.md 的文件')
+      }
+      pathPolicy.grantSelectedRoot(path)
+    }
+    return result.filePaths
+  })
+
   /* 自定义平台：目录发现与推导都在主进程完成，渲染进程只拿到可直接提交的草稿 */
   ipcMain.handle('platforms:discover', () => discoverPlatformCandidates())
 
@@ -490,7 +553,18 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
 
   ipcMain.handle('skills:find-in-dir', async (_event, root: string) => {
     await pathPolicy.assertReadable(root)
-    return findSkills(root)
+    return scanSkillImportPaths([root])
+  })
+
+  ipcMain.handle('skills:find-in-paths', async (_event, paths: string[]) => {
+    for (const path of paths) await pathPolicy.assertReadable(path)
+    return scanSkillImportPaths(paths)
+  })
+
+  ipcMain.handle('skills:find-dropped', async (_event, paths: string[]) => {
+    const grantPaths = await Promise.all(paths.map((path) => resolveSkillImportGrantPath(path)))
+    for (const path of grantPaths) pathPolicy.grantSelectedRoot(path)
+    return scanSkillImportPaths(paths)
   })
 
   ipcMain.handle('skills:import-git', async (_event, url: string) => {

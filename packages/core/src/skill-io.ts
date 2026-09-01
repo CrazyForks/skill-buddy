@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import matter from 'gray-matter'
 import { SKILLBUDDY_DIR_NAME } from './skill-link.js'
 import type { Skill, SkillParseWarning } from './types.js'
@@ -51,11 +51,12 @@ interface SkillFileRead {
  * frontmatter 损坏时不返回 null，而是给出带 `parseError` 的兜底 Skill：名称取目录名、
  * 描述与正文为空。调用方据此决定是「隐藏」还是「标记后照常展示」。
  */
-async function readSkillFile(
+async function readSkillFileState(
   skillPath: string,
   filePath: string,
   fallbackName?: string,
   onWarning?: ParseWarningHandler,
+  includeResources = true,
 ): Promise<SkillFileRead | null> {
   const raw = await fs.readFile(filePath, 'utf8').catch(() => null)
   if (raw === null) return null
@@ -75,10 +76,27 @@ async function readSkillFile(
       version: typeof data.version === 'string' ? data.version : undefined,
       tags: Array.isArray(data.tags) ? data.tags.filter((t) => typeof t === 'string') : undefined,
       content,
-      resources: await collectResources(skillPath),
+      resources: includeResources ? await collectResources(skillPath) : undefined,
       metadata: data,
     },
   }
+}
+
+/** 只读取一个 SKILL.md 文件，不把同目录中的其他文件作为资源带入。 */
+export async function readSkillFile(
+  filePath: string,
+  fallbackName?: string,
+  onWarning?: ParseWarningHandler,
+): Promise<Skill | null> {
+  const read = await readSkillFileState(
+    dirname(filePath),
+    filePath,
+    fallbackName,
+    onWarning,
+    false,
+  )
+  if (!read || read.parseError) return null
+  return read.skill
 }
 
 /**
@@ -95,7 +113,7 @@ export async function readSkillDir(
 ): Promise<Skill | null> {
   const skillFile = join(skillPath, SKILL_FILE_NAME)
   if (!(await exists(skillFile))) return null
-  const read = await readSkillFile(skillPath, skillFile, fallbackName, onWarning)
+  const read = await readSkillFileState(skillPath, skillFile, fallbackName, onWarning)
   if (!read || read.parseError) return null
   return read.skill
 }
@@ -115,7 +133,7 @@ export async function readSkillDirState(
   const disabledPath = join(skillPath, DISABLED_SKILL_FILE_NAME)
   const enabled = await exists(activePath)
   if (!enabled && !(await exists(disabledPath))) return null
-  const read = await readSkillFile(
+  const read = await readSkillFileState(
     skillPath,
     enabled ? activePath : disabledPath,
     fallbackName,

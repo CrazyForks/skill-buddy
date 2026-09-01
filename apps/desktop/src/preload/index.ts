@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   AggregatedSkill,
   McpOperationPlanView,
@@ -308,11 +308,23 @@ const api = {
   ): Promise<TargetResult[]> => invoke('skills:set-enabled', name, targets, enabled),
   revealInFolder: (path: string): Promise<void> => invoke('skills:reveal', path),
   pickDirectory: (): Promise<string | null> => invoke('dialog:pick-directory'),
+  pickSkillFiles: (): Promise<string[]> => invoke('dialog:pick-skill-files'),
   findSkillsInDir: (root: string): Promise<{
     items: FoundSkill[]
     warnings: SkillParseWarning[]
   }> =>
     invoke('skills:find-in-dir', root),
+  findSkillsInPaths: (paths: string[]): Promise<{
+    items: FoundSkill[]
+    warnings: SkillParseWarning[]
+  }> => invoke('skills:find-in-paths', paths),
+  findDroppedSkills: (files: File[]): Promise<{
+    items: FoundSkill[]
+    warnings: SkillParseWarning[]
+  }> => invoke(
+    'skills:find-dropped',
+    files.map((file) => webUtils.getPathForFile(file)).filter(Boolean),
+  ),
   importFromGit: (url: string): Promise<{
     root: string
     items: FoundSkill[]

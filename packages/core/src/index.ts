@@ -12,6 +12,7 @@ export {
 } from './scanner.js'
 export { aggregateSkills, type AggregatedSkill, type Installation } from './aggregate.js'
 export {
+  readSkillFile,
   readSkillDir,
   readSkillDirState,
   findSkills,
