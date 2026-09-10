@@ -5,7 +5,7 @@
 <h1 align="center">SkillBuddy</h1>
 
 <p align="center">
-  A desktop workspace for managing, installing, and synchronizing Skills and MCP Servers across AI agents.
+  A desktop workspace for managing, installing, and synchronizing Skills, MCP Servers, and AI instruction files across AI agents.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
   <img alt="Electron" src="https://img.shields.io/badge/Electron-Vue%203-47848f" />
 </p>
 
-SkillBuddy brings Skills and MCP configurations scattered across different AI coding tools into one interface. It can inspect local installations, distribute content across platforms, resolve drift, discover resources from public marketplaces, and manage reviewed team assets through Git repositories.
+SkillBuddy brings Skills, MCP configurations, and AI instruction files scattered across different AI coding tools into one interface. It can inspect local installations, distribute content across platforms, resolve drift and rule-file conflicts, compare what each agent actually loads, discover resources from public marketplaces, and manage reviewed team assets through Git repositories.
 
 ## Screenshots
 
@@ -74,14 +74,17 @@ The screenshots below show complete application windows and the main SkillBuddy 
 
 ## Highlights
 
-- **Unified inventory**: automatically discover and aggregate Skills and MCP Servers across agents.
+- **Unified inventory**: automatically discover and aggregate Skills, MCP Servers, and AI instruction files across agents.
 - **Cross-platform installation**: install one Skill into multiple user-level or project-level targets.
 - **Drift detection and synchronization**: compare conflicting copies and synchronize from a selected baseline.
 - **Enable, disable, and uninstall**: manage writable Skills, with trash and undo support for removal.
 - **Skill discovery**: search skills.sh, SkillHub, and GitHub, then inspect content and resources before installation.
 - **MCP discovery and change plans**: find MCP Servers, validate target capabilities, and preview exact writes.
+- **AI instruction management**: discover `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and tool-specific rule files across global and project scopes, then create, edit, or delete them with a reviewed write plan.
+- **Effective instruction chains**: see the ordered files each tool actually loads for a directory, and which entries are shadowed or waiting for extra tool configuration.
+- **Instruction diagnostics and bridging**: detect broken links, content drift, duplicates, and invalid `@path` imports, then add a Claude Code bridge for projects that only maintain `AGENTS.md`.
 - **Presets and bundles**: save reusable Skill sets for batch installation, toggling, import, and export.
-- **Private Git backup**: back up user-level Skills and Presets, then preview restore operations on another device.
+- **Private Git backup**: back up user-level Skills, Presets, and global instruction files, then preview restore operations on another device.
 - **Git team libraries**: manage reviewed Skills, MCP definitions, project instruction templates, role bundles, and policies through protected branches and PRs/MRs.
 - **Project compliance**: declare project requirements in `.skillbuddy/team.yaml` and detect missing, drifted, outdated, blocked, or unresolved resources.
 - **Custom platforms**: add another agent by configuring its detection, user, and project paths.
@@ -97,16 +100,34 @@ SkillBuddy includes built-in Skill directory conventions for:
 | Codex | ✓ | ✓ |
 | Cursor | ✓ | ✓ |
 | OpenCode | ✓ | ✓ |
+| Pi | ✓ | ✓ |
+| OMP Agent | ✓ | ✓ |
 | GitHub Copilot | ✓ | ✓ |
 | Gemini CLI | ✓ | ✓ |
+| Google Antigravity | ✓ | ✓ |
+| Qwen Code | ✓ | ✓ |
 | CodeBuddy | ✓ | ✓ |
 | Trae / Trae CN | ✓ | ✓ |
 | WorkBuddy | ✓ | - |
 | Doubao | ✓ | - |
 | Kimi Code | ✓ | ✓ |
 | ZCode | ✓ | ✓ |
+| WPS Lingxi | ✓ | - |
 
 MCP formats, scopes, and capabilities vary by platform. SkillBuddy displays the detected configuration surfaces and validates every planned change before applying it. Some conventions still need broader real-device feedback; see [Platform conventions](docs/platform-conventions.md).
+
+## AI Instructions
+
+The **AI Instructions** page manages the project rule and context files that AI tools read at session start — the files that otherwise stay scattered across `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `CODEBUDDY.md`, and per-tool rule directories.
+
+- **Two scopes**: global instruction files under your home directory, and instruction files anywhere inside the projects you have registered.
+- **Per-tool conventions**: each tool's entry file, same-directory precedence, local overlays (`AGENTS.local.md`, `CODEBUDDY.local.md`), overrides (`AGENTS.override.md`), rule directories, and fallback files are modelled separately. Covered at launch: Codex, Cursor, Claude Code, DeepSeek Harness, OpenCode, Pi Coding Agent, CodeBuddy Code, Google Antigravity, Gemini CLI, ZCode, Grok Build, and WorkBuddy.
+- **Effective chains**: for a tool and a directory, see the ordered list of files that actually apply — global files first, then project files from the repository root down to that directory — including entries that are fallbacks, shadowed by a higher-precedence file, or waiting for additional tool configuration.
+- **Diagnostics**: broken or out-of-project links, `AGENTS.md` and `CLAUDE.md` content drift, duplicated files, and `@path` imports that do not resolve are reported with a severity, and fixable findings are marked as such.
+- **Cross-tool bridging**: when a project maintains only `AGENTS.md`, SkillBuddy can create the Claude Code bridge that imports it. A `CLAUDE.md` that already carries its own rules is left untouched instead of being overwritten.
+- **Reviewed writes**: creating, editing, deleting, and bridging all go through a plan that lists the affected files and tools, and each applied operation can be undone.
+
+Rule evidence is tracked per tool. A profile that rests only on community evidence or is still unverified is surfaced as a warning instead of a confirmed effective chain; other evidence levels are shown alongside the chain.
 
 ## System Support
 
@@ -154,6 +175,8 @@ SkillBuddy reads the local directories already used by your agents. Installation
 A team can use Git as the source of truth for content, versions, permissions, and audit history:
 
 - Maintainers edit Skills, MCP definitions, bundles, and policies on isolated `skillbuddy/<id>` branches.
+- Instruction templates are versioned alongside Skills and MCP definitions and can be applied to registered projects; project compliance reports instruction content that is missing or outdated.
+- Instruction requirements declared in `.skillbuddy/team.yaml` can also be enforced in CI: `skm instructions check --project <root> --library <checkout>` compares a project against a local team-library checkout and exits non-zero when required templates are missing or outdated. A copy-ready pull-request workflow ships in `.github/workflows/instructions-check.yml`.
 - File lists, validation results, and diffs can be reviewed before publishing.
 - GitHub contributions use `gh` to create Pull Requests; GitLab contributions use `glab` to create Merge Requests.
 - Regular members browse and install only content that has already been merged.
@@ -166,8 +189,10 @@ See [Git team libraries](docs/team-library.md) for repository formats and the co
 - SkillBuddy scans and manages local files by default and does not require a SkillBuddy account.
 - An optional GitHub token can raise marketplace API limits and is stored through the system secure storage.
 - MCP definitions must not contain plaintext tokens, passwords, or API keys. Use environment-variable or secret references.
-- Git backup excludes MCP configuration, tokens, absolute machine paths, project-level Skills, and enablement state.
+- Git backup excludes MCP configuration, tokens, absolute machine paths, project-level Skills, and enablement state. Instruction backup is limited to global, writable, non-linked files.
 - Read-only system, administrator, and plugin Skills cannot be edited or removed.
+- Instruction files are limited to 1 MiB of UTF-8 content, and writes are checked against the previous content hash so a file changed by another program is never overwritten silently.
+- Linked instruction files are edited through their source file, and deleting a link removes only the link itself.
 - Main-process path validation prevents writes outside managed roots and rejects symlink escapes.
 
 ## Repository Layout
@@ -178,7 +203,7 @@ skill-buddy/
 │   ├── desktop/       # Electron + Vue 3 desktop app
 │   └── registry/      # Optional self-hosted Fastify + SQLite registry
 ├── packages/
-│   ├── core/          # Canonical models, scanning, aggregation, adapters, and validation
+│   ├── core/          # Canonical models, scanning, aggregation, adapters, instruction rules, and validation
 │   └── cli/           # skm command-line interface
 └── docs/              # Design, platform, registry, and team-library documentation
 ```

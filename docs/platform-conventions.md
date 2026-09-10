@@ -17,6 +17,7 @@
 | WorkBuddy | `~/.workbuddy/skills/` | 无（桌面助手，无项目概念） | `~/.workbuddy` | 多来源一致（非官方一手） |
 | GitHub Copilot | `~/.copilot/skills/` | `.github/skills/` | `~/.copilot` | 官方 |
 | Gemini CLI | `~/.gemini/skills/` | `.gemini/skills/` | `~/.gemini` | 官方 |
+| Google Antigravity | `~/.gemini/config/skills/` | `.agents/skills/`（含 `.agent/`/`_agents/`/`_agent/`） | `~/.gemini/config` | 本机实测（应用自带文档 + 二进制） |
 | Qwen Code | `~/.qwen/skills/` | `.qwen/skills/` | `~/.qwen` | 官方 |
 | CodeBuddy | `~/.codebuddy/skills/` | `.codebuddy/skills/` | `~/.codebuddy` | 官方 |
 | Trae（国际版） | `~/.trae/skills/` | `.trae/skills/` | `~/.trae` | 官方（间接确认） |
@@ -122,16 +123,30 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
   别名优先；skills 激活需用户 consent、workspace 需 `/trust`
 - 另有 commands（TOML）与 extensions 体系；GEMINI.md 三层拼接
 
-### Google Antigravity（antigravity.google/docs）
+### Google Antigravity（真机核实 2026-09-10：应用自带文档 + `language_server` 二进制 + 现场目录，2.12.2）
 
-- 全局 Skills：`~/.gemini/config/skills/`；工作区 Skills：`.agents/skills/`。
-  Antigravity 当前默认使用 `.agents/skills`，并兼容旧版 `.agent/skills`。
-- 全局 MCP：`~/.gemini/config/mcp_config.json`；工作区 MCP：
-  `.agents/mcp_config.json`；配置根节点为 `mcpServers`，支持 stdio 与远程服务器。
-- Antigravity IDE 与 CLI 共用上述 MCP 配置约定；OAuth token 另存于
-  `~/.gemini/antigravity/mcp_oauth_tokens.json`，SkillBuddy 不读取或写入该凭据文件。
-- 官方文档未给出独立的全局 GEMINI.md 规则路径，当前指令适配仅沿用
-  `~/.gemini/config/GEMINI.md` 的兼容约定，待真机复核。
+> 曾按官网 Rules 页写下「未给出独立全局 GEMINI.md 路径」等结论，实测为误。
+> 官网文档不完整，本条目以应用自带文档与二进制字符串为准。
+
+- 定制系统有两类根：全局 `~/.gemini/config/`，工作区 `<repo-root>/.agents/`。
+  工作区根有四种同义写法 `.agents/`、`.agent/`、`_agents/`、`_agent/`
+  （二进制中以 `{.agents,_agents,.agent,_agent}` 展开），只登记 `.agents/`
+  会漏掉另外三种。
+- 全局根可放独立的 `GEMINI.md` / `AGENTS.md`，即 `~/.gemini/config/GEMINI.md`。
+  `~/.gemini/GEMINI.md` 是 v1 遗留文件，2.x 迁移未触碰，不是当前路径。
+- Rules：逐级 `GEMINI.md` / `AGENTS.md`，加上 `<root>/rules/*.md`。
+  `AGENTS.md` 是原生支持的文件名，与 `GEMINI.md` 同级；同目录内 `GEMINI.md` 优先。
+- MCP **只有两处**落点：全局 `~/.gemini/config/mcp_config.json`，以及插件
+  `<root>/plugins/<name>/mcp_config.json`。工作区根目录下**没有** `mcp_config.json`
+  —— 对照 `hooks.json` 确实存在 `.agents/hooks.json`，可证二者不对称。
+  `~/.gemini/antigravity/mcp_config.json` 是指向全局文件的软链接，不是独立来源。
+- MCP 根节点为 `mcpServers`，只支持 Stdio 与 SSE。远端**只认 `serverUrl`**：
+  配置结构体的解析标签里没有 `type` 字段，按通用 schema 写 `type` 属于无效配置。
+- SkillBuddy 的可写目标是全局 `~/.gemini/config/mcp_config.json`；插件内的
+  `<root>/plugins/<name>/mcp_config.json` 只做**只读扫描**（目录名动态，靠子目录展开
+  发现），因为它们由插件自身拥有，改写会与插件更新冲突。
+- OAuth token 另存于 `~/.gemini/antigravity/mcp_oauth_tokens.json`，
+  SkillBuddy 不读取或写入该凭据文件。
 
 ### CodeBuddy（codebuddy.ai/docs/cli/skills，官方）
 

@@ -5,7 +5,7 @@
 <h1 align="center">SkillBuddy</h1>
 
 <p align="center">
-  跨 AI Agent 管理、安装、同步 Skills 与 MCP Servers 的桌面工作台。
+  跨 AI Agent 管理、安装、同步 Skills、MCP Servers 与 AI 指令文件的桌面工作台。
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
   <img alt="Electron" src="https://img.shields.io/badge/Electron-Vue%203-47848f" />
 </p>
 
-SkillBuddy 将不同 AI 编程工具分散在各自目录中的 Skills 和 MCP 配置聚合到一个界面中。你可以查看本机安装状态、跨平台分发内容、处理多端漂移、从市场发现资源，并通过 Git 团队库管理经过审核的团队资产。
+SkillBuddy 将不同 AI 编程工具分散在各自目录中的 Skills、MCP 配置和 AI 指令文件聚合到一个界面中。你可以查看本机安装状态、跨平台分发内容、处理多端漂移和规则文件冲突、对比各工具实际读取的内容、从市场发现资源，并通过 Git 团队库管理经过审核的团队资产。
 
 ## 界面预览
 
@@ -74,15 +74,18 @@ SkillBuddy 将不同 AI 编程工具分散在各自目录中的 Skills 和 MCP �
 
 ## 核心能力
 
-- **统一资产视图**：自动发现并聚合不同 Agent 中的 Skills 和 MCP Servers。
+- **统一资产视图**：自动发现并聚合不同 Agent 中的 Skills、MCP Servers 和 AI 指令文件。
 - **跨平台安装**：将同一个 Skill 安装到多个用户级或项目级目标。
 - **漂移检测与同步**：发现同名 Skill 在不同平台上的内容差异，选择基准版本后同步。
 - **启用、禁用和卸载**：在可管理目录中调整 Skill 状态，删除操作支持移入废纸篓和撤销。
 - **Skills 市场**：搜索 skills.sh、SkillHub 和 GitHub，查看内容与资源后安装。
 - **MCP 市场与配置计划**：发现 MCP Server，检查目标平台能力，在写入前预览具体变更。
+- **AI 指令管理**：发现全局和项目作用域中的 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 及各工具规则文件，在预览变更后新建、编辑或删除。
+- **指令生效链**：查看某个目录下各工具实际读取的文件顺序，以及哪些文件被遮蔽或需要额外配置才会生效。
+- **指令诊断与桥接**：检测失效链接、内容漂移、重复文件和无效 `@path` 导入，并为只维护 `AGENTS.md` 的项目创建 Claude Code 桥接。
 - **Preset 与技能包**：保存常用 Skill 组合，批量安装、启停或导入导出。
-- **Git 多设备备份**：将用户级 Skills 和 Preset 保存到私有 Git 仓库，并在其他设备预览恢复。
-- **Git 团队库**：通过受保护分支和 PR/MR 管理团队 Skills、MCP、岗位包和策略。
+- **Git 多设备备份**：将用户级 Skills、Preset 和全局指令文件保存到私有 Git 仓库，并在其他设备预览恢复。
+- **Git 团队库**：通过受保护分支和 PR/MR 管理经过审核的团队 Skills、MCP、指令模板、岗位包和策略。
 - **项目合规**：使用 `.skillbuddy/team.yaml` 声明项目依赖，检查缺失、过期、禁用和无效引用。
 - **自定义平台**：配置额外 Agent 的检测路径、用户目录和项目目录。
 - **中英文界面**：内置简体中文和英文。
@@ -97,16 +100,34 @@ SkillBuddy 内置以下 Skills 目录约定：
 | Codex | ✓ | ✓ |
 | Cursor | ✓ | ✓ |
 | OpenCode | ✓ | ✓ |
+| Pi | ✓ | ✓ |
+| OMP Agent | ✓ | ✓ |
 | GitHub Copilot | ✓ | ✓ |
 | Gemini CLI | ✓ | ✓ |
+| Google Antigravity | ✓ | ✓ |
+| Qwen Code | ✓ | ✓ |
 | CodeBuddy | ✓ | ✓ |
 | Trae / Trae CN | ✓ | ✓ |
 | WorkBuddy | ✓ | - |
 | 豆包 | ✓ | - |
 | Kimi Code | ✓ | ✓ |
 | ZCode | ✓ | ✓ |
+| WPS 灵犀 | ✓ | - |
 
 不同平台的 MCP 配置格式、作用域和能力并不完全一致。SkillBuddy 会在界面中展示实际检测到的入口和能力，并在应用变更前进行校验。部分平台约定仍需要更多真机反馈，详见 [平台约定说明](docs/platform-conventions.md)。
+
+## AI 指令
+
+**AI 指令**页面用于管理 AI 工具在会话开始时读取的项目规则与上下文文件 —— 也就是平时散落在 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md`、`CODEBUDDY.md` 和各工具规则目录中的那些文件。
+
+- **两种作用域**：用户主目录下的全局指令文件，以及已登记项目内部的指令文件。
+- **分工具建模**：每个工具的入口文件名、同目录优先级、本地覆盖文件（`AGENTS.local.md`、`CODEBUDDY.local.md`）、override 文件（`AGENTS.override.md`）、规则目录和回退文件都单独登记。首期覆盖 Codex、Cursor、Claude Code、DeepSeek Harness、OpenCode、Pi Coding Agent、CodeBuddy Code、Google Antigravity、Gemini CLI、ZCode、Grok Build 和 WorkBuddy。
+- **生效链**：指定工具和目录后，可以看到真正生效的文件顺序 —— 先全局文件，再从仓库根逐级向下到该目录 —— 并标注哪些是回退来源、被更高优先级文件遮蔽，或需要额外配置后才会生效。
+- **诊断**：失效或越出项目的链接、`AGENTS.md` 与 `CLAUDE.md` 的内容漂移、内容重复的文件、无法解析的 `@path` 导入，都会按严重级别列出，可自动修复的会单独标记。
+- **跨工具桥接**：项目只维护 `AGENTS.md` 时，可以创建 Claude Code 桥接文件来导入它；已经带有独立规则的 `CLAUDE.md` 不会被覆盖。
+- **先审后写**：新建、编辑、删除和桥接都会先生成变更计划，列出受影响的文件和工具，应用后可以撤销。
+
+工具规则会记录证据等级：仅有社区证据或尚未验证的规则会以警告形式呈现，不会被当作已确认的生效链；其它等级会在生效链旁标注。
 
 ## 系统支持
 
@@ -154,6 +175,8 @@ SkillBuddy 会读取各 Agent 已有的本地目录。安装、同步、启停�
 团队可以使用 Git 仓库作为内容、版本、权限和审计的事实来源：
 
 - 维护者在隔离的 `skillbuddy/<标识>` 分支中编辑 Skills、MCP、岗位包和策略。
+- 指令模板与 Skills、MCP 定义一起纳入版本管理，可以应用到已登记项目；项目合规会检查指令内容缺失或过期。
+- `.skillbuddy/team.yaml` 中声明的指令要求也可以在 CI 中校验：`skm instructions check --project <项目根> --library <团队库检出目录>` 会把项目与本地团队库检出结果比对，必装模板缺失或过期时返回非零退出码。仓库内提供了可直接复制的 PR 工作流 `.github/workflows/instructions-check.yml`。
 - 发布前可以审阅文件列表、校验结果和 Git diff。
 - GitHub 使用 `gh` 创建 Pull Request，GitLab 使用 `glab` 创建 Merge Request。
 - 普通成员只能浏览和安装团队库中已经合并的内容。
@@ -166,8 +189,10 @@ SkillBuddy 会读取各 Agent 已有的本地目录。安装、同步、启停�
 - SkillBuddy 默认在本地扫描和管理文件，不要求登录 SkillBuddy 账号。
 - GitHub Token 仅用于提升市场 API 限额，并存储在系统安全存储中。
 - MCP 定义不允许包含明文 Token、密码或 API Key，敏感值应使用环境变量或密钥引用。
-- Git 备份不包含 MCP 配置、Token、本机绝对路径、项目级 Skill 或启停状态。
+- Git 备份不包含 MCP 配置、Token、本机绝对路径、项目级 Skill 或启停状态；指令备份只包含全局、可写且非链接的文件。
 - 系统、管理员和插件拥有的只读 Skill 不会被编辑或删除。
+- 指令文件限制在 1 MiB 以内的 UTF-8 内容；写入前会校验文件是否已被其他程序改动，不会静默覆盖。
+- 链接型指令文件需要通过其源文件编辑，删除链接只会移除链接本身。
 - 主进程会校验可访问路径，拒绝越过受管目录的写入和符号链接逃逸。
 
 ## 项目结构
@@ -178,7 +203,7 @@ skill-buddy/
 │   ├── desktop/       # Electron + Vue 3 桌面应用
 │   └── registry/      # 可选的 Fastify + SQLite 自托管 Registry
 ├── packages/
-│   ├── core/          # 统一数据模型、扫描、聚合、适配器与安全校验
+│   ├── core/          # 统一数据模型、扫描、聚合、适配器、指令规则与安全校验
 │   └── cli/           # skm 命令行工具
 └── docs/              # 设计、平台约定、Registry 与团队库文档
 ```
