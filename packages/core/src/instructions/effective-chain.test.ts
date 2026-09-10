@@ -39,6 +39,32 @@ describe('effective instruction chains', () => {
     expect(chain.includesGlobal).toBe(false)
   })
 
+  it('merges Antigravity standalone rules and its rule directory into one level', async () => {
+    const root = await createProject()
+    const nested = join(root, 'src')
+    await fs.mkdir(join(root, '.agents', 'rules'), { recursive: true })
+    await fs.mkdir(nested)
+    await fs.writeFile(join(root, 'GEMINI.md'), 'gemini\n', 'utf8')
+    await fs.writeFile(join(root, 'AGENTS.md'), 'shared\n', 'utf8')
+    await fs.writeFile(join(root, '.agents', 'rules', 'code-style.md'), 'style\n', 'utf8')
+    const scan = await scanInstructionDocuments([root], { includeGlobal: false })
+    const realRoot = await fs.realpath(root)
+    const realNested = await fs.realpath(nested)
+
+    const chain = deriveEffectiveInstructionChain(
+      { vendorId: 'google', productId: 'google-antigravity', surfaceId: 'ide' },
+      realRoot,
+      realNested,
+      scan.documents,
+    )
+
+    expect(chain.documents.map((item) => item.fileName)).toEqual([
+      'GEMINI.md',
+      'AGENTS.md',
+      'code-style.md',
+    ])
+  })
+
   it('uses the nearest matching file for OpenCode fallback traversal', async () => {
     const root = await createProject()
     const nested = join(root, 'packages', 'app')

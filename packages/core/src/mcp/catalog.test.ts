@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { BUILTIN_PLATFORMS } from '../platforms.js'
 import { PlatformMcpAdapter } from './adapters/platform-adapter.js'
 import { defaultMcpProfiles, type McpPlatformProfile } from './catalog.js'
 import type { McpConfigSource } from './types.js'
@@ -63,9 +64,137 @@ describe('MCP 平台目录', () => {
         'copilot:cli',
         'copilot:vscode',
         'copilot:cloud',
+        'google-antigravity:ide',
       ]),
     )
     expect(keys.some((key) => key.startsWith('doubao:'))).toBe(false)
+  })
+
+  it('接入面顺序与内置平台顺序一致，同一平台的接入面相邻', () => {
+    const profiles = defaultMcpProfiles()
+    const agentOrder = [...new Set(profiles.map((profile) => profile.agent))]
+    // 技能侧（侧边栏、PlatformTargetPicker）展示的是 BUILTIN_PLATFORMS 顺序，
+    // MCP 安装目标列表走的是这份 profile 顺序，两者不一致时同一个平台会出现在不同位置。
+    const expected = BUILTIN_PLATFORMS.map((platform) => platform.id).filter((id) =>
+      agentOrder.includes(id),
+    )
+    expect(agentOrder).toEqual(expected)
+
+    for (const agent of agentOrder) {
+      const positions = profiles.reduce<number[]>(
+        (acc, profile, index) => (profile.agent === agent ? [...acc, index] : acc),
+        [],
+      )
+      const first = positions[0]
+      expect(positions).toEqual(positions.map((_, offset) => first + offset))
+    }
+  })
+
+  it('Antigravity 的 MCP 配置只落在全局文件', async () => {
+    const home = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-antigravity-'))
+    temporaryRoots.push(home)
+    const projectRoot = join(home, 'project')
+    await fs.mkdir(projectRoot)
+
+    const adapter = new PlatformMcpAdapter(profile('google-antigravity', 'ide'), home)
+    const sources = await adapter.configSources([projectRoot])
+
+    // 工作区根目录下并没有 mcp_config.json：MCP 只在全局 `~/.gemini/config/`
+    // 与插件目录 `plugins/<name>/` 里。没有插件时，插件来源展开为空。
+    expect(sources.map((source) => source.configPath)).toEqual([
+      join(home, '.gemini', 'config', 'mcp_config.json'),
+    ])
+    expect(sources.some((source) => source.scope === 'project')).toBe(false)
+    // 只声明 user：插件来源只读，声明 project 会给用户一个写不了的目标。
+    expect(profile('google-antigravity', 'ide').capabilities.scopes).toEqual(['user'])
+  })
+
+  it('以只读来源发现 Antigravity 插件内的 MCP 配置', async () => {
+    const home = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-antigravity-plugin-'))
+    temporaryRoots.push(home)
+    const projectRoot = join(home, 'project')
+    const globalPlugin = join(
+      home,
+      '.gemini',
+      'config',
+      'plugins',
+      'global-kit',
+      'mcp_config.json',
+    )
+    // 工作区插件故意用非默认前缀 `.agent/`，验证四种拼写都参与展开。
+    const projectPlugin = join(projectRoot, '.agent', 'plugins', 'team-kit', 'mcp_config.json')
+    await fs.mkdir(dirname(globalPlugin), { recursive: true })
+    await fs.writeFile(
+      globalPlugin,
+      JSON.stringify({
+        mcpServers: { globalPlugin: { command: 'node', args: ['global.js'] } },
+      }),
+    )
+    await fs.mkdir(dirname(projectPlugin), { recursive: true })
+    await fs.writeFile(
+      projectPlugin,
+      JSON.stringify({
+        mcpServers: { teamPlugin: { serverUrl: 'https://mcp.example.com/sse' } },
+      }),
+    )
+
+    const adapter = new PlatformMcpAdapter(profile('google-antigravity', 'ide'), home)
+    const sources = (await adapter.configSources([projectRoot])).filter((source) => source.exists)
+
+    expect(sources.map((source) => source.configPath).sort()).toEqual(
+      [globalPlugin, projectPlugin].sort(),
+    )
+    expect(sources.every((source) => source.readOnly)).toBe(true)
+
+    const installations = (
+      await Promise.all(sources.map((source) => adapter.read(source)))
+    ).flat()
+    expect(installations.map((item) => item.definition.name).sort()).toEqual([
+      'globalPlugin',
+      'teamPlugin',
+    ])
+    // 插件里的远端服务器同样按 antigravity schema 还原成 sse。
+    expect(installations.find((item) => item.definition.name === 'teamPlugin')?.definition.transport)
+      .toMatchObject({ kind: 'sse', url: 'https://mcp.example.com/sse' })
+  })
+
+  it('拒绝写入 Antigravity 插件内的 MCP 配置', async () => {
+    const home = await fs.mkdtemp(join(tmpdir(), 'skillbuddy-antigravity-readonly-'))
+    temporaryRoots.push(home)
+    const projectRoot = join(home, 'project')
+    const pluginConfig = join(projectRoot, '.agents', 'plugins', 'team-kit', 'mcp_config.json')
+    await fs.mkdir(dirname(pluginConfig), { recursive: true })
+    await fs.writeFile(
+      pluginConfig,
+      JSON.stringify({ mcpServers: { teamPlugin: { command: 'node', args: ['team.js'] } } }),
+    )
+
+    const adapter = new PlatformMcpAdapter(profile('google-antigravity', 'ide'), home)
+    const installation = (
+      await Promise.all(
+        (await adapter.configSources([projectRoot]))
+          .filter((source) => source.exists)
+          .map((source) => adapter.read(source)),
+      )
+    )
+      .flat()
+      .find((item) => item.definition.name === 'teamPlugin')
+
+    expect(installation?.source.readOnly).toBe(true)
+    await expect(adapter.prepareSetSecret(installation!, 'TOKEN', 'secret-value')).rejects.toThrow(
+      '只读',
+    )
+    // 全局配置仍可写，插件来源不会把写入目标顶掉。
+    await expect(
+      adapter.prepareUpsert(
+        {
+          name: 'local',
+          transport: { kind: 'stdio', command: 'node', args: ['local.js'], env: {} },
+          requiredSecrets: [],
+        },
+        { agent: 'google-antigravity', surface: 'ide', scope: 'user' },
+      ),
+    ).resolves.toMatchObject({ kind: 'upsert' })
   })
 
   it('按官方优先级选择 CodeBuddy 兼容配置文件', async () => {

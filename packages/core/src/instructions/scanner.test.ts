@@ -109,6 +109,26 @@ describe('instruction scanner boundaries', () => {
     )
   })
 
+  it('scans both Antigravity rule directory spellings and its standalone rule files', async () => {
+    const root = await createProject()
+    await fs.mkdir(join(root, '.agents', 'rules'), { recursive: true })
+    await fs.mkdir(join(root, '_agents', 'rules'), { recursive: true })
+    await fs.writeFile(join(root, 'GEMINI.md'), 'antigravity rules\n', 'utf8')
+    await fs.writeFile(join(root, 'AGENTS.md'), 'shared rules\n', 'utf8')
+    await fs.writeFile(join(root, '.agents', 'rules', 'code-style.md'), 'style\n', 'utf8')
+    await fs.writeFile(join(root, '_agents', 'rules', 'testing.md'), 'tests\n', 'utf8')
+
+    const result = await scanInstructionDocuments([root], { includeGlobal: false })
+    const antigravityPrimary = (fileName: string): boolean => result.documents
+      .find((item) => item.fileName === fileName)
+      ?.bindings.some((binding) => binding.surface.productId === 'google-antigravity' && binding.role === 'primary') ?? false
+
+    expect(antigravityPrimary('code-style.md')).toBe(true)
+    expect(antigravityPrimary('testing.md')).toBe(true)
+    expect(antigravityPrimary('GEMINI.md')).toBe(true)
+    expect(antigravityPrimary('AGENTS.md')).toBe(true)
+  })
+
   it.runIf(process.platform !== 'win32')('marks a symlink escaping the project as broken and read-only', async () => {
     const root = await createProject()
     const outside = await createProject()

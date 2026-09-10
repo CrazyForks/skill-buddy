@@ -218,6 +218,45 @@ function codexRemote(
   return native
 }
 
+/**
+ * Antigravity 的原生投影。
+ *
+ * 远端传输只用 `serverUrl` 表达：应用自带文档
+ * `builtin/skills/agy-customizations/docs/mcp_servers.md`（2.12.2）把它列为 SSE 的唯一字段。
+ * 关键点是**不能写 `type`** —— `language_server` 的配置解析标签里根本没有这个键，
+ * 按 standard schema 写出的 `{ type: 'sse', url: ... }` 属于无效配置。
+ * `headers` 则确认受支持（配置解析标签中存在该键）。
+ */
+function antigravityProjection(
+  definition: McpServerDefinition,
+  warnings: McpPlanIssue[],
+): McpConfigObject {
+  if (definition.transport.kind === 'stdio') {
+    const env = projectReferenceMap(
+      definition.transport.env,
+      'standard',
+      'transport.env',
+      warnings,
+    )
+    return {
+      command: definition.transport.command,
+      args: definition.transport.args,
+      ...(definition.transport.cwd ? { cwd: definition.transport.cwd } : {}),
+      ...(Object.keys(env).length > 0 ? { env } : {}),
+    }
+  }
+  const headers = projectReferenceMap(
+    definition.transport.headers,
+    'standard',
+    'transport.headers',
+    warnings,
+  )
+  return {
+    serverUrl: definition.transport.url,
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+  }
+}
+
 function standardProjection(
   definition: McpServerDefinition,
   schema: McpNativeSchema,
@@ -229,6 +268,7 @@ function standardProjection(
       ? codexStdio(definition, blockers, warnings)
       : codexRemote(definition, warnings)
   }
+  if (schema === 'antigravity') return antigravityProjection(definition, warnings)
 
   const syntax = schema === 'opencode' ? 'opencode' : 'standard'
   if (definition.transport.kind === 'stdio') {
@@ -333,6 +373,33 @@ export function projectMcpDefinition(
 export function nativeKnownKeys(schema: McpNativeSchema): Set<string> {
   if (schema === 'opencode') {
     return new Set(['type', 'command', 'environment', 'url', 'headers', 'enabled', 'oauth'])
+  }
+  if (schema === 'antigravity') {
+    /**
+     * 依据 `language_server` 二进制的配置解析标签（mapstructure）梳理出的服务级字段。
+     * 其中**没有 `type`** —— 这正是不能按 standard schema 投影的原因。
+     * `url` 与 `serverUrl` 并存，投影统一写文档声明的 `serverUrl`。
+     */
+    return new Set([
+      'command',
+      'args',
+      'cwd',
+      'env',
+      'serverUrl',
+      'url',
+      'headers',
+      'oauth',
+      'clientId',
+      'clientSecret',
+      'authProviderType',
+      'disabled',
+      'tools',
+      'enabledTools',
+      'disabledTools',
+      'timeoutSeconds',
+      'eager',
+      'background',
+    ])
   }
   if (schema === 'codex') {
     return new Set([

@@ -132,6 +132,9 @@ function nativeTransport(
   const type = stringValue(value.type)?.toLowerCase()
   if (type === 'sse') return 'sse'
   if (type === 'websocket' || type === 'ws') return 'websocket'
+  // Antigravity 的文件里没有传输字段，远端只有 serverUrl 一种形态；不还原成 sse
+  // 会让写回内容与读到的传输类型不一致，从而误报漂移。
+  if (schema === 'antigravity') return 'sse'
   if (schema === 'opencode' && type === 'remote') return 'streamable-http'
   return 'streamable-http'
 }

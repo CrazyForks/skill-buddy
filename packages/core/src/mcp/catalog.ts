@@ -10,10 +10,11 @@ import type {
 } from './types.js'
 import type { McpConfigFormat } from './codecs/index.js'
 
-export type McpNativeSchema = 'standard' | 'codex' | 'opencode'
+export type McpNativeSchema = 'standard' | 'codex' | 'opencode' | 'antigravity'
 
 export interface McpSourceTemplate {
   scope: McpScope
+  /** 配置文件的字面路径；声明 `perSubdirectory` 时改为父目录。 */
   path: string
   projectRoot?: string
   format: McpConfigFormat
@@ -22,6 +23,13 @@ export interface McpSourceTemplate {
   readOnly?: boolean
   /** 同组模板按声明顺序选择第一个已存在来源；均不存在时选择第一项作为写入目标。 */
   fallbackGroup?: string
+  /**
+   * 子目录展开：把 `path` 当作父目录，对其每个直接子目录追加该相对路径，
+   * 命中存在的文件各自成为一个来源。目录不存在或没有子目录时展开为空。
+   * 用于配置落在动态命名子目录里的平台，例如 Antigravity 插件的
+   * `<customization-root>/plugins/<name>/mcp_config.json`。
+   */
+  perSubdirectory?: string
 }
 
 export interface McpPlatformProfile {
@@ -48,6 +56,33 @@ function projectTemplates(
     nodePath,
     origin: 'project',
   }))
+}
+
+/**
+ * Antigravity 的工作区定制根支持四种同义写法（`language_server` 中以
+ * `{.agents,_agents,.agent,_agent}` 展开）。插件的 MCP 配置就写在根下的 `plugins/` 里，
+ * 而插件目录名是动态的，所以只能靠子目录展开、不能写成字面路径。
+ */
+const ANTIGRAVITY_ROOT_VARIANTS = ['.agents', '.agent', '_agents', '_agent'] as const
+
+/**
+ * 插件内 MCP 配置的只读来源：`<root>/<variant>/plugins/<name>/mcp_config.json`。
+ * 这些文件由插件自身拥有，SkillBuddy 只扫描不写入。
+ */
+function antigravityPluginTemplates(projectRoots: string[]): McpSourceTemplate[] {
+  return projectRoots.flatMap((projectRoot) => {
+    const root = resolve(projectRoot)
+    return ANTIGRAVITY_ROOT_VARIANTS.map((variant) => ({
+      scope: 'project' as const,
+      projectRoot: root,
+      path: join(root, variant, 'plugins'),
+      perSubdirectory: 'mcp_config.json',
+      format: 'json' as const,
+      nodePath: ['mcpServers'],
+      origin: 'project' as const,
+      readOnly: true,
+    }))
+  })
 }
 
 const STANDARD_FEATURES = {
@@ -88,27 +123,15 @@ function standardCapabilities(
   })
 }
 
+/**
+ * MCP 接入面的顺序 = 平台在 `BUILTIN_PLATFORMS` 中的先后顺序，同一平台的多个接入面相邻。
+ *
+ * 该数组的声明顺序直接决定 `scanMcpServers` 返回的 `platforms` 顺序，进而决定
+ * `McpTargetPicker` 等安装目标列表的展示顺序；技能侧（侧边栏、`PlatformTargetPicker`）
+ * 走 `BUILTIN_PLATFORMS`。两处必须一致，否则同一个平台在两类列表里位置不同。
+ * `catalog.test.ts` 有断言锁定该不变量 —— 新增平台时两处都要按同一位置插入。
+ */
 export const INITIAL_MCP_PROFILES: readonly McpPlatformProfile[] = [
-  {
-    agent: 'google-antigravity',
-    surface: 'ide',
-    displayName: 'Google Antigravity',
-    schema: 'standard',
-    capabilities: standardCapabilities({
-      transports: ['stdio', 'streamable-http', 'sse'],
-    }),
-    detectPaths: (homeDir) => [join(homeDir, '.gemini', 'config')],
-    sourceTemplates: (homeDir, projectRoots) => [
-      {
-        scope: 'user',
-        path: join(homeDir, '.gemini', 'config', 'mcp_config.json'),
-        format: 'json',
-        nodePath: ['mcpServers'],
-        origin: 'user',
-      },
-      ...projectTemplates(projectRoots, '.agents/mcp_config.json', 'json', ['mcpServers']),
-    ],
-  },
   {
     agent: 'claude-code',
     surface: 'cli',
@@ -236,6 +259,124 @@ export const INITIAL_MCP_PROFILES: readonly McpPlatformProfile[] = [
     ],
   },
   {
+    agent: 'copilot',
+    surface: 'cli',
+    displayName: 'GitHub Copilot CLI',
+    schema: 'standard',
+    capabilities: standardCapabilities({
+      transports: ['stdio', 'streamable-http'],
+    }),
+    detectPaths: (homeDir) => [process.env.COPILOT_HOME || join(homeDir, '.copilot')],
+    sourceTemplates: (homeDir) => {
+      const copilotHome = process.env.COPILOT_HOME || join(homeDir, '.copilot')
+      return [
+        {
+          scope: 'user',
+          path: join(copilotHome, 'mcp-config.json'),
+          format: 'json',
+          nodePath: ['mcpServers'],
+          origin: 'user',
+        },
+      ]
+    },
+  },
+  {
+    agent: 'copilot',
+    surface: 'vscode',
+    displayName: 'GitHub Copilot (VS Code)',
+    schema: 'standard',
+    capabilities: standardCapabilities({ toggle: 'unsupported' }),
+    detectPaths: (homeDir) => [editorUserMcpPath(homeDir, 'Code')],
+    sourceTemplates: (homeDir, projectRoots) => [
+      {
+        scope: 'user',
+        path: editorUserMcpPath(homeDir, 'Code'),
+        format: 'json',
+        nodePath: ['servers'],
+        origin: 'user',
+      },
+      ...projectTemplates(projectRoots, '.vscode/mcp.json', 'json', ['servers']),
+    ],
+  },
+  {
+    agent: 'copilot',
+    surface: 'cloud',
+    displayName: 'GitHub Copilot Cloud',
+    schema: 'standard',
+    capabilities: standardCapabilities({
+      management: 'read-only',
+      scopes: ['project'],
+      transports: ['streamable-http'],
+    }),
+    detectPaths: () => [],
+    sourceTemplates: () => [],
+  },
+  {
+    agent: 'gemini-cli',
+    surface: 'cli',
+    displayName: 'Gemini CLI',
+    schema: 'standard',
+    capabilities: standardCapabilities({
+      transports: ['stdio', 'streamable-http', 'sse'],
+    }),
+    detectPaths: (homeDir) => [join(homeDir, '.gemini')],
+    sourceTemplates: (homeDir, projectRoots) => [
+      {
+        scope: 'user',
+        path: join(homeDir, '.gemini', 'settings.json'),
+        format: 'json',
+        nodePath: ['mcpServers'],
+        origin: 'user',
+      },
+      ...projectTemplates(projectRoots, '.gemini/settings.json', 'json', ['mcpServers']),
+    ],
+  },
+  {
+    agent: 'google-antigravity',
+    surface: 'ide',
+    displayName: 'Google Antigravity',
+    schema: 'antigravity',
+    capabilities: standardCapabilities({
+      /**
+       * 应用自带文档 `builtin/skills/agy-customizations/docs/mcp_servers.md`（2.12.2）只声明
+       * Stdio 与 SSE 两种传输；远端统一用 `serverUrl` 表达，文件中没有区分传输的字段，
+       * 因此这里不再声明 streamable-http，读取时也一律按 `sse` 还原。
+       */
+      transports: ['stdio', 'sse'],
+      /**
+       * MCP 只有两处落点：全局 `~/.gemini/config/mcp_config.json`，以及插件内
+       * `plugins/<name>/mcp_config.json`。
+       * 依据：`language_server` 二进制中 `mcp_config.json` 的路径形态只有上述两种，
+       * 对照 `hooks.json` 确实存在 `.agents/hooks.json` —— 工作区根目录下并无 `mcp_config.json`。
+       *
+       * 这里只声明 `user`：`McpTargetPicker.vue` 直接按 scopes 生成写入目标，而插件来源是
+       * 只读的，把 `project` 加进来会给出一个「能选但写必然失败」的目标。插件内 MCP 仍会被
+       * 只读扫描出来，只是不作为写入目标。
+       */
+      scopes: ['user'],
+    }),
+    detectPaths: (homeDir) => [join(homeDir, '.gemini', 'config')],
+    sourceTemplates: (homeDir, projectRoots) => [
+      {
+        scope: 'user',
+        path: join(homeDir, '.gemini', 'config', 'mcp_config.json'),
+        format: 'json',
+        nodePath: ['mcpServers'],
+        origin: 'user',
+      },
+      {
+        scope: 'user',
+        path: join(homeDir, '.gemini', 'config', 'plugins'),
+        perSubdirectory: 'mcp_config.json',
+        format: 'json',
+        nodePath: ['mcpServers'],
+        origin: 'user',
+        readOnly: true,
+      },
+      ...antigravityPluginTemplates(projectRoots),
+    ],
+  },
+  {
     agent: 'codebuddy',
     surface: 'cli',
     displayName: 'CodeBuddy',
@@ -324,6 +465,32 @@ export const INITIAL_MCP_PROFILES: readonly McpPlatformProfile[] = [
     }),
   ),
   {
+    agent: 'workbuddy',
+    surface: 'desktop',
+    displayName: 'WorkBuddy',
+    schema: 'standard',
+    capabilities: standardCapabilities({ scopes: ['user'] }),
+    detectPaths: (homeDir) => [join(homeDir, '.workbuddy')],
+    sourceTemplates: (homeDir) => [
+      {
+        scope: 'user',
+        path: join(homeDir, '.workbuddy', '.mcp.json'),
+        format: 'json',
+        nodePath: ['mcpServers'],
+        origin: 'user',
+      },
+    ],
+  },
+  {
+    agent: 'workbuddy',
+    surface: 'connector',
+    displayName: 'WorkBuddy Connector',
+    schema: 'standard',
+    capabilities: standardCapabilities({ management: 'read-only', scopes: ['user'] }),
+    detectPaths: (homeDir) => [join(homeDir, '.workbuddy')],
+    sourceTemplates: () => [],
+  },
+  {
     agent: 'kimi',
     surface: 'cli',
     displayName: 'Kimi Code',
@@ -372,105 +539,6 @@ export const INITIAL_MCP_PROFILES: readonly McpPlatformProfile[] = [
       projectTemplates(projectRoots, '.agents/mcp.json', 'json', ['mcpServers']).map(
         (source) => ({ ...source, readOnly: true }),
       ),
-  },
-  {
-    agent: 'workbuddy',
-    surface: 'desktop',
-    displayName: 'WorkBuddy',
-    schema: 'standard',
-    capabilities: standardCapabilities({ scopes: ['user'] }),
-    detectPaths: (homeDir) => [join(homeDir, '.workbuddy')],
-    sourceTemplates: (homeDir) => [
-      {
-        scope: 'user',
-        path: join(homeDir, '.workbuddy', '.mcp.json'),
-        format: 'json',
-        nodePath: ['mcpServers'],
-        origin: 'user',
-      },
-    ],
-  },
-  {
-    agent: 'workbuddy',
-    surface: 'connector',
-    displayName: 'WorkBuddy Connector',
-    schema: 'standard',
-    capabilities: standardCapabilities({ management: 'read-only', scopes: ['user'] }),
-    detectPaths: (homeDir) => [join(homeDir, '.workbuddy')],
-    sourceTemplates: () => [],
-  },
-  {
-    agent: 'gemini-cli',
-    surface: 'cli',
-    displayName: 'Gemini CLI',
-    schema: 'standard',
-    capabilities: standardCapabilities({
-      transports: ['stdio', 'streamable-http', 'sse'],
-    }),
-    detectPaths: (homeDir) => [join(homeDir, '.gemini')],
-    sourceTemplates: (homeDir, projectRoots) => [
-      {
-        scope: 'user',
-        path: join(homeDir, '.gemini', 'settings.json'),
-        format: 'json',
-        nodePath: ['mcpServers'],
-        origin: 'user',
-      },
-      ...projectTemplates(projectRoots, '.gemini/settings.json', 'json', ['mcpServers']),
-    ],
-  },
-  {
-    agent: 'copilot',
-    surface: 'cli',
-    displayName: 'GitHub Copilot CLI',
-    schema: 'standard',
-    capabilities: standardCapabilities({
-      transports: ['stdio', 'streamable-http'],
-    }),
-    detectPaths: (homeDir) => [process.env.COPILOT_HOME || join(homeDir, '.copilot')],
-    sourceTemplates: (homeDir) => {
-      const copilotHome = process.env.COPILOT_HOME || join(homeDir, '.copilot')
-      return [
-        {
-          scope: 'user',
-          path: join(copilotHome, 'mcp-config.json'),
-          format: 'json',
-          nodePath: ['mcpServers'],
-          origin: 'user',
-        },
-      ]
-    },
-  },
-  {
-    agent: 'copilot',
-    surface: 'vscode',
-    displayName: 'GitHub Copilot (VS Code)',
-    schema: 'standard',
-    capabilities: standardCapabilities({ toggle: 'unsupported' }),
-    detectPaths: (homeDir) => [editorUserMcpPath(homeDir, 'Code')],
-    sourceTemplates: (homeDir, projectRoots) => [
-      {
-        scope: 'user',
-        path: editorUserMcpPath(homeDir, 'Code'),
-        format: 'json',
-        nodePath: ['servers'],
-        origin: 'user',
-      },
-      ...projectTemplates(projectRoots, '.vscode/mcp.json', 'json', ['servers']),
-    ],
-  },
-  {
-    agent: 'copilot',
-    surface: 'cloud',
-    displayName: 'GitHub Copilot Cloud',
-    schema: 'standard',
-    capabilities: standardCapabilities({
-      management: 'read-only',
-      scopes: ['project'],
-      transports: ['streamable-http'],
-    }),
-    detectPaths: () => [],
-    sourceTemplates: () => [],
   },
 ]
 

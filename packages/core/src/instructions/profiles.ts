@@ -100,8 +100,22 @@ export const INSTRUCTION_PROFILES: InstructionRuleProfile[] = [
     key: surface('google', 'google-antigravity', 'ide'),
     displayName: 'Google Antigravity',
     platformId: 'google-antigravity',
-    globalPaths: [join(home, '.gemini', 'config', 'GEMINI.md')],
+    /**
+     * 全局根为 `~/.gemini/config/`，根内可放独立的 `GEMINI.md` / `AGENTS.md`。
+     * 注意不是 `~/.gemini/GEMINI.md`：该文件是 v1 遗留，2.x 迁移时未触碰。
+     * 依据：应用自带文档 `builtin/skills/agy-customizations/SKILL.md`（2.12.2）。
+     */
+    globalPaths: [
+      join(home, '.gemini', 'config', 'GEMINI.md'),
+      join(home, '.gemini', 'config', 'AGENTS.md'),
+    ],
     projectFileCandidates: ['GEMINI.md', 'AGENTS.md'],
+    /**
+     * 工作区规则是两种机制并存：逐级 `GEMINI.md` / `AGENTS.md` 文件，加上规则目录。
+     * customization 根支持 `.agents/`、`.agent/`、`_agents/`、`_agent/` 四种写法，
+     * 只登记 `.agents/` 会漏掉另外三种。
+     */
+    rulesDirCandidates: ['.agents/rules', '.agent/rules', '_agents/rules', '_agent/rules'],
     sameDirectoryPrecedence: ['GEMINI.md', 'AGENTS.md'],
   },
   {

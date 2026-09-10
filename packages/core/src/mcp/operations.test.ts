@@ -47,6 +47,71 @@ describe('projectMcpDefinition', () => {
     expect(codex.nativeValue).toMatchObject({ env_vars: ['DATABASE_URL'] })
   })
 
+  it('projects Antigravity servers to serverUrl without a transport type', () => {
+    const stdio = projectMcpDefinition(
+      stdioDefinition,
+      { agent: 'google-antigravity', surface: 'ide', scope: 'user' },
+      profile('google-antigravity'),
+    )
+    const remote = projectMcpDefinition(
+      {
+        name: 'remote-service',
+        transport: {
+          kind: 'sse',
+          url: 'https://mcp.example.com/sse',
+          headers: {
+            Authorization: { kind: 'env', name: 'MCP_TOKEN' },
+          },
+        },
+        requiredSecrets: [],
+      },
+      { agent: 'google-antigravity', surface: 'ide', scope: 'user' },
+      profile('google-antigravity'),
+    )
+
+    expect(stdio.blockers).toEqual([])
+    expect(stdio.nativeValue).toEqual({
+      command: 'node',
+      args: ['server.js'],
+      env: { DATABASE_URL: '${DATABASE_URL}' },
+    })
+
+    expect(remote.blockers).toEqual([])
+    expect(remote.nativeValue).toEqual({
+      serverUrl: 'https://mcp.example.com/sse',
+      headers: { Authorization: '${MCP_TOKEN}' },
+    })
+    // Antigravity 的配置里没有 type 键，写出来就是无效配置。
+    expect(stdio.nativeValue).not.toHaveProperty('type')
+    expect(remote.nativeValue).not.toHaveProperty('type')
+    expect(remote.nativeValue).not.toHaveProperty('url')
+  })
+
+  it('blocks Antigravity transports and scopes it cannot express', () => {
+    const unsupportedTransport = projectMcpDefinition(
+      {
+        name: 'streamed',
+        transport: { kind: 'streamable-http', url: 'https://mcp.example.com/mcp', headers: {} },
+        requiredSecrets: [],
+      },
+      { agent: 'google-antigravity', surface: 'ide', scope: 'user' },
+      profile('google-antigravity'),
+    )
+    const unsupportedScope = projectMcpDefinition(
+      stdioDefinition,
+      { agent: 'google-antigravity', surface: 'ide', scope: 'project' },
+      profile('google-antigravity'),
+    )
+
+    expect(unsupportedTransport.blockers.map((issue) => issue.code)).toContain(
+      'MCP_TRANSPORT_UNSUPPORTED',
+    )
+    // MCP 只落在全局与插件目录，工作区级配置无处可写。
+    expect(unsupportedScope.blockers.map((issue) => issue.code)).toContain(
+      'MCP_SCOPE_UNSUPPORTED',
+    )
+  })
+
   it('blocks non-exportable secrets and unsupported transports', () => {
     const projection = projectMcpDefinition(
       {

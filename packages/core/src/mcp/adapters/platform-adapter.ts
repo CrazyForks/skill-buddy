@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import type { AgentId } from '../../types.js'
 import {
   jsonMcpConfigCodec,
@@ -44,6 +44,30 @@ async function exists(path: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/**
+ * 把模板展开成具体配置文件路径。
+ *
+ * 普通模板只有 `path` 一个字面路径；声明了 `perSubdirectory` 的模板把 `path` 当父目录，
+ * 对其每个直接子目录追加该相对路径。目录不存在时展开为空，不当作错误。
+ * 结果按路径排序，保证 `configSources()` 的顺序可复现 —— `readTarget()` 依赖声明顺序取值。
+ */
+async function expandTemplate(template: McpSourceTemplate): Promise<string[]> {
+  const relativePath = template.perSubdirectory
+  if (!relativePath) return [template.path]
+  let entries
+  try {
+    entries = await fs.readdir(template.path, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  return entries
+    // 只认真实子目录：符号链接目录不跟随（与 path-policy 拒绝软链配置文件的取向一致），
+    // 隐藏目录用于容纳工具自身的状态，不是插件。
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+    .map((entry) => join(template.path, entry.name, relativePath))
+    .sort()
 }
 
 const PRESERVED_STATE_KEYS = new Set(['enabled', 'disabled', 'oauth'])
@@ -178,22 +202,24 @@ export class PlatformMcpAdapter implements McpAdapter {
     const seen = new Set<string>()
     const entries: { template: McpSourceTemplate; source: McpConfigSource }[] = []
     for (const template of templates) {
-      const sourceWithoutId: Omit<McpConfigSource, 'id'> = {
-        agent: this.agent,
-        surface: this.surface,
-        scope: template.scope,
-        projectRoot: template.projectRoot,
-        configPath: resolve(template.path),
-        format: template.format,
-        nodePath: [...template.nodePath],
-        origin: template.origin,
-        readOnly: template.readOnly ?? false,
-        exists: await exists(template.path),
+      for (const path of await expandTemplate(template)) {
+        const sourceWithoutId: Omit<McpConfigSource, 'id'> = {
+          agent: this.agent,
+          surface: this.surface,
+          scope: template.scope,
+          projectRoot: template.projectRoot,
+          configPath: resolve(path),
+          format: template.format,
+          nodePath: [...template.nodePath],
+          origin: template.origin,
+          readOnly: template.readOnly ?? false,
+          exists: await exists(path),
+        }
+        const identity = sourceIdentity(sourceWithoutId)
+        if (seen.has(identity)) continue
+        seen.add(identity)
+        entries.push({ template, source: { ...sourceWithoutId, id: stableMcpId(identity) } })
       }
-      const identity = sourceIdentity(sourceWithoutId)
-      if (seen.has(identity)) continue
-      seen.add(identity)
-      entries.push({ template, source: { ...sourceWithoutId, id: stableMcpId(identity) } })
     }
     const fallbackChoices = new Map<string, McpConfigSource>()
     for (const { template, source } of entries) {
@@ -435,11 +461,14 @@ export class PlatformMcpAdapter implements McpAdapter {
     beforeHash: string | null
   }> {
     const sources = await this.configSources(target.projectRoot ? [target.projectRoot] : [])
-    const source = sources.find(
+    const candidates = sources.filter(
       (candidate) =>
         candidate.scope === target.scope &&
         (candidate.projectRoot ?? '') === (target.projectRoot ? resolve(target.projectRoot) : ''),
     )
+    // 同一作用域可能有多个来源（例如 Antigravity 的全局配置与只读的插件配置），
+    // 写入必须落在可写来源上，不能因为声明顺序被只读来源顶掉。
+    const source = candidates.find((candidate) => !candidate.readOnly) ?? candidates[0]
     if (!source) {
       throw new McpOperationError(
         'MCP_TARGET_NOT_FOUND',
