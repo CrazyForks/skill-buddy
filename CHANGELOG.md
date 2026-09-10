@@ -2,6 +2,42 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.12 - 2026-09-10
+
+### Added
+
+- Added Google Antigravity support: skill directories, AI instruction rules, and MCP configuration using Antigravity's native remote `serverUrl` schema.
+- Added AI instruction diagnostics for duplicated files and for `@path` imports that do not resolve.
+- Added read-only discovery of MCP servers defined inside Antigravity plugins.
+
+### Improved
+
+- Covered all four Antigravity customization-root spellings (`.agents`, `.agent`, `_agents`, `_agent`) when discovering instruction rules.
+- Aligned the platform order in MCP install targets with the order used by the rest of the application.
+
+### Fixed
+
+- Removed the Antigravity workspace MCP path (`.agents/mcp_config.json`) that Antigravity never reads, so planned writes are no longer discarded.
+- Fixed the missing surface label for Antigravity in skill install targets.
+
+---
+
+### 新增
+
+- 新增 Google Antigravity 支持：Skills 目录、AI 指令规则，以及使用 Antigravity 原生远端 `serverUrl` 格式的 MCP 配置。
+- 新增 AI 指令诊断：内容重复的指令文件，以及无法解析的 `@path` 导入。
+- 新增对 Antigravity 插件内 MCP Server 的只读发现。
+
+### 优化
+
+- 指令规则发现覆盖 Antigravity 定制根的全部四种写法（`.agents`、`.agent`、`_agents`、`_agent`）。
+- MCP 安装目标列表的平台顺序与界面其它位置保持一致。
+
+### 修复
+
+- 移除 Antigravity 工作区中并不生效的 MCP 路径（`.agents/mcp_config.json`），避免写入被静默丢弃。
+- 修复 Antigravity 在技能安装目标中缺少接入面标签的问题。
+
 ## 0.1.11 - 2026-09-01
 
 ### Added
