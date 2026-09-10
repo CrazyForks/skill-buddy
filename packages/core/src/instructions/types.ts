@@ -29,6 +29,23 @@ export interface InstructionBinding {
   shadowedBy?: string
 }
 
+/**
+ * 指令文件里解析出的一条 Markdown 导入引用（Claude Code 的 `@path` 语法）。
+ *
+ * 路径一律按声明文件所在目录解析；`root` 为该项目允许访问的边界，
+ * 越过边界的引用在诊断阶段报为 `invalid-import`。
+ */
+export interface InstructionImportRef {
+  /** 原始引用文本，不含前导 `@`。 */
+  raw: string
+  /** 按声明文件所在目录解析后的绝对路径。 */
+  target: string
+  /** 目标文件当前是否存在。 */
+  exists: boolean
+  /** 目标是否越出允许的根目录（项目根或全局根）。 */
+  escapesRoot: boolean
+}
+
 export interface InstructionDocument {
   id: string
   kind: InstructionKind
@@ -47,6 +64,8 @@ export interface InstructionDocument {
   linkBroken?: boolean
   contentTruncated?: boolean
   encodingInvalid?: boolean
+  /** 文件中解析出的导入引用，仅在内容可读且编码合法时存在。 */
+  imports?: InstructionImportRef[]
 }
 
 export interface InstructionRuleProfile {

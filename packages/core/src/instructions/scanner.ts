@@ -5,7 +5,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { INSTRUCTION_PROFILES } from './profiles.js'
 import { instructionEffectiveDirectory, normalizedPath } from './paths.js'
 import { MAX_INSTRUCTION_FILE_BYTES } from './constants.js'
-import type { InstructionBinding, InstructionDirectory, InstructionDocument, InstructionDiagnostic, InstructionKind, InstructionScanResult } from './types.js'
+import type { InstructionBinding, InstructionDirectory, InstructionDocument, InstructionDiagnostic, InstructionImportRef, InstructionKind, InstructionScanResult } from './types.js'
 
 /** 扫描与文件监听共用的目录排除集，元素均为小写。 */
 export const INSTRUCTION_SCAN_EXCLUDES: ReadonlySet<string> = new Set(['.git', '.cache', '.next', '.nuxt', '.output', '.pnpm-store', '.turbo', '.vite', 'build', 'coverage', 'dist', 'node_modules', 'out', 'temp', 'tmp'])
@@ -21,6 +21,35 @@ function kindForName(name: string): InstructionKind {
 
 function hash(content: Buffer): string {
   return createHash('sha256').update(content).digest('hex')
+}
+
+const IMPORT_LINE_PATTERN = /^\s*@([^\s@]+)\s*$/
+const IMPORT_FILE_EXTENSION_PATTERN = /\.(?:md|mdc|markdown|txt)$/i
+
+/**
+ * 解析指令文件中的 Markdown 导入引用（Claude Code 的 `@path` 语法）。
+ *
+ * 只识别独占一行的 `@path`，并要求 token 带已知扩展名或以 `./`、`../`、`~/`、`/` 开头，
+ * 以此排除正文里出现的邮箱地址。路径按声明文件所在目录解析，`root` 为该文件的访问边界；
+ * 越界引用不进行存在性探测，直接标记为 `escapesRoot`，交由诊断层报 `invalid-import`。
+ */
+async function parseImports(content: string, fileDirectory: string, root: string | undefined): Promise<InstructionImportRef[]> {
+  const refs: InstructionImportRef[] = []
+  const seen = new Set<string>()
+  for (const line of content.split(/\r?\n/)) {
+    const raw = IMPORT_LINE_PATTERN.exec(line)?.[1]
+    if (!raw || seen.has(raw)) continue
+    seen.add(raw)
+    if (raw.includes('://')) continue
+    const pathLike = raw.startsWith('./') || raw.startsWith('../') || raw.startsWith('/')
+      || raw.startsWith('~/') || IMPORT_FILE_EXTENSION_PATTERN.test(raw)
+    if (!pathLike) continue
+    const target = resolve(fileDirectory, raw.startsWith('~/') ? join(homedir(), raw.slice(2)) : raw)
+    const escapesRoot = root !== undefined && target !== root && !target.startsWith(`${root}${sep}`)
+    const exists = !escapesRoot && await fs.stat(target).then((item) => item.isFile(), () => false)
+    refs.push({ raw, target, exists, escapesRoot })
+  }
+  return refs
 }
 
 function candidateNames(): Set<string> {
@@ -184,6 +213,7 @@ async function readDocument(path: string, scope: 'user' | 'project', projectRoot
   }
   const importsAgents = !encodingInvalid
     && content.toString('utf8').split(/\r?\n/).some((line) => line.trim() === '@AGENTS.md')
+  const imports = encodingInvalid ? [] : await parseImports(content.toString('utf8'), dirname(path), rootForLink)
   const linksAgents = linked && realPath !== null && basename(realPath).toLowerCase() === 'agents.md'
   const bindings = bindingForDocument(path, scope, projectRoot).map((binding) => {
     if (
@@ -211,6 +241,7 @@ async function readDocument(path: string, scope: 'user' | 'project', projectRoot
     linked,
     ...(linkTarget ? { linkTarget } : {}),
     ...(encodingInvalid ? { encodingInvalid: true } : {}),
+    ...(imports.length ? { imports } : {}),
   }
 }
 

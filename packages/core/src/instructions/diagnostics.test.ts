@@ -41,4 +41,35 @@ describe('instruction diagnostics', () => {
     expect(stats.linked).toBe(0)
     expect(stats.readOnly).toBe(0)
   })
+
+  it('reports missing and escaping Markdown imports', async () => {
+    const root = await createProject()
+    await fs.writeFile(join(root, 'AGENTS.md'), 'shared\n', 'utf8')
+    await fs.writeFile(join(root, 'CLAUDE.md'), '@AGENTS.md\n@./docs/missing.md\n@../outside.md\n', 'utf8')
+    const scan = await scanInstructionDocuments([root], { includeGlobal: false })
+    const diagnostics = await diagnoseInstructions(scan.documents)
+    const invalid = diagnostics.filter((item) => item.code === 'invalid-import')
+
+    expect(invalid).toHaveLength(2)
+    expect(invalid.map((item) => item.message)).toEqual(expect.arrayContaining([
+      expect.stringContaining('@./docs/missing.md'),
+      expect.stringContaining('@../outside.md'),
+    ]))
+    expect(invalid.every((item) => item.paths[0]?.endsWith('CLAUDE.md'))).toBe(true)
+  })
+
+  it('flags identical files in one directory as duplicate maintenance', async () => {
+    const root = await createProject()
+    const shared = '# Shared rules\n'
+    await fs.writeFile(join(root, 'AGENTS.md'), shared, 'utf8')
+    await fs.writeFile(join(root, 'CLAUDE.md'), shared, 'utf8')
+    const realRoot = await fs.realpath(root)
+
+    const scan = await scanInstructionDocuments([root], { includeGlobal: false })
+    const diagnostics = await diagnoseInstructions(scan.documents)
+    const duplicate = diagnostics.find((item) => item.code === 'duplicate')
+
+    expect(duplicate?.paths).toEqual([join(realRoot, 'AGENTS.md'), join(realRoot, 'CLAUDE.md')])
+    expect(diagnostics.map((item) => item.code)).not.toContain('drifted')
+  })
 })
