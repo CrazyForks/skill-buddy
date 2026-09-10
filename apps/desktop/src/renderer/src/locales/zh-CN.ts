@@ -386,6 +386,8 @@ export default {
       'missing-claude-bridge': '存在 AGENTS.md，但没有 Claude Code 兼容文件',
       'claude-bridge-conflict': 'CLAUDE.md 已包含独立内容，无法自动创建桥接',
       drifted: 'AGENTS.md 与 CLAUDE.md 内容存在差异',
+      duplicate: '同一目录存在内容完全相同的指令文件，建议改为共享源加导入',
+      'invalid-import': '导入的文件不存在或超出允许范围',
     },
   },
   newSkill: {

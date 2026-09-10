@@ -386,6 +386,8 @@ export default {
       'missing-claude-bridge': 'AGENTS.md exists without a Claude Code compatibility file',
       'claude-bridge-conflict': 'CLAUDE.md contains independent content and cannot be bridged automatically',
       drifted: 'AGENTS.md and CLAUDE.md contain different content',
+      duplicate: 'Two instruction files in one directory hold identical content; share a source and import instead',
+      'invalid-import': 'An imported file is missing or outside the allowed boundary',
     },
   },
   newSkill: {
