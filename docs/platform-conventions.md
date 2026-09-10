@@ -122,6 +122,17 @@ Skill 必须依据 `~/.claude/plugins/installed_plugins.json` 中的 `installPat
   别名优先；skills 激活需用户 consent、workspace 需 `/trust`
 - 另有 commands（TOML）与 extensions 体系；GEMINI.md 三层拼接
 
+### Google Antigravity（antigravity.google/docs）
+
+- 全局 Skills：`~/.gemini/config/skills/`；工作区 Skills：`.agents/skills/`。
+  Antigravity 当前默认使用 `.agents/skills`，并兼容旧版 `.agent/skills`。
+- 全局 MCP：`~/.gemini/config/mcp_config.json`；工作区 MCP：
+  `.agents/mcp_config.json`；配置根节点为 `mcpServers`，支持 stdio 与远程服务器。
+- Antigravity IDE 与 CLI 共用上述 MCP 配置约定；OAuth token 另存于
+  `~/.gemini/antigravity/mcp_oauth_tokens.json`，SkillBuddy 不读取或写入该凭据文件。
+- 官方文档未给出独立的全局 GEMINI.md 规则路径，当前指令适配仅沿用
+  `~/.gemini/config/GEMINI.md` 的兼容约定，待真机复核。
+
 ### CodeBuddy（codebuddy.ai/docs/cli/skills，官方）
 
 - `~/.codebuddy/skills/` 与 `.codebuddy/skills/`，项目级同名优先

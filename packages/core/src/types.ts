@@ -1,5 +1,6 @@
 /** Built-in agent platforms (rows in BUILTIN_PLATFORMS). */
 export type BuiltinAgentId =
+  | 'google-antigravity'
   | 'claude-code'
   | 'codex'
   | 'copilot'

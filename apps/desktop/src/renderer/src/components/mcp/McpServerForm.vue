@@ -19,7 +19,6 @@ import { useI18n } from 'vue-i18n'
 import McpTargetPicker from './McpTargetPicker.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface ReferenceRow {
   id: string
@@ -170,7 +169,7 @@ function submit(): void {
           </button>
         </div>
 
-        <ScrollArea class="min-h-0 flex-1">
+        <div class="mcp-form-scroll min-h-0 flex-1 overflow-y-auto">
           <form class="px-5 py-4" @submit.prevent="submit">
           <div class="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
             <button
@@ -281,9 +280,9 @@ function submit(): void {
             />
           </section>
           </form>
-        </ScrollArea>
+        </div>
 
-        <div class="flex justify-end gap-2 border-t px-5 py-4">
+        <div class="flex shrink-0 justify-end gap-2 border-t px-5 py-4">
           <Button variant="ghost" size="sm" @click="emit('close')">
             {{ t('common.cancel') }}
           </Button>
@@ -295,3 +294,25 @@ function submit(): void {
     </DialogPortal>
   </DialogRoot>
 </template>
+
+<style scoped lang="scss">
+.mcp-form-scroll {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+}
+</style>

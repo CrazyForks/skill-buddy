@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { BUILTIN_PLATFORMS } from './platforms.js'
 
 describe('BUILTIN_PLATFORMS', () => {
+  it('registers Google Antigravity with its native Skills roots', () => {
+    expect(BUILTIN_PLATFORMS).toContainEqual({
+      id: 'google-antigravity',
+      displayName: 'Google Antigravity',
+      userSkillsDir: '~/.gemini/config/skills',
+      projectSkillsDir: '.agents/skills',
+      detectPath: '~/.gemini/config',
+    })
+  })
   it('registers Qwen Code with personal and project Skills roots', () => {
     expect(BUILTIN_PLATFORMS).toContainEqual({
       id: 'qwen-code',

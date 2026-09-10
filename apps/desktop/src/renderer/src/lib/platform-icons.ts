@@ -6,6 +6,7 @@
  * @Description:
  */
 import claudeIcon from '@lobehub/icons-static-svg/icons/claude-color.svg'
+import antigravityIcon from '@lobehub/icons-static-svg/icons/antigravity-color.svg'
 import codebuddyIcon from '@lobehub/icons-static-svg/icons/codebuddy-color.svg'
 import codexSvg from '@lobehub/icons-static-svg/icons/openai.svg?raw'
 import cursorSvg from '@lobehub/icons-static-svg/icons/cursor.svg?raw'
@@ -41,6 +42,7 @@ function svgMask(svg: string): string {
 }
 
 const ICONS: Record<string, PlatformIconDef> = {
+  'google-antigravity': { src: antigravityIcon },
   'claude-code': { src: claudeIcon },
   codex: { maskSrc: svgMask(codexSvg) },
   copilot: { maskSrc: svgMask(githubcopilotSvg) },

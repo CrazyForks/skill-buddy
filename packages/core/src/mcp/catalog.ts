@@ -90,6 +90,26 @@ function standardCapabilities(
 
 export const INITIAL_MCP_PROFILES: readonly McpPlatformProfile[] = [
   {
+    agent: 'google-antigravity',
+    surface: 'ide',
+    displayName: 'Google Antigravity',
+    schema: 'standard',
+    capabilities: standardCapabilities({
+      transports: ['stdio', 'streamable-http', 'sse'],
+    }),
+    detectPaths: (homeDir) => [join(homeDir, '.gemini', 'config')],
+    sourceTemplates: (homeDir, projectRoots) => [
+      {
+        scope: 'user',
+        path: join(homeDir, '.gemini', 'config', 'mcp_config.json'),
+        format: 'json',
+        nodePath: ['mcpServers'],
+        origin: 'user',
+      },
+      ...projectTemplates(projectRoots, '.agents/mcp_config.json', 'json', ['mcpServers']),
+    ],
+  },
+  {
     agent: 'claude-code',
     surface: 'cli',
     displayName: 'Claude Code',

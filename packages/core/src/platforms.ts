@@ -109,6 +109,13 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     detectPath: '~/.gemini',
   },
   {
+    id: 'google-antigravity',
+    displayName: 'Google Antigravity',
+    userSkillsDir: '~/.gemini/config/skills',
+    projectSkillsDir: '.agents/skills',
+    detectPath: '~/.gemini/config',
+  },
+  {
     id: 'qwen-code',
     displayName: 'Qwen Code',
     userSkillsDir: '~/.qwen/skills',

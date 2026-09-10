@@ -97,6 +97,15 @@ export const INSTRUCTION_PROFILES: InstructionRuleProfile[] = [
   },
   {
     ...base,
+    key: surface('google', 'google-antigravity', 'ide'),
+    displayName: 'Google Antigravity',
+    platformId: 'google-antigravity',
+    globalPaths: [join(home, '.gemini', 'config', 'GEMINI.md')],
+    projectFileCandidates: ['GEMINI.md', 'AGENTS.md'],
+    sameDirectoryPrecedence: ['GEMINI.md', 'AGENTS.md'],
+  },
+  {
+    ...base,
     key: surface('google', 'gemini-cli', 'cli'),
     displayName: 'Gemini CLI',
     platformId: 'gemini-cli',
