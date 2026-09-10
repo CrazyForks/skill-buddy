@@ -52,6 +52,7 @@ const platformSurfaces: Record<string, string> = {
   copilot: 'editor',
   cursor: 'editor',
   'gemini-cli': 'cli',
+  'google-antigravity': 'ide',
   'qwen-code': 'cli',
   opencode: 'cli',
   pi: 'cli',
