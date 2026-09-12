@@ -2,6 +2,40 @@
 
 All notable changes to SkillBuddy are documented in this file.
 
+## 0.1.13 - 2026-09-12
+
+### Added
+
+- Added residual-data cleanup for supported uninstalled agents, with directory selection, confirmation, and removal to the system trash.
+
+### Improved
+
+- Added conservative installation detection, including macOS Bundle ID lookup for applications installed outside default locations.
+- Restricted cleanup to trusted built-in platform metadata and protected shared directories using resolved filesystem paths.
+- Standardized cleanup tooltips in the sidebar and platform settings.
+
+### Fixed
+
+- Fixed partial cleanup retries resubmitting already removed directories, and prevented conflicting actions while cleanup is running.
+- Fixed long instruction-directory paths overlapping the file count in the directory selector.
+
+---
+
+### 新增
+
+- 新增受支持 Agent 卸载后的残留数据清理，支持目录选择、确认后移入系统废纸篓。
+
+### 优化
+
+- 采用保守的安装状态检测，在 macOS 上通过 Bundle ID 查找安装在非默认位置的应用。
+- 清理权限仅限可信内置平台元数据，并结合文件系统真实路径保护共享目录。
+- 统一侧边栏和平台设置中的清理 Tooltip 样式。
+
+### 修复
+
+- 修复部分清理成功后重试仍提交已移除目录的问题，并在清理期间禁止冲突操作。
+- 修复指令目录选择器中长路径与文件数量重叠的问题。
+
 ## 0.1.12 - 2026-09-10
 
 ### Added
