@@ -40,6 +40,15 @@ export default {
     clearFilters: 'Clear filters',
     skillParseWarnings: '{n} Skill file(s) failed to parse; other Skills are still available',
     skillParseLine: 'line {n}',
+    residueBadge: 'App removed',
+    residueButton: 'The app is uninstalled but left data behind — clean up',
+    residueTitle: '{name} has been removed',
+    residueDesc:
+      'The application is gone, but these directories are still on disk. Pick the ones to move to the Trash; uncheck anything you want to keep.',
+    residueHint: 'Directories are moved to the system Trash, so you can restore them yourself.',
+    residueCleanup: 'Clean up',
+    residueClean: 'Move {count} to Trash',
+    residueCleaned: 'Moved the residue of {name} to the Trash',
   },
   skillTree: {
     global: 'Global',

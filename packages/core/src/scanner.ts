@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { allAdapters } from './adapters/index.js'
+import { allAdapters, allPlatformDefs } from './adapters/index.js'
+import { detectPlatformResidue, filterSafeResidueCandidates, platformOwnedRoots } from './platform-residue.js'
 import {
   DISABLED_SKILL_FILE_NAME,
   readSkillDirState,
@@ -15,6 +17,13 @@ export interface PlatformStatus {
   displayName: string
   detected: boolean
   hasProjectScope: boolean
+  /**
+   * 「应用已删除、只剩残留目录」时可清理的目录（绝对路径，空数组表示无需提示）。
+   *
+   * 只有可信内置平台才可能非空，且仅在默认路径缺失、系统查询也未找到本体时才
+   * 带出路径 —— 应用还在时那些目录正被使用，不能给删除入口。见 platform-residue.ts。
+   */
+  residualPaths: string[]
 }
 
 /** One directory whose immediate children are SKILL.md folders. */
@@ -31,14 +40,63 @@ export {
 } from './adapters/index.js'
 
 /** Detection status of every registered platform, for pickers and sidebars. */
-export async function listPlatformStatus(): Promise<PlatformStatus[]> {
-  return Promise.all(
-    allAdapters().map(async (adapter) => ({
+export async function listPlatformStatus(
+  homeDir: string = homedir(),
+  os: NodeJS.Platform = process.platform,
+): Promise<PlatformStatus[]> {
+  const defs = allPlatformDefs()
+  const defById = new Map(defs.map((def) => [def.id, def]))
+  const adapters = allAdapters()
+  const base = await Promise.all(
+    adapters.map(async (adapter) => ({
       id: adapter.agent,
       displayName: adapter.displayName,
       detected: await adapter.detect(),
       hasProjectScope: adapter.skillsDir('project', '/probe') !== null,
     })),
+  )
+  const detectedIds = new Set(base.filter((status) => status.detected).map((status) => status.id))
+
+  /** 适配器实际使用的用户目录也需要保护，包括 CODEX_HOME 和插件等补充目录。 */
+  const effectiveRoots = new Map<AgentId, string[]>()
+  let protectionComplete = true
+  await Promise.all(adapters.filter((adapter) => detectedIds.has(adapter.agent)).map(async (adapter) => {
+    try {
+      const roots: string[] = []
+      const userPath = adapter.skillsDir('user')
+      if (userPath) roots.push(userPath)
+      const supplemental = adapter.supplementalRoots
+        ? await adapter.supplementalRoots([])
+        : await adapter.supplementalSkillRoots?.()
+      roots.push(...(supplemental ?? []).map((root) => root.path))
+      effectiveRoots.set(adapter.agent, roots)
+    } catch {
+      protectionComplete = false
+    }
+  }))
+
+  const protectedRoots = (ownerId: AgentId): string[] => [
+    homeDir,
+    ...defs
+      .filter((def) => def.id !== ownerId)
+      .flatMap((def) => [
+        ...platformOwnedRoots(def, homeDir, os),
+        ...(effectiveRoots.get(def.id) ?? []),
+      ]),
+  ]
+
+  return Promise.all(
+    base.map(async (status): Promise<PlatformStatus> => {
+      const def = defById.get(status.id)
+      const residue = def ? await detectPlatformResidue(def, homeDir, os) : null
+      return {
+        ...status,
+        residualPaths:
+          protectionComplete && residue?.installationState === 'missing'
+            ? await filterSafeResidueCandidates(residue.paths, protectedRoots(status.id), homeDir)
+            : [],
+      }
+    }),
   )
 }
 

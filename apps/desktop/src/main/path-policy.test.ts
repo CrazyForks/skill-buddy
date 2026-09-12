@@ -220,6 +220,24 @@ describe.runIf(process.platform !== 'win32')('PathAccessPolicy (parked links)', 
 })
 
 describe('validateCustomPlatform', () => {
+  it('剔除清理权限和 OS 路径覆盖等非公开字段', () => {
+    const definition = {
+      id: 'private-agent',
+      displayName: 'Private Agent',
+      userSkillsDir: '~/.private-agent/skills',
+      projectSkillsDir: null,
+      detectPath: '~/.private-agent',
+    }
+    const injected = {
+      ...definition,
+      installPathsByOs: { darwin: ['/missing.app'] },
+      residualPathsByOs: { darwin: ['~/Documents'] },
+      macBundleId: 'com.example.missing',
+      detectPathByOs: { darwin: '~/Documents' },
+    }
+    expect(validateCustomPlatform(injected)).toEqual(definition)
+  })
+
   it('accepts home-contained and project-relative paths', () => {
     expect(
       validateCustomPlatform({

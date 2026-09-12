@@ -18,16 +18,17 @@ import {
   scanInstalledSkills,
   scanInstalledSkillsWithWarnings,
   SKILL_FILE_NAME,
+  type AgentId,
   type FoundSkill,
   type InstalledSkill,
   type Skill,
   type SkillParseWarning,
 } from '@skillbuddy/core'
-import type { CustomPlatformInput, InstallTarget } from '#shared/ipc'
+import type { CustomPlatformInput, InstallTarget, PlatformCleanupResult } from '#shared/ipc'
 import { readFilePreview } from '../file-preview'
 import { readSecret, writeSecret } from '../secrets'
 import { copyUndoSnapshot } from '../undo-stash'
-import { PathAccessPolicy, validateCustomPlatform } from '../path-policy'
+import { assertRemovableResidue, PathAccessPolicy, validateCustomPlatform } from '../path-policy'
 import { derivePlatformDraft, discoverPlatformCandidates } from '../platform-discovery'
 import { setWindowChromeTheme, setWindowVibrancy } from '../window'
 import { installTarget, runTargets } from './targets'
@@ -249,8 +250,50 @@ export function registerSkillsIpc(pathPolicy: PathAccessPolicy): void {
   ipcMain.handle('platforms:list', () => listPlatformStatus())
 
   ipcMain.handle('platforms:register', (_event, definitions: CustomPlatformInput[]) => {
-    for (const definition of definitions) registerPlatform(validateCustomPlatform(definition))
+    if (!Array.isArray(definitions)) throw new Error('invalid platform definitions')
+    const validated = definitions.map(validateCustomPlatform)
+    for (const definition of validated) registerPlatform(definition)
   })
+
+  /**
+   * 清理「应用已删除、只剩残留目录」的平台目录树，移入系统废纸篓以便还原。
+   *
+   * 渲染层只被允许传平台 id 和一个子集，绝不信任它给出的任意路径：这里重新
+   * 跑一次检测，用主进程自己推导出的 `residualPaths` 做白名单校验。这样即使
+   * 渲染层被注入，删除范围也不可能越过残留目录本身。
+   */
+  ipcMain.handle(
+    'platforms:cleanup-residue',
+    async (_event, platformId: AgentId, paths: string[]): Promise<PlatformCleanupResult[]> => {
+      if (
+        typeof platformId !== 'string'
+        || !Array.isArray(paths)
+        || !paths.every((path) => typeof path === 'string' && path.length > 0)
+      ) {
+        throw new Error('invalid platform cleanup request')
+      }
+      if (paths.length === 0) return []
+      const status = (await listPlatformStatus()).find((item) => item.id === platformId)
+      if (!status) throw new Error(`unknown platform: ${platformId}`)
+      const allowed = new Set(status.residualPaths)
+      const requested = [...new Set(paths.map((path) => resolve(path)))]
+      for (const path of requested) {
+        if (!allowed.has(path)) {
+          throw new Error(`path is not a cleanable residue of ${platformId}: ${path}`)
+        }
+        await assertRemovableResidue(path)
+      }
+      const settled = await Promise.allSettled(requested.map((path) => shell.trashItem(path)))
+      return settled.map((result, index) => ({
+        path: requested[index]!,
+        ok: result.status === 'fulfilled',
+        error:
+          result.status === 'rejected'
+            ? String((result.reason as Error | undefined)?.message ?? result.reason)
+            : undefined,
+      }))
+    },
+  )
 
   ipcMain.handle('skills:install', async (_event, skill: Skill, targets: InstallTarget[]) => {
     await pathPolicy.assertSkillResources(skill)

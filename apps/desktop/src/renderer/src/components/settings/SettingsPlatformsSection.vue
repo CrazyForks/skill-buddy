@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronRight, FolderSearch, Loader2, Plus, Trash2 } from '@lucide/vue'
+import { Check, ChevronRight, FolderSearch, Loader2, Plus, Trash2, TriangleAlert } from '@lucide/vue'
 import type { PlatformStatus } from '@skillbuddy/core'
 import type { CustomPlatformInput } from '#shared/ipc'
 import PlatformIcon from '@/components/PlatformIcon.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tooltip } from '@/components/ui/tooltip'
+import { openPlatformCleanup } from '@/composables/usePlatformCleanup'
 import {
   isSelectableDraft,
   PLATFORM_DRAFT_ERROR_KEYS,
@@ -194,23 +196,55 @@ const selectedCount = computed(() => props.candidates.filter((row) => row.select
         class="flex items-center justify-between gap-2 px-5 py-3"
       >
         <div class="flex min-w-0 items-center gap-2.5">
-          <PlatformIcon :id="platform.id" :size="16" />
+          <PlatformIcon
+            :id="platform.id"
+            :size="16"
+          />
           <span class="text-sm">{{ platform.displayName }}</span>
-          <Badge :variant="platform.detected ? 'success' : 'secondary'">
+          <!--
+            应用本体已删除时，「已检测」这个说法会自相矛盾：目录确实还在，
+            但用户已经卸载了应用。改说「应用已删除」，并由右侧按钮给出清理入口。
+          -->
+          <Badge
+            v-if="platform.residualPaths.length > 0"
+            variant="destructive"
+          >
+            {{ t('app.residueBadge') }}
+          </Badge>
+          <Badge
+            v-else
+            :variant="platform.detected ? 'success' : 'secondary'"
+          >
             {{ platform.detected ? t('settings.detected') : t('settings.notDetected') }}
           </Badge>
         </div>
-        <Button
-          v-if="props.customPlatforms.some((custom) => custom.id === platform.id)"
-          variant="ghost"
-          size="icon"
-          class="size-7 shrink-0 cursor-pointer text-muted-foreground"
-          :title="t('settings.removeNote')"
-          :aria-label="t('settings.removeNote')"
-          @click="emit('remove', platform.id)"
-        >
-          <Trash2 class="size-3.5" />
-        </Button>
+        <div class="flex shrink-0 items-center gap-1">
+          <Tooltip
+            v-if="platform.residualPaths.length > 0"
+            :content="t('app.residueButton')"
+            trigger-class="cursor-pointer"
+          >
+            <button
+              type="button"
+              class="flex cursor-pointer items-center gap-1.5 rounded-md border border-destructive/30 px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+              @click="openPlatformCleanup(platform)"
+            >
+              <TriangleAlert class="size-3.5" />
+              {{ t('app.residueCleanup') }}
+            </button>
+          </Tooltip>
+          <Button
+            v-if="props.customPlatforms.some((custom) => custom.id === platform.id)"
+            variant="ghost"
+            size="icon"
+            class="size-7 shrink-0 cursor-pointer text-muted-foreground"
+            :title="t('settings.removeNote')"
+            :aria-label="t('settings.removeNote')"
+            @click="emit('remove', platform.id)"
+          >
+            <Trash2 class="size-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   </section>

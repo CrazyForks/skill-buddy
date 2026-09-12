@@ -32,6 +32,27 @@ export interface PlatformDef {
   detectPath: string
   /** Per-OS override for `detectPath`, resolved like `userSkillsDirByOs`. */
   detectPathByOs?: Partial<Record<PlatformOs, string>>
+  /**
+   * 应用本体（安装包）的路径候选，绝对路径或 `~/` 前缀，命中任一即视为本体还在。
+   *
+   * 只按 OS 声明、没有 OS 无关的兜底项：安装包路径天生是 OS 专属的，留一个
+   * 「通用」默认值只会在其它系统上误判。某个 OS 没有声明就表示该平台在这个
+   * 系统上**不参与**残留判定 —— 这与「声明了但不存在」是两回事，前者不会
+   * 产生任何提示。
+   *
+   * 未声明的平台（CLI 类平台没有可查的包体）同样永不参与判定。
+   */
+  installPathsByOs?: Partial<Record<PlatformOs, readonly string[]>>
+  /** 经核实的 macOS Bundle ID，用于查询非默认位置及改名后的应用。 */
+  macBundleId?: string
+  /**
+   * `detectPath` 之外、同样归该平台所有、可随残留一起清理的目录。
+   *
+   * 仅供「清理残留」列出候选，不参与已安装判定。声明时必须避开其它平台的
+   * `detectPath`：例如 Antigravity 只能声明 `~/.gemini/antigravity*` 这些
+   * 自己名下的子目录，绝不能声明 `~/.gemini` —— 那是 Gemini CLI 的根目录。
+   */
+  residualPathsByOs?: Partial<Record<PlatformOs, readonly string[]>>
 }
 
 /** Pick the path declared for `os`, falling back to the OS-neutral default. */
@@ -44,6 +65,34 @@ export function resolvePlatformOsPath<T extends string | null>(
   return byOs[os as PlatformOs] ?? fallback
 }
 
+/**
+ * Pick the list declared for `os`. An OS absent from the map yields an empty
+ * list, which callers read as "not declared for this system" rather than
+ * "declared and empty" — see `installPathsByOs`.
+ */
+export function resolvePlatformOsList(
+  byOs: Partial<Record<PlatformOs, readonly string[]>> | undefined,
+  os: NodeJS.Platform,
+): string[] {
+  return [...(byOs?.[os as PlatformOs] ?? [])]
+}
+
+/**
+ * 内置平台表。
+ *
+ * 关于 `installPathsByOs`：只有**能查到安装包**的 GUI 应用才声明它，目前覆盖
+ * Cursor、Trae、豆包、WPS 灵犀、Google Antigravity 的 macOS 落点。以下平台
+ * 刻意不声明，因此永不产生「应用已删除」提示：
+ *
+ * - CLI 类：claude-code、codex、gemini-cli、kimi、qwen-code、opencode、pi、omp、
+ *   copilot（VS Code 扩展与 CLI）。它们没有可查的 GUI 包体（包管理器装的命令行
+ *   程序没有稳定落点）。
+ * - zcode：`~/.zcode` 同时被 GUI 与 `~/.zcode/cli` 的 agent 使用（日志至今仍在写），
+ *   拿「GUI 包体不存在」推断整个目录是残留会产生误报。
+ * - workbuddy：`~/.workbuddy` 是宿主运行时自己的数据目录（含 skills 与运行时二进制），
+ *   把它做成可删目标的风险远大于收益。
+ * - trae-cn / codebuddy / 豆包之外的平台：本机没有安装痕迹，无法核实包名，不猜。
+ */
 export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
   {
     id: 'claude-code',
@@ -67,6 +116,12 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     userSkillsDir: '~/.cursor/skills',
     projectSkillsDir: '.cursor/skills',
     detectPath: '~/.cursor',
+    // 证据：Cursor 自己的 `~/Library/Application Support/Cursor` 日志里出现
+    // `/Applications/Cursor.app`；bundle id 为 `com.todesktop.230313mzl4w4u92`。
+    installPathsByOs: {
+      darwin: ['/Applications/Cursor.app', '~/Applications/Cursor.app'],
+    },
+    macBundleId: 'com.todesktop.230313mzl4w4u92',
   },
   {
     id: 'opencode',
@@ -114,6 +169,25 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     userSkillsDir: '~/.gemini/config/skills',
     projectSkillsDir: '.agents/skills',
     detectPath: '~/.gemini/config',
+    /**
+     * 真机验证（官方 dmg 内 Info.plist）：CFBundleName `Antigravity`、
+     * CFBundleIdentifier `com.google.antigravity`、2.12.2；dmg 里只有
+     * `Antigravity.app` 和指向 `/Applications` 的软链，故本体就是这两个落点。
+     * 声明后即可区分「应用已删除、只剩数据目录」。
+     */
+    installPathsByOs: {
+      darwin: ['/Applications/Antigravity.app', '~/Applications/Antigravity.app'],
+    },
+    macBundleId: 'com.google.antigravity',
+    /**
+     * v2 起 AppDataDir 迁到 `~/.gemini/config`（即 detectPath 本身），v1 留下的
+     * 同级目录仍归它所有。**不要**加 `~/.gemini`：那是 Gemini CLI 的 detectPath，
+     * Gemini CLI 0.59.0 只引用 `.gemini/settings.json` 与 `.gemini/skills`，
+     * 与 `.gemini/config` 无交集，清理列表必须停在 Antigravity 自己的子目录。
+     */
+    residualPathsByOs: {
+      darwin: ['~/.gemini/antigravity', '~/.gemini/antigravity-backup', '~/.gemini/antigravity-ide'],
+    },
   },
   {
     id: 'qwen-code',
@@ -135,6 +209,12 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     userSkillsDir: '~/.trae/skills',
     projectSkillsDir: '.trae/skills',
     detectPath: '~/.trae',
+    // 证据：Trae 自己的日志里出现 `/Applications/Trae.app/Contents/MacOS/Electron`
+    // 且带 `__CFBundleIdentifier=com.trae.app`。
+    installPathsByOs: {
+      darwin: ['/Applications/Trae.app', '~/Applications/Trae.app'],
+    },
+    macBundleId: 'com.trae.app',
   },
   {
     // The China edition keeps a separate home dir from international Trae.
@@ -161,6 +241,14 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
     userSkillsDir: '~/Doubao/skills',
     projectSkillsDir: null,
     detectPath: '~/Doubao',
+    // 证据：豆包桌面版自己的数据目录里出现 `/Applications/Doubao.app/Contents/Helpers/
+    // Doubao Browser.app/...`（桌面版内嵌浏览器，v2.21.10）。注意这与独立安装的
+    // 「豆包浏览器.app」是两个应用，bundle id 分别为 `com.bot.pc.doubao` 与
+    // `com.bot.pc.doubao.browser`，不能拿后者的存在与否判断桌面版。
+    installPathsByOs: {
+      darwin: ['/Applications/Doubao.app', '~/Applications/Doubao.app'],
+    },
+    macBundleId: 'com.bot.pc.doubao',
   },
   {
     id: 'kimi',
@@ -196,5 +284,12 @@ export const BUILTIN_PLATFORMS: readonly PlatformDef[] = [
       win32: '~/AppData/Roaming/WPS 灵犀',
       linux: '~/.config/WPS 灵犀',
     },
+    // 证据：灵犀自己的云日志（cloudlog-pending-logs.json）里出现
+    // `/Applications/WPS 灵犀.app/...` 的 Node 堆栈；bundle id 为 `com.wps.lingxi`。
+    // Windows / Linux 的包体位置没有核实过，故只声明 macOS。
+    installPathsByOs: {
+      darwin: ['/Applications/WPS 灵犀.app', '~/Applications/WPS 灵犀.app'],
+    },
+    macBundleId: 'com.wps.lingxi',
   },
 ]

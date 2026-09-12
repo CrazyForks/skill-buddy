@@ -1,5 +1,6 @@
 export * from './types.js'
 export * from './platforms.js'
+export * from './platform-residue.js'
 export * from './adapters/index.js'
 export {
   scanInstalledSkills,

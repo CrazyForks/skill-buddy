@@ -184,8 +184,43 @@ export function expandHome(path: string): string {
   return path.startsWith('~/') ? resolve(homedir(), path.slice(2)) : resolve(path)
 }
 
+/**
+ * 校验「清理平台残留」的目标目录。
+ *
+ * 候选范围由调用方负责收敛（必须是主进程 `listPlatformStatus()` 自己推导出的
+ * `residualPaths` 之一，不接受渲染层传来的任意路径）；这里再确认这一项本身是
+ * 可以安全移入废纸篓的：
+ *
+ * - 必须存在，且不是符号链接 —— 删除链接会把「删引用」和「删本体」两件事混淆；
+ * - 解析后的真实路径必须**严格位于**用户主目录之下。这一条同时排除了主目录
+ *   自身、文件系统根，以及经软链逃逸到别处的目录。
+ */
+export async function assertRemovableResidue(path: string): Promise<void> {
+  const target = resolve(path)
+  const entry = await fs.lstat(target).catch(() => null)
+  if (!entry) throw new Error(`residue path does not exist: ${path}`)
+  if (entry.isSymbolicLink()) throw new Error(`refusing to remove a symbolic link: ${path}`)
+  if (!entry.isDirectory()) throw new Error(`residue path is not a directory: ${path}`)
+  const realHome = await fs.realpath(resolve(homedir()))
+  const realPath = await fs.realpath(target).catch(() => null)
+  if (realPath === null) throw new Error(`residue path is not accessible: ${path}`)
+  if (!isWithin(realHome, realPath)) {
+    throw new Error(`residue path is not inside the user home directory: ${path}`)
+  }
+}
+
 /** 校验自定义平台，避免通过目录配置扩大主进程文件访问范围。 */
 export function validateCustomPlatform(input: CustomPlatformInput): CustomPlatformInput {
+  if (
+    !input || typeof input !== 'object'
+    || typeof input.id !== 'string'
+    || typeof input.displayName !== 'string'
+    || typeof input.detectPath !== 'string'
+    || (input.userSkillsDir !== null && typeof input.userSkillsDir !== 'string')
+    || (input.projectSkillsDir !== null && typeof input.projectSkillsDir !== 'string')
+  ) {
+    throw new Error('invalid custom platform definition')
+  }
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.id)) {
     throw new Error(`invalid platform id: ${input.id}`)
   }
@@ -222,7 +257,10 @@ export function validateCustomPlatform(input: CustomPlatformInput): CustomPlatfo
     }
   }
   return {
-    ...input,
+    id: input.id,
     displayName: input.displayName.trim(),
+    detectPath: input.detectPath,
+    userSkillsDir: input.userSkillsDir,
+    projectSkillsDir: input.projectSkillsDir,
   }
 }

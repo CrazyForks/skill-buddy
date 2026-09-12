@@ -480,6 +480,16 @@ export interface TargetResult {
   error?: string
 }
 
+/**
+ * 单个平台残留目录的清理结果。目录被移入系统废纸篓，用户可以自行还原，
+ * 因此这里不提供应用内撤销。
+ */
+export interface PlatformCleanupResult {
+  path: string
+  ok: boolean
+  error?: string
+}
+
 /** 已授权本地文件可安全返回给渲染进程的预览数据。 */
 export type FilePreviewResult =
   | { kind: 'text'; content: string; truncated: boolean }

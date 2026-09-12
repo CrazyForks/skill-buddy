@@ -5,6 +5,7 @@ import AppToast from '@/components/AppToast.vue'
 import InAppBrowser from '@/components/InAppBrowser.vue'
 import GroupDeleteDialog from '@/components/groups/GroupDeleteDialog.vue'
 import GroupToggleDialog from '@/components/groups/GroupToggleDialog.vue'
+import PlatformResidueDialog from '@/components/PlatformResidueDialog.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import SettingsPageSkeleton from '@/components/SettingsPageSkeleton.vue'
 import WindowTopBar from '@/components/WindowTopBar.vue'
@@ -88,6 +89,8 @@ useAppLifecycle({ refreshLocal })
 <template>
   <AppToast />
   <AppConfirm />
+  <!-- 残留清理入口同时存在于侧边栏与设置页，弹窗随单例状态挂在这里，保证全局只有一个。 -->
+  <PlatformResidueDialog />
   <InAppBrowser />
   <div class="relative flex h-screen flex-col">
     <WindowTopBar :show-sidebar-toggle="!settingsOpen" />

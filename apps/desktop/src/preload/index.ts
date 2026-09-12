@@ -49,6 +49,7 @@ import type {
   ModelScopeMcpDetail,
   ModelScopeMcpStats,
   ModelScopeMcpSummary,
+  PlatformCleanupResult,
   PlatformDraft,
   TeamLibraryConfig,
   TeamContributionDiff,
@@ -294,6 +295,11 @@ const api = {
   listPlatforms: (): Promise<PlatformStatus[]> => invoke('platforms:list'),
   registerPlatforms: (defs: CustomPlatformInput[]): Promise<void> =>
     invoke('platforms:register', defs),
+  cleanupPlatformResidue: (
+    platformId: string,
+    paths: string[],
+  ): Promise<PlatformCleanupResult[]> =>
+    invoke('platforms:cleanup-residue', platformId, paths),
   discoverPlatforms: (): Promise<PlatformDraft[]> => invoke('platforms:discover'),
   pickPlatformDirectory: (): Promise<PlatformDraft | null> =>
     invoke('platforms:pick-directory'),
