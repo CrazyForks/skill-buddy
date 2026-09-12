@@ -333,7 +333,7 @@ function updateTargetDirectory(value: string | undefined): void {
           :placeholder="$t('instructions.targetDirectory')"
           :search-placeholder="$t('instructions.searchDirectories')"
           :empty-text="$t('instructions.noMatchingDirectories')"
-          class="min-w-52 flex-1"
+          class="min-w-0 flex-1"
           @update:model-value="updateTargetDirectory"
         />
       </div>

@@ -62,15 +62,13 @@ function emptyDisplayValue(): string {
     :open="open"
     :disabled="props.disabled"
     :ignore-filter="true"
+    :class="cn('min-w-0', props.class)"
     @update:open="updateOpen"
   >
     <ComboboxAnchor as-child>
       <ComboboxTrigger
         :aria-label="props.placeholder"
-        :class="cn(
-          'flex h-8 cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background py-1 pl-2.5 pr-2 text-sm transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-          props.class,
-        )"
+        class="flex h-8 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background py-1 pl-2.5 pr-2 text-sm transition-colors hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span
           :class="['min-w-0 flex-1 truncate text-left', !selectedOption && 'text-muted-foreground']"
